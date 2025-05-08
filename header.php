@@ -1,3 +1,53 @@
+<!-- Add a hamburger menu for mobile and tablet view -->
+<style>
+    .hamburger-menu {
+        display: none;
+        cursor: pointer;
+    }
+
+    .hamburger-menu div {
+        width: 25px;
+        height: 3px;
+        background-color: #fff;
+        margin: 5px 0;
+    }
+
+    @media (max-width: 768px) {
+        .sidebar {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 250px;
+            height: 100%;
+            background-color: #333;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .sidebar.active {
+            display: block;
+        }
+
+        .hamburger-menu {
+            display: block;
+        }
+    }
+</style>
+
+<div class="hamburger-menu" onclick="toggleSidebar()">
+    <div></div>
+    <div></div>
+    <div></div>
+</div>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        sidebar.classList.toggle('active');
+    }
+</script>
+
 <!-- Sidebar -->
 <div class="sidebar ">
     <div class="text-center mb-4">
@@ -26,9 +76,6 @@
         <a href="login.php" id="login">Login</a>
     <?php endif; ?>
 </div>
-
-
-
 
  <!-- Barra Superior -->
     <div class="topbar">
