@@ -3,55 +3,35 @@
 <?php include('head.php'); ?>
 <body>
 
-  <!-- Conteúdo da página -->
-    <?php include('header.php'); ?>
-    <div class="content">
-        <div class="login-container">
-        <div class="login-form shadow-lg p-3 mb-5 bg-white rounded w-100 mx-auto">
-            <h2 class="fw-bold mb-4 mt-3">Login</h2>
-            <form action="logged.php" method="POST">
+    <!-- Conteúdo da página -->
+    <section class="d-flex justify-content-center align-items-center vh-100">
+        <div class="w-100 h-100 login-container d-flex justify-content-center align-items-center flex-column">
+          
+            <div class="login-form shadow-lg p-3 mb-5 bg-white rounded w-100 mx-auto">
+                
+                <h2 class="fw-bold mb-4 mt-3">Login</h2>
+                <form action="logged.php" method="POST">
 
-            <!-- Campo de E-mail -->
-            <div class="input-group mb-4 w-75 mx-auto d-flex justify-content-center">
+                    <!-- Campo de E-mail -->
+                    <div class="input-group mb-4 w-75 mx-auto d-flex justify-content-center">
 
-                <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
-                <input type="email" class="form-control" id="email" name="email" placeholder="Digite o seu e-mail..." required style="background-color: #f0f0f0; border: none;">
-            </div>
+                        <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+                        <input type="email" class="form-control" id="email" name="email" placeholder="Digite o seu e-mail..." required style="background-color: #f0f0f0; border: none;">
+                    </div>
 
-                <!-- Campo de Senha -->
-                <div class="input-group mb-4 w-75 mx-auto d-flex justify-content-center">
+                    <!-- Campo de Password -->
+                    <div class="input-group mb-4 w-75 mx-auto d-flex justify-content-center">
 
-                    <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
-                    <input type="password" class="form-control" id="password" name="password" placeholder="Digite a sua senha..." required style="background-color: #f0f0f0; border: none;">
-                </div>
+                        <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Digite a sua senha..." required style="background-color: #f0f0f0; border: none;">
+                    </div>
 
-                <!-- Botão Para enviar Formulário -->
-                <button type="submit" class="btn btn-primary mb-4 w-75 mx-auto d-flex justify-content-center">Entrar</button>
-            </form>
+                    <!-- Botão Para enviar Formulário -->
+                    <button type="submit" class="btn btn-primary mb-4 w-75 mx-auto d-flex justify-content-center">Entrar</button>
+                </form>
         </div>
-    </div>
-    </div>
+    </section>
     <!-- Scripts do Bootstrap e JQuery -->
-    <script src="script/script.js"></script>    
+    <script src="script/script.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
