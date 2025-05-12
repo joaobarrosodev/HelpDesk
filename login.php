@@ -4,10 +4,9 @@
 <body>
 
   <!-- Conteúdo da página -->
-    <?php include('header.php'); ?>
-    <div class="content">
-        <div class="login-container">
-        <div class="login-form shadow-lg p-3 mb-5 bg-white rounded w-100 mx-auto">
+    <section class="container w-100 h-100 justify-content-center align-content-center">
+    
+        <div class="login-form shadow-lg p-3 mb-5 bg-white rounded w-100 mx-auto flex-column">
             <h2 class="fw-bold mb-4 mt-3">Login</h2>
             <form action="logged.php" method="POST">
 
@@ -29,8 +28,7 @@
                 <button type="submit" class="btn btn-primary mb-4 w-75 mx-auto d-flex justify-content-center">Entrar</button>
             </form>
         </div>
-    </div>
-    </div>
+</section>
     <!-- Scripts do Bootstrap e JQuery -->
     <script src="script/script.js"></script>    
 </body>
