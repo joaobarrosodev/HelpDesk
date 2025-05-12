@@ -6,10 +6,11 @@
 
   <!-- Conteúdo da página -->
     <section class="w-100 h-100"
-    style="background: linear-gradient(to right,rgb(34, 76, 95), rgb(85, 160, 191));">
+
+    style="background: #55A0BF;">
         <div class="container d-flex justify-content-center align-items-center h-100">
-                <div class="col-4 p-3 bg-white rounded flex-column justify-content-center align-items-center fade-in">
-                    <h2 class="fw-bold mb-4 mt-4 text-center">Bem Vindo</h2>
+                <div class="col-4 p-5 bg-white rounded flex-column justify-content-center align-items-center fade-in box-shadow">
+                    <h2 class="fw-bold mb-4 mt-4 text-center">Bem Vindo de Volta!</h2>
                     <form action="logged.php" method="POST">
 
                     <!-- Campo de E-mail -->
