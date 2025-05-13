@@ -8,7 +8,7 @@ include('conflogin.php');
 <body>
 
     <?php include('menu.php'); ?>
-    <div class="content">
+    <div class="content content-area">
         <h2 class="text-center">Bem-vindo à página principal, <?php echo $_SESSION['Nome']; ?>!</h2>
         <p class="text-center">Conteúdo exclusivo para clientes.</p>
 
