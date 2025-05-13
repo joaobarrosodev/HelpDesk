@@ -1,0 +1,68 @@
+/* Estilos específicos para a página de extrato de conta corrente */
+
+/* Cabeçalho e informações bancárias */
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+.text-primary {
+    color: #4285F4 !important;
+}
+
+/* Filtro de datas */
+#filterBtn {
+    background-color: transparent;
+    border: 1px solid #dee2e6;
+}
+
+/* Tabela de transações */
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    background-color: #fff;
+    color: #6c757d;
+    font-weight: 500;
+    border: none !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    padding: 0.75rem;
+    font-size: 0.85rem;
+}
+
+.table td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border: none !important;
+}
+
+.table tr {
+    border-bottom: 1px solid #eee;
+}
+
+.table-borderless tbody tr:last-child {
+    border-bottom: none;
+}
+
+/* Data range */
+#date-range-text {
+    color: #6c757d;
+}
+
+/* Botões de download */
+.btn-light {
+    background-color: #f8f9fa;
+    border-color: #eee;
+    color: #6c757d;
+    box-shadow: none;
+}
+
+.btn-light:hover {
+    background-color: #e9ecef;
+}
+
+/* Toggle filter popup */
+.filter-popup {
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+}

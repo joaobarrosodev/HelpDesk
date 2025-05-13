@@ -7,7 +7,7 @@ include('conflogin.php');
 <?php include('head.php'); ?>
 <body>
 
-    <?php include('header.php'); ?>
+    <?php include('menu.php'); ?>
     <div class="content">
         <h2 class="text-center">Painel de Administração</h2>
         </div>

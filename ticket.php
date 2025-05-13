@@ -10,7 +10,7 @@ include('conflogin.php');
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.css">
 </head>
 <body>
-    <?php include('header.php'); ?>
+    <?php include('menu.php'); ?>
     <div class="content">
         <h2>Criar Ticket de Suporte</h2>
         <form action="criar_ticket.php" method="POST" enctype="multipart/form-data">

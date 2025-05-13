@@ -67,7 +67,7 @@ if (isset($_GET['keyid'])) {
   </div>
 </div>
 <body>
-    <?php include('header.php'); ?>
+    <?php include('menu.php'); ?>
     <div class="content">
         <table class="table">
             <tr>
