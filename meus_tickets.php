@@ -68,14 +68,16 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="content">
         <div class="container-fluid p-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h2">Meus Tickets</h1>
+                <div class="flex-grow-1">
+                    <h1 class="mb-3">Meus Tickets</h1>
+                    <p class="">Lista de todos os seus tickets, incluindo tickets em aberto e resolvidos. Use os filtros abaixo para refinar a visualização.</p>
+                </div>
                 <a href="ticket.php" class="btn btn-primary d-flex align-items-center">
                     <i class="bi bi-plus-circle me-2"></i> Abrir Novo Ticket
                 </a>
             </div>
             
             <div class="card shadow-sm mb-4">                <div class="card-body">
-                    <p class="text-muted small">Lista de todos os seus tickets, incluindo tickets em aberto e resolvidos. Use os filtros abaixo para refinar a visualização.</p>
                       <!-- Filters -->
                     <form method="get" action="" class="row g-3 mb-4">
                         <div class="col-md-3">

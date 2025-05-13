@@ -213,9 +213,18 @@ function setDefaultDateRange() {
 /**
  * Alterna a visibilidade do popup de filtro
  */
+/**
+ * Mostra ou esconde o popup de filtro
+ */
 function toggleFilterPopup() {
   const popup = document.getElementById('filterPopup');
+  const button = document.getElementById('filterBtn');
+  
   if (popup.style.display === 'none') {
+    // Posicionar o popup corretamente abaixo do botão
+    const buttonRect = button.getBoundingClientRect();
+    popup.style.top = (buttonRect.bottom + window.scrollY) + 'px';
+    popup.style.left = (buttonRect.left + window.scrollX) + 'px';
     popup.style.display = 'block';
   } else {
     popup.style.display = 'none';
