@@ -3,6 +3,8 @@
 /* Cabeçalho e informações bancárias */
 .bg-light {
     background-color: #f8f9fa !important;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .text-primary {
@@ -10,15 +12,9 @@
 }
 
 /* Filtro de datas */
-/* Filtro de datas */
 #filterBtn {
     background-color: transparent;
     border: 1px solid #dee2e6;
-    transition: all 0.3s;
-}
-
-#filterBtn:hover {
-    background-color: #f8f9fa;
 }
 
 .filter-popup {
@@ -48,12 +44,6 @@
     background-color: #4285F4;
     border-color: #4285F4;
     font-weight: 500;
-    transition: all 0.3s;
-}
-
-.filter-popup .btn-primary:hover {
-    background-color: #3367d6;
-    border-color: #3367d6;
 }
 
 /* Tabela de transações */
@@ -114,14 +104,7 @@
 
 /* Estilo para linhas filtradas */
 .filtered-row {
-    animation: highlight-row 2s ease-in-out;
-    transition: background-color 0.3s ease-in-out;
-}
-
-@keyframes highlight-row {
-    0% { background-color: rgba(66, 133, 244, 0.1); }
-    50% { background-color: rgba(66, 133, 244, 0.2); }
-    100% { background-color: #fff; }
+    background-color: rgba(66, 133, 244, 0.1);
 }
 
 .table-borderless tbody tr:last-child {
@@ -141,12 +124,30 @@
     box-shadow: none;
 }
 
-.btn-light:hover {
-    background-color: #e9ecef;
-}
-
 /* Toggle filter popup */
 .filter-popup {
     border: 1px solid #dee2e6;
     border-radius: 0.25rem;
+}
+
+/* Informações bancárias e valor pendente */
+#pending-amount-section h6.fw-bold,
+.card-body h6.fw-bold {
+    color: #333;
+    font-size: 1.15rem;
+}
+
+.text-secondary {
+    font-weight: 500;
+}
+
+#pending-amount {
+    font-size: 1.75rem;
+}
+
+/* Cartões informativos */
+.card.border-0 .card-body,
+.card.bg-light .card-body {
+    padding: 1.25rem;
+    border-radius: 8px;
 }

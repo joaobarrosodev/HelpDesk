@@ -16,31 +16,34 @@ include('db.php');
     <script src="js/filter-functions.js"></script>
     <script src="js/script.js"></script>
                     <h1 class="mb-3 display-5">Extrato de Conta Corrente</h1>
-                    <p class="fs-4">Aqui tem um pequena lista de compras que fez</p>
+                    <p class="">Aqui tem um pequena lista de compras que fez</p>
 
         <div class=" mt-4">
             <div class="card mb-4 shadow-sm">
-                <div class="card-body">
-                      <div class="row mb-4">                        <div class="col-md-6">
-                            <div class="d-flex">
-                                <div class="me-4">
-                                    <p class="mb-1 fs-5"><strong>Banco:</strong></p>
-                                    <p class="mb-1 fs-5"><strong>Bic Swift:</strong></p>
-                                    <p class="mb-1 fs-5"><strong>IBAN:</strong></p>
-                                </div>
-                                <div>
-                                    <p class="mb-1 fs-5">Crédito Agrícola</p>
-                                    <p class="mb-1 fs-5">CCCMPTPL</p>
-                                    <p class="mb-1 fs-5">PT50 0045 1405 4029 4772 6307 5</p>
+                <div class="card-body">                <div class="row mb-4">                        <div class="col-md-6">
+                            <div class="card border-0">
+                                <div class="card-body p-0">
+                                    <h6 class="fw-bold mb-3">Informações Bancárias</h6>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="text-secondary me-2">Banco:</span>
+                                        <span class="fw-medium">Crédito Agrícola</span>
+                                    </div>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="text-secondary me-2" >BIC/SWIFT:</span>
+                                        <span class="fw-medium">CCCMPTPL</span>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <span class="text-secondary me-2" >IBAN:</span>
+                                        <span class="fw-medium" style="font-size: 0.95rem;">PT50 0045 1405 4029 4772 6307 5</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>                        <div class="col-md-6">
-                            <div class="card bg-light">
-                                <div class="card-body py-3" id="pending-amount-section">
-                                    <!-- The pending amount will be filled by JavaScript -->
-                                    <p class="mb-1 fs-5">Tem neste momento:</p>
-                                    <h2 class="text-danger mb-0" id="pending-amount">Calculando...</h2>
-                                    <p class="text-muted mb-0 fs-5">pendentes</p>
+                            <div class="card bg-light">                                <div class="card-body py-3" id="pending-amount-section">
+                                    <h6 class="fw-bold mb-3">Valor Pendente</h6>
+                                    <p class="mb-1">Tem neste momento:</p>
+                                    <h3 class="text-danger mb-0" id="pending-amount">Calculando...</h3>
+                                    <p class="text-muted mb-0">pendentes de pagamento</p>
                                 </div>
                             </div>
                         </div></div><div class="d-flex justify-content-between align-items-center mb-3">                        <div>                            <!-- Filtro por data com popup -->                            <button class="btn btn-outline-primary" id="filterBtn" onclick="toggleFilterPopup()">
@@ -177,12 +180,8 @@ include('db.php');
                     <th scope='col' class='text-center'></th>
                   </tr>
                 </thead>
-                <tbody>";// Totais já foram calculados anteriormente
-
-        // Exibindo os dados da transação
-        $delay = 0;
+                <tbody>";// Totais já foram calculados anteriormente        // Exibindo os dados da transação
         foreach ($transactions as $transaction) {
-            $delay += 100;
             // Mapeamento de descrições para siglas
             $mapa_descricoes = [
                 "Fatura" => "FAC",
@@ -197,23 +196,20 @@ include('db.php');
             $data_registro = date('d/m/Y', strtotime($transaction['RegisterDate']));
             
             // Formatar a data de expiração (vencimento)
-            $data_vencimento = date('d/m/Y', strtotime($transaction['ExpirationDate']));
-              // Verificar se há valor em dívida
-            $divida_class = $transaction['DueValue'] != 0 ? 'text-danger' : '';
-              // Criar uma borda entre as linhas com estilo leve
-            echo "<tr class='border-top border-bottom' style='animation-delay: {$delay}ms; background-color: #fff;'>
+            $data_vencimento = date('d/m/Y', strtotime($transaction['ExpirationDate']));            // Verificar se há valor em dívida
+            $divida_class = $transaction['DueValue'] != 0 ? 'text-danger' : '';            // Criar uma borda entre as linhas com estilo leve
+            echo "<tr class='border-top border-bottom' style='background-color: #fff;'>
                 <td>Fatura Nº " . $transaction['SerieId'] . "/" . $transaction['DocNumber'] . "</td>
                 <td>" . $data_registro . "</td>
                 <td>" . number_format($transaction['MovD'], 2, ',', '.') . "</td>
                 <td>" . number_format($transaction['MovC'], 2, ',', '.') . "</td>
-                <td class='text-danger'>-" . number_format(abs($transaction['Total']), 2, ',', '.') . "</td>
+                <td class='text-danger'>-" . number_format(abs($transaction['Total']), 2, ',', '.') . "€</td>
                 <td class='{$divida_class}'>";
-            
-            // Mostra a dívida apenas se não for zero
+              // Mostra a dívida apenas se não for zero
             if ($transaction['DueValue'] != 0) {
-                echo "-" . number_format(abs($transaction['DueValue']), 2, ',', '.');
+                echo "-" . number_format(abs($transaction['DueValue']), 2, ',', '.') . "€";
             } else {
-                echo "0,00";
+                echo "0,00€";
             }
             
             echo "</td>
@@ -242,14 +238,12 @@ include('db.php');
         echo "</div>";
         echo "</div>";        // Fechando a conexão com o banco de dados
         $pdo = null;
-        ?>    
-        
-        <script>
+        ?>        <script>
         // Update the pending amount with the calculated value
         document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('pending-amount').innerHTML = '<?php echo number_format(abs($totalDueValue), 2, ',', '.'); ?>€';
+            document.getElementById('pending-amount').innerHTML = '-<?php echo number_format(abs($totalDueValue), 2, ',', '.'); ?>€';
         });
-        </script>
+    </script>
     </div>
       <!-- jQuery, Popper.js, and Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>

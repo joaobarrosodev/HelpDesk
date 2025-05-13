@@ -8,10 +8,11 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css" rel="stylesheet">
   <!-- Se precisar de fontes adicionais -->
  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet">
- <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+ <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
   <link href="css/style.css" rel="stylesheet">
   <link href="css/account-extract.css" rel="stylesheet">
+  <link href="css/ticket.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.css">
 
       <style>
         /* Add fade-in animation */
@@ -119,11 +120,7 @@
         .card {
             transition: box-shadow 0.3s ease, transform 0.3s ease;
         }
-        
-        .card:hover {
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15)!important;
-        }
-        
+                
         .account-row-animation {
             animation: fadeInRow 0.6s ease-out forwards;
             opacity: 0;
