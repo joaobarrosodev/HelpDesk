@@ -41,13 +41,13 @@
                         <span>Abrir Ticket</span>
                     </a>
                 </li>
-                
-                <li class="nav-item px-2 py-1">
-                    <a href="consultar_tickets.php" id="tickets" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'consultar_tickets.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'consultar_tickets.php' ? 'page' : 'false'; ?>">
+                  <li class="nav-item px-2 py-1">
+                    <a href="meus_tickets.php" id="tickets" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'meus_tickets.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'meus_tickets.php' ? 'page' : 'false'; ?>">
                         <i class="bi bi-ticket-detailed me-3 nav-menu-item" aria-hidden="true"></i> 
-                        <span>Ticket Resolvidos</span>
+                        <span>Meus Tickets</span>
                     </a>
                 </li>
+        
                 
                 <?php if (isset($_SESSION['Grupo']) && $_SESSION['Grupo'] == 'Admin'): ?>
                     <li class="nav-item px-2 py-1">
@@ -270,8 +270,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 element.style.marginLeft = '300px';
                 element.style.width = 'calc(100% - 300px)';
             });
-        }
-    }
+        }    }
 });
-</script>
 </script>
