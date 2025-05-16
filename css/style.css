@@ -1,4 +1,4 @@
- /* Garantir que a página não faça scroll */
+/* Garantir que a página não faça scroll */
 html, body {
     height: 100%;
     margin: 0;
@@ -279,4 +279,64 @@ th.sortable.asc::after {
 
 th.sortable.desc::after {
     opacity: 1;
+}
+
+/* Dashboard Specific Styles */
+.dashboard-card {
+    margin-bottom: 20px;
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease-in-out;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.dashboard-card .card-title {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 1rem;
+}
+
+#categoriaTicketsChart, #prioridadeTicketsChart {
+    max-height: 300px; /* Adjust as needed */
+}
+
+.user-avatar-sm {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    color: white;
+    text-align: center;
+    line-height: 30px;
+    font-weight: bold;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.table th {
+    font-weight: 500; /* Ensure table headers are appropriately styled */
+}
+
+.table .badge {
+    font-size: 0.85em;
+    padding: 0.5em 0.75em;
+}
+
+.card-header h5 {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.progress {
+    height: 20px; /* Consistent height for progress bars */
+    border-radius: 5px;
+}
+
+.progress-bar {
+    font-weight: bold;
 }

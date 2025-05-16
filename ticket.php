@@ -70,7 +70,7 @@ include('conflogin.php');
                     <!-- Upload de Imagem (Drag & Drop) -->
                     <div class="mb-4">
                         <label class="form-label fw-bold">
-                            <i class="bi bi-image me-1"></i> Anexar Imagem:
+                            <i class="bi bi-image me-1"></i> Anexar Imagem do Problema:
                         </label>
                         <div id="dropzone" class="dropzone"></div>
                         <div class="form-text">Arraste uma imagem ou clique para selecionar (opcional)</div>
