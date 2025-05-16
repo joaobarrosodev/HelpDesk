@@ -24,8 +24,7 @@ if (isset($_GET['keyid'])) {
     $stmt->execute();
     $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$ticket) {
-        echo "Ticket não encontrado.";
+    if (!$ticket) {        echo "Ticket não encontrado.";
         exit;
     }
 
@@ -112,8 +111,7 @@ if (isset($_GET['keyid'])) {
                 <th>Colaborador</th>
                 <td><?php echo $ticket['User']; ?></td>
             </tr>
-            <tr>
-                <th>Tempo dispendido</th>
+            <tr>                <th>Tempo despendido</th>
                 <td><?php echo $ticket['Time']; ?></td>
             </tr>
             <tr>

@@ -1,3 +1,11 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logout</title>
+</head>
+<body>
 <?php
 session_start();  // Inicia a sessão
 
@@ -8,3 +16,5 @@ session_destroy();
 header("Location: login.php");
 exit;
 ?>
+</body>
+</html>

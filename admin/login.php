@@ -8,7 +8,7 @@
     <div class="content">
         <div class="login-container">
         <div class="login-form shadow-lg p-3 mb-5 bg-white rounded w-100 mx-auto">
-            <h2 class="fw-bold mb-4 mt-3">Login</h2>
+            <h2 class="fw-bold mb-4 mt-3">Iniciar Sessão</h2>
             <form action="logged.php" method="POST">
 
             <!-- Campo de E-mail -->
@@ -22,7 +22,7 @@
                 <div class="input-group mb-4 w-75 mx-auto d-flex justify-content-center">
 
                     <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
-                    <input type="password" class="form-control" id="password" name="password" placeholder="Digite a sua senha..." required style="background-color: #f0f0f0; border: none;">
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Digite a sua palavra-passe..." required style="background-color: #f0f0f0; border: none;">
                 </div>
 
                 <!-- Botão Para enviar Formulário -->

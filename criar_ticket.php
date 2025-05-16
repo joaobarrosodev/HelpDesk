@@ -46,7 +46,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $stmt->execute();
 
-        echo "<p class='alert alert-success'>Ticket criado com sucesso! Seu KeyId: $novo_keyid</p>";
+        echo "<p class='alert alert-success'>Ticket criado com sucesso! O seu KeyId: $novo_keyid</p>";
         header("Refresh: 2; url=index.php");
         exit;
 
@@ -57,7 +57,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 ?>
 
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-pt">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -68,15 +68,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
     <div class="container mt-5">
-        <h2>Criar Ticket de Suporte</h2>
+    <h2>Criar Pedido de Suporte</h2>
         <form action="criar_ticket.php" method="POST" enctype="multipart/form-data">
-            <div class="mb-3">
-                <label for="nome_computador" class="form-label">Nome do Computador/Utilizador</label>
+            <div class="mb-3">                <label for="nome_computador" class="form-label">Nome do Computador/Utilizador</label>
                 <input type="text" class="form-control" id="nome_computador" name="nome_computador" required>
             </div>
 
-            <div class="mb-3">
-                <label for="descricao_problema" class="form-label">Descrição do Problema</label>
+            <div class="mb-3">                <label for="descricao_problema" class="form-label">Descrição do Problema</label>
                 <textarea class="form-control" id="descricao_problema" name="descricao_problema" rows="4" required></textarea>
             </div>
 

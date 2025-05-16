@@ -98,8 +98,10 @@ if (isset($_GET['keyid'])) {
             </div>
 
             <!-- Botões -->
-            <button type="submit" class="btn btn-success">Salvar Alterações</button>
+            <button type="submit" class="btn btn-success">Guardar Alterações</button>
             <a href="meus_tickets.php" class="btn btn-secondary">Cancelar</a>
         </form>
     </div>
+</body>
+</html>
 

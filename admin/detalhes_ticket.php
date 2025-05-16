@@ -158,7 +158,7 @@ if ($messages) {
         <input type="hidden" name="id" value="<?php echo $ticket['id']; ?>"> 
         <div class="form-group">
             <label for="message"><h5>Enviar nova mensagem:</h5></label>
-            <textarea name="message" class="form-control" placeholder="Escreva aqui a sua Mensagem..." required></textarea><br>
+            <textarea name="message" class="form-control" placeholder="Escreva aqui a sua mensagem..." required></textarea><br>
         </div>
         <button type="submit" class="btn btn-primary btn-block">Enviar Mensagem</button>
     </form>
@@ -171,7 +171,7 @@ if ($messages) {
         Finalizar/Alterar Ticket
     </a>
 </td>
-        <a href="consultar_tickets.php" class="btn btn-secondary mt-3">Voltar para meus tickets</a>
+        <a href="consultar_tickets.php" class="btn btn-secondary mt-3">Voltar para os meus tickets</a>
     </div>
 
     <!-- Inclusão do JS do Bootstrap -->

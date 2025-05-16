@@ -9,9 +9,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $_POST['email'];
     $senha = $_POST['password'];
 
-
-
-
     // Preparar a consulta SQL
     $stmt = $pdo->prepare("select u.id, u.Name, ou.Email, ou.Password
     from users u
@@ -19,7 +16,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->bindParam(':email', $email);
     $stmt->execute();
 
-    // Verificar se o usuário foi encontrado
+    // Verificar se o utilizador foi encontrado
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($usuario && $senha == $usuario['Password']) {
@@ -33,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit;
     } else {
         // Se a autenticação falhar, mostrar mensagem de erro
-        $erro = "E-mail ou senha incorretos.";
+        $erro = "E-mail ou palavra-passe incorretos.";
     }
 }
 ?>
@@ -71,6 +68,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
     </div>
     <!-- Scripts do Bootstrap e JQuery -->
-    <script src="script/script.js"></script>    
+    <script src="script/script.js"></script>
 
 

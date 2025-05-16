@@ -68,7 +68,7 @@ echo "<table class='table table-striped'>
             <th>Tipo de Licença</th>
             <th>Versão/Registo</th>
             <th>Data de Renovação</th>
-            <th>Obs</th>
+            <th>Observações</th>
         </tr>";
 
 foreach ($tickets as $ticket) {

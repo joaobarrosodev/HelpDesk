@@ -8,8 +8,7 @@ include('conflogin.php');
 <body>
 
     <?php include('menu.php'); ?>
-    <div class="content content-area">
-        <h2 class="text-center">Bem-vindo à página principal, <?php echo $_SESSION['Nome']; ?>!</h2>
+    <div class="content content-area">        <h2 class="text-center">Bem-vindo à página principal, <?php echo $_SESSION['Nome']; ?>!</h2>
         <p class="text-center">Conteúdo exclusivo para clientes.</p>
 
         <?php
@@ -22,8 +21,7 @@ include('conflogin.php');
         $stmt->execute();
         $cc = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$cc) {
-            echo "Ticket não encontrado.";
+        if (!$cc) {            echo "Ticket não encontrado.";
             exit;
         }
 

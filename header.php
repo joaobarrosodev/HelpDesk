@@ -73,7 +73,7 @@
 
     <?php else: ?>
         <!-- Se não tiver o Login feito aparece apenas a opção para fazer login -->
-        <a href="login.php" id="login">Login</a>
+        <a href="login.php" id="login">Iniciar Sessão</a>
     <?php endif; ?>
 </div>
 

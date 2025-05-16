@@ -4,7 +4,7 @@ session_start();  // Inicia a sessão
 include('conflogin.php');
 include('db.php');
 
-// Consultar os tickets do usuário logado
+// Consultar os tickets do utilizador autenticado
 $usuario_id = $_SESSION['usuario_id'];
 
 // Recupera o filtro de estado, se existir

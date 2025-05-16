@@ -4,7 +4,7 @@ session_start();  // Inicia a sessão
 include('conflogin.php');
 include('db.php');
 
-// Consultar os tickets do usuário logado (abertos e resolvidos)
+// Consultar os tickets do utilizador autenticado (abertos e resolvidos)
 $usuario_id = $_SESSION['usuario_id'];
 
 // Verifica se existe um filtro de data
@@ -69,8 +69,8 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="container-fluid p-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div class="flex-grow-1">
-                    <h1 class="mb-3 display-5">Meus Tickets</h1>
-                    <p class="">Lista de todos os seus tickets, incluindo tickets em aberto e resolvidos. Use os filtros abaixo para refinar a visualização.</p>
+                    <h1 class="mb-3 display-5">Os Meus Tickets</h1>
+                    <p class="">Lista de todos os seus tickets, incluindo tickets em aberto e resolvidos. Utilize os filtros abaixo para refinar a visualização.</p>
                 </div>
                 <a href="ticket.php" class="btn btn-primary d-flex align-items-center">
                     <i class="bi bi-plus-circle me-2"></i> Abrir Novo Ticket
@@ -86,7 +86,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
                        
                         <div class="col-md-3">
-                            <label for="status" class="form-label">Status</label>
+                            <label for="status" class="form-label">Estado</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="">Todos</option>
                                 <option value="Em Análise" <?php echo $status_filtro == 'Em Análise' ? 'selected' : ''; ?>>Em Análise</option>
@@ -110,12 +110,12 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         
                     
                     <!-- Table -->                    <div class="table-responsive">
-                        <table class="table align-middle">                            <thead class="table-dark">                                <tr>
+                        <table class="table align-middle">                            <thead class="table-dark">                <tr>
                                     <th scope="col" class="sortable">Título do Ticket</th>
                                     <th scope="col" class="sortable">Assunto</th>
                                     <th scope="col" class="sortable">Atualizado</th>
                                     <th scope="col" class="sortable">Criado</th>
-                                    <th scope="col" class="sortable">Status</th>
+                                    <th scope="col" class="sortable">Estado</th>
                                     <th scope="col" class="sortable">Prioridade</th>
                                     <th scope="col" class="sortable">Atribuído a</th>
                                 </tr>

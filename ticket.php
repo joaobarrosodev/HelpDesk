@@ -52,12 +52,12 @@ include('conflogin.php');
                             <div class="priority-item priority-low" data-value="Baixa" onclick="selectPriority(this, 'Baixa')">
                                 <i class="bi bi-flag priority-icon" style="color: #27ae60;"></i>
                                 <span>Baixa</span>
-                                <small class="d-block text-muted">Posso continuar trabalhando</small>
+                                <small class="d-block text-muted">Posso continuar a trabalhar</small>
                             </div>
                             <div class="priority-item priority-normal selected" data-value="Normal" onclick="selectPriority(this, 'Normal')">
                                 <i class="bi bi-flag-fill priority-icon" style="color: #f39c12;"></i>
                                 <span>Normal</span>
-                                <small class="d-block text-muted">Dificulta meu trabalho</small>
+                                <small class="d-block text-muted">Dificulta o meu trabalho</small>
                             </div>
                             <div class="priority-item priority-high" data-value="Alta" onclick="selectPriority(this, 'Alta')">
                                 <i class="bi bi-exclamation-triangle priority-icon" style="color: #e74c3c;"></i>
