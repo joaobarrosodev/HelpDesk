@@ -283,25 +283,25 @@ th.sortable.desc::after {
 
 /* Dashboard Specific Styles */
 .dashboard-card {
-    margin-bottom: 20px;
-    border: none;
-    border-radius: 10px;
-    background-color: #f8f9fa;
-    padding: 20px;
-    box-shadow: none;
+    margin-bottom: 1.5rem; /* Adjusted from 20px */
+    border: 1px solid #e9ecef; /* Softer border */
+    border-radius: .75rem; /* Adjusted from 10px */
+    padding: 1.5rem; /* Adjusted from 20px */
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); /* Softer shadow */
     transition: all 0.3s ease-in-out;
+    background-color: #fff; /* Ensure white background */
 }
 
 .dashboard-card:hover {
-    transform: none;
-    box-shadow: none;
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
 }
 
 .dashboard-card .card-title {
-    font-weight: 700;
-    color: #333;
+    font-weight: 600; /* Slightly bolder */
+    color: #343a40; /* Darker color */
     margin-bottom: 1rem;
-    font-size: 14px;
+    font-size: 1rem; /* Adjusted from 14px */
 }
 
 .dashboard-header {
@@ -318,8 +318,13 @@ th.sortable.desc::after {
 }
 
 #categoriaTicketsChart, #prioridadeTicketsChart {
-    max-height: 250px;
+    max-height: 220px; /* Adjusted for new card padding */
     width: 100% !important;
+}
+
+.chart-container {
+    position: relative;
+    height: 180px; /* Fixed height for chart containers */
 }
 
 /* Styling for client evaluation section */
@@ -375,6 +380,48 @@ th.sortable.desc::after {
     background-color: #ffc107 !important;
 }
 
+/* Styling for client evaluation section */
+.evaluation-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem; /* Adjusted spacing */
+}
+
+.evaluation-item .icon {
+    font-size: 1.5rem; /* Larger icons */
+    margin-right: 1rem;
+    width: 30px; /* Fixed width for icon container */
+    text-align: center;
+}
+
+.evaluation-item .icon-positive {
+    color: #28a745;
+}
+
+.evaluation-item .icon-negative {
+    color: #dc3545;
+}
+
+.evaluation-item .icon-neutral {
+    color: #ffc107;
+}
+
+.evaluation-item .details {
+    flex-grow: 1;
+}
+
+.evaluation-item .label-percent {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.875rem; /* 14px */
+    color: #495057; /* Subtler text color */
+    margin-bottom: 0.25rem;
+}
+
+.evaluation-item .label-percent strong {
+    color: #212529; /* Darker percentage text */
+}
+
 /* Style for response time display */
 .tempo-resposta {
     display: flex;
@@ -392,6 +439,19 @@ th.sortable.desc::after {
     color: #666;
 }
 
+.tempo-medio-valor {
+    font-size: 2.5rem; /* Larger font for time */
+    font-weight: 700; /* Bolder */
+    color: #007bff; /* Primary color for emphasis */
+}
+
+.tempo-medio-unidade {
+    font-size: 1rem;
+    color: #6c757d; /* Muted color for unit */
+    font-weight: 400;
+    margin-left: 0.25rem;
+}
+
 /* Button style */
 .btn-abrir-ticket {
     background-color: #0d6efd;
@@ -405,6 +465,33 @@ th.sortable.desc::after {
 .btn-abrir-ticket:hover {
     background-color: #0b5ed7;
     color: white;
+}
+
+/* Button style for Abrir Novo Ticket */
+.btn-primary {
+    background-color: #e7f3ff; /* Light blue background */
+    color: #007bff; /* Primary blue text */
+    border: 1px solid #007bff; /* Primary blue border */
+    border-radius: .25rem;
+    padding: .5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    text-wrap: nowrap;
+}
+
+.btn-primary:hover {
+    background-color: #007bff;
+    color: #fff;
+    border-color: #007bff;
+}
+
+.btn-primary i {
+    transition: transform 0.2s ease-in-out;
+}
+
+.btn-primary:hover i {
+    transform: rotate(90deg);
 }
 
 /* Priority bar styles */

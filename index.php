@@ -33,236 +33,199 @@ include('conflogin.php');
             $cor = 'bg-success'; // Se houver crédito, fica verde
         }
 
-        // Formatar o número corretamente, SEM o sinal negativo na exibição
-        
-
-        // Consultar número de tickets abertos
         $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields WHERE (status = 'Em Análise' OR status = 'Em Resolução' OR status = 'Aguarda Resposta Cliente') AND Entity = :usuario_id";
         $stmt_tickets = $pdo->prepare($sql_tickets);
         $stmt_tickets->bindParam(':usuario_id', $_SESSION['usuario_id']);
         $stmt_tickets->execute();
         $ticket_count = $stmt_tickets->fetchColumn();
 
-        // Fetch data for "Categoria dos Tickets"
-        // $sql_categorias = "SELECT categoria, COUNT(*) as count FROM info_xdfree01_extrafields WHERE Entity = :usuario_id GROUP BY categoria";
-        // $stmt_categorias = $pdo->prepare($sql_categorias);
-        // $stmt_categorias->bindParam(':usuario_id', $_SESSION['usuario_id']);
-        // $stmt_categorias->execute();
-        // $categorias_data = $stmt_categorias->fetchAll(PDO::FETCH_ASSOC);
-        // $categoria_labels = [];
-        // $categoria_counts = [];
-        // foreach ($categorias_data as $row) {
-        //     $categoria_labels[] = $row['categoria']; // Assuming 'categoria' is the column name
-        //     $categoria_counts[] = $row['count'];
-        // }
-        // Hardcoded data for Categoria dos Tickets
+
         $categoria_labels = ['E-mail', 'XD', 'Impressoras', 'Office'];
         $categoria_counts = [12, 19, 3, 5];
 
 
-        // Fetch data for "Prioridade dos Tickets"
-        // Assuming 'prioridade' is the column name in info_xdfree01_extrafields
-        // $sql_prioridades = "SELECT prioridade, COUNT(*) as count FROM info_xdfree01_extrafields WHERE Entity = :usuario_id GROUP BY prioridade ORDER BY CASE prioridade WHEN 'Baixo' THEN 1 WHEN 'Médio' THEN 2 WHEN 'Alto' THEN 3 ELSE 4 END";
-        // $stmt_prioridades = $pdo->prepare($sql_prioridades);
-        // $stmt_prioridades->bindParam(':usuario_id', $_SESSION['usuario_id']);
-        // $stmt_prioridades->execute();
-        // $prioridades_data = $stmt_prioridades->fetchAll(PDO::FETCH_ASSOC);
-        // $prioridade_labels = [];
-        // $prioridade_counts = [];
-        // foreach ($prioridades_data as $row) {
-        //     $prioridade_labels[] = $row['prioridade'];
-        //     $prioridade_counts[] = $row['count'];
-        // }
-        // Hardcoded data for Prioridade dos Tickets
+      
         $prioridade_labels = ['Baixo', 'Médio', 'Alto'];
         $prioridade_counts = [71, 22, 7];
         
-        // Fetch data for "ISSUE" table (recent 5 tickets for example)
-        // Joined with xdfree01 to get user names for reporter and assignee if possible
-        // Adjust column names like 'requestedby', 'assignedto', 'creationdate', 'lastupdate' as per your xdfree01 and info_xdfree01_extrafields table structure
-        // $sql_issues = "SELECT 
-        //                 t.id, 
-        //                 t.assunto as summary, 
-        //                 COALESCE(assignee_user.Nome, 'N/A') as assignee_name, 
-        //                 COALESCE(reporter_user.Nome, 'N/A') as reporter_name, 
-        //                 t.status, 
-        //                 DATE_FORMAT(t.data_criacao, '%d/%m/%y') as created, 
-        //                 DATE_FORMAT(t.data_atualizacao, '%d/%m/%y') as updated,
-        //                 t.categoria as category_raw 
-        //                FROM info_xdfree01_extrafields t
-        //                LEFT JOIN xdfree01 reporter_user ON t.requestedby = reporter_user.keyid -- Assuming requestedby stores user ID
-        //                LEFT JOIN xdfree01 assignee_user ON t.assignedto = assignee_user.keyid -- Assuming assignedto stores user ID
-        //                WHERE t.Entity = :usuario_id 
-        //                ORDER BY t.data_criacao DESC 
-        //                LIMIT 5"; // Get 5 most recent tickets
-        // $stmt_issues = $pdo->prepare($sql_issues);
-        // $stmt_issues->bindParam(':usuario_id', $_SESSION['usuario_id']);
-        // $stmt_issues->execute();
-        // $issues = $stmt_issues->fetchAll(PDO::FETCH_ASSOC);
+        // Data for Avaliação dos Clientes
+        $respostas_recebidas = 156;
+        $positive_percentage = 72;
+        $negative_percentage = 4;
+        $neutral_percentage = 24;
 
+        // Data for Tempo Médio de Resposta
+        $tempo_medio_resposta = "4:34";
         ?>
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="mb-3 display-5">Bem Vindo, <?php echo htmlspecialchars($_SESSION['Nome']); ?></h4>
+                <h1 class="mb-3 display-5">Bem Vindo, <?php echo htmlspecialchars($_SESSION['Nome']); ?></h1>
                 <p class="text-muted m-0 w-100">Aqui pode acompanhar todos os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real. Utilize esta área para monitorizar o progresso das suas solicitações e garantir um acompanhamento eficaz.</p>
             </div>
-            <a href="ticket.php" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Abrir Novo Ticket</a>
+            <a href="ticket.php" class="btn btn-primary btn-primary"><i class="bi bi-plus-circle me-2"></i>Abrir Novo Ticket</a>
         </div>
 
         <!-- Dashboard Cards -->
-        <div class="row mb-4">
-            <div class="col-md-6 col-lg-3 mb-4 mb-lg-0">
+        <div class="row">
+            <div class="col-xl-3 col-md-6 mb-4">
                 <div class="card dashboard-card h-100">
                     <div class="card-body d-flex flex-column">
                         <h5 class="card-title">Categoria dos Tickets</h5>
-                        <div class="mt-auto">
+                        <div class="mt-auto chart-container">
                             <canvas id="categoriaTicketsChart"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-3 mb-4 mb-lg-0">
+            <div class="col-xl-3 col-md-6 mb-4">
                 <div class="card dashboard-card h-100">
                     <div class="card-body d-flex flex-column">
                         <h5 class="card-title">Prioridade dos Tickets</h5>
-                        <div class="mt-auto">
-                            <canvas id="prioridadeTicketsChart" height="250"></canvas> 
+                        <div class="mt-auto chart-container">
+                            <canvas id="prioridadeTicketsChart"></canvas> 
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-3 mb-4 mb-md-0">
+            <div class="col-xl-3 col-md-6 mb-4">
                 <div class="card dashboard-card h-100">
                     <div class="card-body">
                         <h5 class="card-title">Avaliação dos Clientes</h5>
-                        <p>Respostas Recebidas: <strong>156 Clientes</strong></p>
-                        <div class="d-flex align-items-center mb-1">
-                            <span class="me-2" style="font-size: 1.5rem;">👍</span>
-                            <div class="flex-grow-1">
-                                <span>Positive</span>
-                                <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: 72%;" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100">72%</div>
-                                </div>
+                        <p class="text-muted mb-2 card-subtitle">Respostas Recebidas: <strong><?php echo $respostas_recebidas; ?> Clientes</strong></p>
+
+                        <div class="evaluation-item">
+                            <div class="icon icon-positive"><i class="bi bi-hand-thumbs-up-fill"></i></div>
+                            <div class="details">
+                                <div class="label-percent"><span>Positive</span><span><strong><?php echo $positive_percentage; ?>%</strong></span></div>
+                                <div class="progress" style="height: 6px;"><div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $positive_percentage; ?>%;" aria-valuenow="<?php echo $positive_percentage; ?>" aria-valuemin="0" aria-valuemax="100"></div></div>
                             </div>
                         </div>
-                        <div class="d-flex align-items-center mb-1">
-                            <span class="me-2" style="font-size: 1.5rem;">👎</span>
-                            <div class="flex-grow-1">
-                                <span>Negative</span>
-                                <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar bg-danger" role="progressbar" style="width: 4%;" aria-valuenow="4" aria-valuemin="0" aria-valuemax="100">4%</div>
-                                </div>
+                        <div class="evaluation-item mt-2">
+                            <div class="icon icon-negative"><i class="bi bi-hand-thumbs-down-fill"></i></div>
+                            <div class="details">
+                                <div class="label-percent"><span>Negative</span><span><strong><?php echo $negative_percentage; ?>%</strong></span></div>
+                                <div class="progress" style="height: 6px;"><div class="progress-bar bg-danger" role="progressbar" style="width: <?php echo $negative_percentage; ?>%;" aria-valuenow="<?php echo $negative_percentage; ?>" aria-valuemin="0" aria-valuemax="100"></div></div>
                             </div>
                         </div>
-                        <div class="d-flex align-items-center">
-                            <span class="me-2" style="font-size: 1.5rem;">✋</span>
-                            <div class="flex-grow-1">
-                                <span>Neutral</span>
-                                <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar bg-warning" role="progressbar" style="width: 24%;" aria-valuenow="24" aria-valuemin="0" aria-valuemax="100">24%</div>
-                                </div>
+                        <div class="evaluation-item mt-2">
+                            <div class="icon icon-neutral"><i class="bi bi-emoji-neutral-fill"></i></div>
+                            <div class="details">
+                                <div class="label-percent"><span>Neutral</span><span><strong><?php echo $neutral_percentage; ?>%</strong></span></div>
+                                <div class="progress" style="height: 6px;"><div class="progress-bar bg-warning" role="progressbar" style="width: <?php echo $neutral_percentage; ?>%;" aria-valuenow="<?php echo $neutral_percentage; ?>" aria-valuemin="0" aria-valuemax="100"></div></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-3">
+            <div class="col-xl-3 col-md-6 mb-4">
                  <div class="card dashboard-card h-100">
-                    <div class="card-body text-center d-flex flex-column justify-content-center">
-                        <h5 class="card-title">Tempo Médio de Resposta</h5>
-                        <p class="display-4 fw-bold m-0" style="color: #434A54;">4:34 <span style="font-size: 1rem; color: #AAB8C2;">min</span></p>
+                    <div class="card-body text-center d-flex flex-column justify-content-center align-items-center">
+                        <h5 class="card-title mb-3">Tempo Médio de Resposta</h5>
+                        <p class="display-4 fw-bold m-0 tempo-medio-valor"><?php echo $tempo_medio_resposta; ?> <span class="tempo-medio-unidade">min</span></p>
                     </div>
                 </div>
             </div>
-            <!-- Existing Cards: Conta Corrente and Tickets Abertos - REMOVED -->
         </div>
+        </div> <!-- This closes the div.content -->
 
-        <!-- ISSUE Table -->
-        <!-- 
-        <div class="card dashboard-card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="m-0">ISSUE</h5>
-                <div>
-                    <button class="btn btn-sm btn-outline-secondary me-2"><i class="bi bi-filter"></i> Filter</button>
-                    <input type="text" class="form-control-sm d-inline-block" style="width: 200px;" value="Jan 01, 2025 - May 13, 2025" readonly> 
-                    <a href="consultar_tickets.php" class="btn btn-sm btn-primary">View All <i class="bi bi-arrow-right-circle"></i></a>
-                </div>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover m-0">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;"><input type="checkbox" class="form-check-input"></th>
-                                <th>Id Number</th>
-                                <th>Summary</th>
-                                <th>Assignee</th>
-                                <th>Reporter</th>
-                                <th>Status</th>
-                                <th>Created</th>
-                                <th>Updated</th>
-                                <th style="width: 5%;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($issues)): ?>
-                                <tr><td colspan="9" class="text-center">Nenhum ticket encontrado.</td></tr>
-                            <?php else: ?>
-                                <?php foreach ($issues as $issue): ?>
-                                    <tr>
-                                        <td><input type="checkbox" class="form-check-input"></td>
-                                        <td><?php echo htmlspecialchars($issue['id']); ?></td>
-                                        <td><?php echo htmlspecialchars(substr($issue['summary'], 0, 30)) . (strlen($issue['summary']) > 30 ? '...' : ''); ?></td>
-                                        <td>
-                                            
-                                            <span class="user-avatar-sm me-2" style="background-color: #<?php echo substr(md5($issue['assignee_name']), 0, 6); ?>;">
-                                                <?php echo strtoupper(substr($issue['assignee_name'], 0, 1)); ?>
-                                            </span>
-                                            <?php echo htmlspecialchars($issue['assignee_name']); ?>
-                                        </td>
-                                        <td>
-                                            <span class="user-avatar-sm me-2" style="background-color: #<?php echo substr(md5($issue['reporter_name']), 0, 6); ?>;">
-                                                <?php echo strtoupper(substr($issue['reporter_name'], 0, 1)); ?>
-                                            </span>
-                                            <?php echo htmlspecialchars($issue['reporter_name']); ?>
-                                        </td>
-                                        <td>
-                                            <?php 
-                                            $status_class = 'bg-secondary'; // Default
-                                            if ($issue['status'] == 'Em Análise' || $issue['status'] == 'Em Resolução') $status_class = 'bg-warning text-dark';
-                                            if ($issue['status'] == 'IN PROGRESS') $status_class = 'bg-warning text-dark'; // from screenshot
-                                            if ($issue['status'] == 'Concluído' || $issue['status'] == 'Resolvido') $status_class = 'bg-success';
-                                            if ($issue['status'] == 'SOLVED') $status_class = 'bg-success'; // from screenshot
-                                            if ($issue['status'] == 'DECLINED') $status_class = 'bg-danger'; // from screenshot
-                                            if ($issue['status'] == 'Fechado') $status_class = 'bg-danger';
-                                            ?>
-                                            <span class="badge <?php echo $status_class; ?>"><?php echo htmlspecialchars($issue['status']); ?></span>
-                                        </td>
-                                        <td><?php echo htmlspecialchars($issue['created']); ?></td>
-                                        <td><?php echo htmlspecialchars($issue['updated']); ?></td>
-                                        <td><a href="#" class="text-muted"><i class="bi bi-three-dots-vertical"></i></a></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <!-- ISSUE Section - SKIPPED FOR NOW as per user request -->
+        <?php /*
+        <div class="card mt-4">
+            <div class="card-header issue-table-header d-flex justify-content-between align-items-center py-3">
+        // ... (rest of the ISSUE section HTML commented out or removed)
         </div>
-        -->
+        */ ?>
 
-    </div>  
+    </div> <!-- This was an extra closing div, ensure it matches your layout or remove if not needed -->
 
-    <!-- Scripts do Bootstrap e JQuery -->
-    <script src="script/script.js"></script>    
-    <script src="js/dashboard-charts.js"></script> <!-- Added dashboard charts script -->
+
     <script>
-        // Pass PHP data to JavaScript for charts
-        const categoriaLabels = <?php echo json_encode($categoria_labels); ?>;
-        const categoriaCounts = <?php echo json_encode($categoria_counts); ?>;
-        const prioridadeLabels = <?php echo json_encode($prioridade_labels); ?>;
-        const prioridadeCounts = <?php echo json_encode($prioridade_counts); ?>;
+        document.addEventListener('DOMContentLoaded', function () {
+            // Categoria dos Tickets Chart (Doughnut)
+            const categoriaCtx = document.getElementById('categoriaTicketsChart').getContext('2d');
+            new Chart(categoriaCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: <?php echo json_encode($categoria_labels); ?>,
+                    datasets: [{
+                        label: 'Categoria dos Tickets',
+                        data: <?php echo json_encode($categoria_counts); ?>,
+                        backgroundColor: [
+                            '#28a745', // E-mail (Green)
+                            '#007bff', // XD (Blue)
+                            '#ffc107', // Impressoras (Yellow)
+                            '#dc3545'  // Office (Red)
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Prioridade dos Tickets Chart (Horizontal Bar)
+            const prioridadeCtx = document.getElementById('prioridadeTicketsChart').getContext('2d');
+            new Chart(prioridadeCtx, {
+                type: 'bar',
+                data: {
+                    labels: <?php echo json_encode($prioridade_labels); ?>,
+                    datasets: [{
+                        label: 'Prioridade',
+                        data: <?php echo json_encode($prioridade_counts); ?>,
+                        backgroundColor: [
+                            '#28a745', // Baixo
+                            '#ffc107', // Médio
+                            '#dc3545'  // Alto
+                        ],
+                        borderColor: [
+                            '#28a745',
+                            '#ffc107',
+                            '#dc3545'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + "%"
+                                }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false // Hide legend for this chart as per image
+                        }
+                    }
+                }
+            });
+        });
     </script>
 </body>
 </html>

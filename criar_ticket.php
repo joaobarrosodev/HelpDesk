@@ -94,7 +94,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <input type="hidden" name="imagem" id="imagem_path">
             </div>
 
-            <button type="submit" class="btn btn-primary">Criar Ticket</button>
+            <button type="submit" class="btn btn-success">Criar Ticket</button>
         </form>
     </div>
 

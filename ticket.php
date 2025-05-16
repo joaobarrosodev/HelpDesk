@@ -78,7 +78,7 @@ include('conflogin.php');
 
                     <!-- Botão de envio -->
                     <div class="text-end mt-4">
-                        <button type="submit" class="btn btn-primary btn-lg submit-btn">
+                        <button type="submit" class="btn btn-success submit-btn">
                             <i class="bi bi-send me-2"></i>Criar Ticket
                         </button>
                     </div>
