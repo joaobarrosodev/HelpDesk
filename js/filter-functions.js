@@ -161,8 +161,6 @@ function clearAllFilters() {
   // Restaura o texto do intervalo de datas
   document.getElementById('date-range-text').textContent = 'Todos os registros';
   
-  // Esconde o badge de filtros ativos
-  document.getElementById('filter-badge').style.display = 'none';
 }
 
 /**

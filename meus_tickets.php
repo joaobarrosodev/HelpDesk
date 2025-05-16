@@ -104,7 +104,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </select>
                         </div>
                         <div class="col-md-1 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+                            <button type="submit" class="btn btn-dark w-100">Filtrar</button>
                         </div>
                     </form>
                         

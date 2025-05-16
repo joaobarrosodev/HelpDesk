@@ -286,23 +286,151 @@ th.sortable.desc::after {
     margin-bottom: 20px;
     border: none;
     border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    background-color: #f8f9fa;
+    padding: 20px;
+    box-shadow: none;
     transition: all 0.3s ease-in-out;
 }
 
 .dashboard-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transform: none;
+    box-shadow: none;
 }
 
 .dashboard-card .card-title {
-    font-weight: 500;
-    color: #495057;
+    font-weight: 700;
+    color: #333;
     margin-bottom: 1rem;
+    font-size: 14px;
+}
+
+.dashboard-header {
+    color: #333;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.dashboard-subtext {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 30px;
 }
 
 #categoriaTicketsChart, #prioridadeTicketsChart {
-    max-height: 300px; /* Adjust as needed */
+    max-height: 250px;
+    width: 100% !important;
+}
+
+/* Styling for client evaluation section */
+.rating-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.rating-icon {
+    font-size: 20px;
+    width: 30px;
+    text-align: center;
+    margin-right: 10px;
+}
+
+.rating-bar {
+    flex-grow: 1;
+}
+
+.rating-label {
+    min-width: 60px;
+    margin-right: 10px;
+}
+
+.rating-value {
+    min-width: 40px;
+    text-align: right;
+    font-weight: bold;
+}
+
+/* Progress bar styles */
+.progress {
+    height: 10px;
+    border-radius: 5px;
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    font-weight: bold;
+    font-size: 0;  /* Hide text inside progress bar */
+}
+
+.progress-bar.bg-success {
+    background-color: #28a745 !important;
+}
+
+.progress-bar.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+.progress-bar.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+/* Style for response time display */
+.tempo-resposta {
+    display: flex;
+    align-items: baseline;
+}
+
+.tempo-valor {
+    font-size: 18px;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.tempo-unidade {
+    font-size: 14px;
+    color: #666;
+}
+
+/* Button style */
+.btn-abrir-ticket {
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 15px;
+    font-size: 14px;
+}
+
+.btn-abrir-ticket:hover {
+    background-color: #0b5ed7;
+    color: white;
+}
+
+/* Priority bar styles */
+.prioridade-container {
+    margin-bottom: 10px;
+}
+
+.prioridade-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.prioridade-nome {
+    font-size: 14px;
+}
+
+.prioridade-valor {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.prioridade-barra {
+    height: 20px;
+    background-color: #333;
+    border-radius: 4px;
 }
 
 .user-avatar-sm {

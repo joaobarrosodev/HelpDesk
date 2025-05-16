@@ -48,7 +48,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <option value="Concluído" <?php echo ($estado_filtro == 'Concluído') ? 'selected' : ''; ?>>Concluído</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-primary mb-3">Filtrar</button>
+            <button type="submit" class="btn btn-dark mb-3">Filtrar</button>
         </form>
 
         <?php if (count($tickets) > 0): ?>

@@ -78,17 +78,13 @@ include('db.php');
                         </div>
                         <div class="col-md-2 d-flex align-items-end">
                             <div class="d-flex gap-2 w-100">
-                                <button type="button" class="btn btn-primary" onclick="filterTableByAll()">Filtrar</button>
+                                <button type="button" class="btn btn-dark" onclick="filterTableByAll()">Filtrar</button>
                                 <button type="button" class="btn btn-outline-danger" onclick="clearAllFilters()">
                                     <i class="bi bi-x-circle"></i> Limpar
                                 </button>
                             </div>
                         </div>
                     </form>
-
-                    <!-- Indicador de filtros ativos -->
-                    <div id="filter-badge" class="badge bg-primary me-2 fs-6 mb-3" style="display: none;">Filtros Ativos</div>
-
            
 <?php
         // Consulta SQL
@@ -271,10 +267,7 @@ include('db.php');
                 rows[i].style.display = '';
                 rows[i].classList.remove('filtered-row');
             }
-            
-            // Esconde o badge de filtros ativos
-            document.getElementById('filter-badge').style.display = 'none';
-            
+         
             // Configura a data padrão inicial como primeiro dia do mês atual
             const today = new Date();
             const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -309,9 +302,7 @@ include('db.php');
                 endDateObj = new Date(endDate);
             }
             
-            // Mostra o badge de filtros ativos
-            document.getElementById('filter-badge').style.display = 'inline-block';
-            
+      
             // Itera pelas linhas da tabela (começando em 1 para pular o cabeçalho)
             for (let i = 1; i < rows.length; i++) {
                 let showRow = true; // Por padrão, mostra a linha

@@ -8,7 +8,7 @@ include('conflogin.php');
 <body>
 
     <?php include('menu.php'); ?>
-    <div class="content content-area">        
+    <div class="content p-5 content-area">        
         <?php
         include('db.php');
 
@@ -23,7 +23,7 @@ include('conflogin.php');
             exit;
         }
 
-        echo "<p style='font-weight: bold;'> Informações Gerais da Empresa:</p>";
+
         $valor = $cc['Balance'];
         $valor_formatado = number_format(abs($valor), 2, ',', '.');
         // Corrigindo a lógica das cores:
@@ -104,32 +104,36 @@ include('conflogin.php');
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h4 class="m-0">Bem Vindo, <?php echo htmlspecialchars($_SESSION['Nome']); ?></h4>
-                <p class="text-muted m-0">Aqui pode acompanhar todos os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real. Utilize esta área para monitorizar o progresso das suas solicitações e garantir um acompanhamento eficaz.</p>
+                <h1 class="mb-3 display-5">Bem Vindo, <?php echo htmlspecialchars($_SESSION['Nome']); ?></h4>
+                <p class="text-muted m-0 w-100">Aqui pode acompanhar todos os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real. Utilize esta área para monitorizar o progresso das suas solicitações e garantir um acompanhamento eficaz.</p>
             </div>
             <a href="ticket.php" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Abrir Novo Ticket</a>
         </div>
 
         <!-- Dashboard Cards -->
         <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card dashboard-card">
-                    <div class="card-body">
+            <div class="col-md-6 col-lg-3 mb-4 mb-lg-0">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body d-flex flex-column">
                         <h5 class="card-title">Categoria dos Tickets</h5>
-                        <canvas id="categoriaTicketsChart"></canvas>
+                        <div class="mt-auto">
+                            <canvas id="categoriaTicketsChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card dashboard-card">
-                    <div class="card-body">
+            <div class="col-md-6 col-lg-3 mb-4 mb-lg-0">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body d-flex flex-column">
                         <h5 class="card-title">Prioridade dos Tickets</h5>
-                        <canvas id="prioridadeTicketsChart" height="175"></canvas> <!-- Adjusted height for bar chart -->
+                        <div class="mt-auto">
+                            <canvas id="prioridadeTicketsChart" height="250"></canvas> 
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card dashboard-card">
+            <div class="col-md-6 col-lg-3 mb-4 mb-md-0">
+                <div class="card dashboard-card h-100">
                     <div class="card-body">
                         <h5 class="card-title">Avaliação dos Clientes</h5>
                         <p>Respostas Recebidas: <strong>156 Clientes</strong></p>
@@ -163,11 +167,9 @@ include('conflogin.php');
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="row mb-4">
-             <div class="col-md-4">
-                 <div class="card dashboard-card">
-                    <div class="card-body text-center">
+            <div class="col-md-6 col-lg-3">
+                 <div class="card dashboard-card h-100">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
                         <h5 class="card-title">Tempo Médio de Resposta</h5>
                         <p class="display-4 fw-bold m-0" style="color: #434A54;">4:34 <span style="font-size: 1rem; color: #AAB8C2;">min</span></p>
                     </div>
@@ -175,7 +177,6 @@ include('conflogin.php');
             </div>
             <!-- Existing Cards: Conta Corrente and Tickets Abertos - REMOVED -->
         </div>
-
 
         <!-- ISSUE Table -->
         <!-- 
