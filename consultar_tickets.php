@@ -55,7 +55,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <html lang="pt-pt">
 <?php include('head.php'); ?>
 <body>
-    <?php include('header.php'); ?>
+    <?php include('menu.php'); ?>
     <div class="content">
         <h2>Meus Tickets</h2>
 

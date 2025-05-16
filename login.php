@@ -1,36 +1,36 @@
 <!DOCTYPE html>
 <html lang="pt-pt">
 <?php include('head.php'); ?>
+
 <body>
 
   <!-- Conteúdo da página -->
-    <?php include('header.php'); ?>
-    <div class="content">
-        <div class="login-container">
-        <div class="login-form shadow-lg p-3 mb-5 bg-white rounded w-100 mx-auto">
-            <h2 class="fw-bold mb-4 mt-3">Login</h2>
-            <form action="logged.php" method="POST">
+    <section class="w-100 h-100"
 
-            <!-- Campo de E-mail -->
-            <div class="input-group mb-4 w-75 mx-auto d-flex justify-content-center">
+    style="background: #55A0BF;">
+        <div class="container d-flex justify-content-center align-items-center h-100">
+                <div class="col-4 p-5 bg-white rounded flex-column justify-content-center align-items-center fade-in box-shadow">
+                    <h2 class="fw-bold mb-4 mt-4 text-center">Bem Vindo de Volta!</h2>
+                    <form action="logged.php" method="POST">
 
-                <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
-                <input type="email" class="form-control" id="email" name="email" placeholder="Digite o seu e-mail..." required style="background-color: #f0f0f0; border: none;">
-            </div>
+                    <!-- Campo de E-mail -->
+                    <div class="input-group mb-4 w-100  d-flex justify-content-center flex-column">
+                        <label for="email" class="mb-1">Email:</label>
+                        <input type="email" class="form-control w-100 rounded" id="email" name="email" placeholder="example@domain.com">
+                    </div>
 
-                <!-- Campo de Senha -->
-                <div class="input-group mb-4 w-75 mx-auto d-flex justify-content-center">
+                        <!-- Campo de Palavra-Passe -->
+                        <div class="input-group mb-4 w-100 d-flex justify-content-center flex-column">
+                            <label for="password" class="mb-1">Palavra-Passe:</label>
+                            <input type="password" class="form-control w-100 rounded" id="password" name="password" placeholder="********" >
+                        </div>
 
-                    <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
-                    <input type="password" class="form-control" id="password" name="password" placeholder="Digite a sua senha..." required style="background-color: #f0f0f0; border: none;">
+                        <!-- Botão Para enviar Formulário -->
+                        <button type="submit" class="btn btn-primary mb-4 w-75 mx-auto d-flex justify-content-center">Iniciar Sessão</button>
+                    </form>
                 </div>
-
-                <!-- Botão Para enviar Formulário -->
-                <button type="submit" class="btn btn-primary mb-4 w-75 mx-auto d-flex justify-content-center">Entrar</button>
-            </form>
         </div>
-    </div>
-    </div>
+</section>
     <!-- Scripts do Bootstrap e JQuery -->
     <script src="script/script.js"></script>    
 </body>
