@@ -24,15 +24,16 @@ $sql = "SELECT
             DATE_FORMAT(i.CreationDate, '%d/%m/%Y') as criado,
             i.Status as status,
             i.Priority as prioridade,
-            '1' as nivel, -- Valor padrão já que i.Level não existe
             u.Name as atribuido_a,
             (SELECT oee.Name FROM comments_xdfree01_extrafields c JOIN online_entity_extrafields oee ON c.user = oee.email WHERE c.XDFree01_KeyID = t.KeyId ORDER BY c.Date DESC LIMIT 1) as LastCommentUser
         FROM 
             xdfree01 t
-        JOIN 
-            info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
         LEFT JOIN 
-            users u ON i.AttUser = u.id
+            info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
+            LEFT JOIN 
+            internal_xdfree01_extrafields ie ON t.KeyId = ie.XDFree01_KeyID
+        LEFT JOIN 
+            users u ON ie.User = u.id
         WHERE 
             i.Entity = :usuario_id";
 

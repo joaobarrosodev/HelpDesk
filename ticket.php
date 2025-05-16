@@ -20,14 +20,23 @@ include('conflogin.php');
                     <div class="row">
                         <!-- Coluna Esquerda: Assunto e Descrição -->
                         <div class="col-lg-6">
-                            <!-- Nome do Computador/de -->
+                            <!-- Assunto -->
                             <div class="mb-4">
                                 <label for="nome_computador" class="form-label fw-bold">
                                     Assunto:
                                 </label>
-                                <input type="text" class="form-control" id="nome_computador" name="nome_computador" 
-                                      placeholder="Descreva o problema" maxlength="50" required>
-                                <div class="form-text">Um título claro e conciso (máx. 50 caracteres)</div>
+                                <select class="form-select" id="nome_computador" name="nome_computador" required>
+                                    <option value="" disabled selected>Selecione um assunto</option>
+                                    <option value="xd">XD</option>
+                                    <option value="sage">Sage</option>
+                                    <option value="office">Office</option>
+                                    <option value="email">Email</option>
+                                    <option value="site">Site</option>
+                                    <option value="computador">Computador</option>
+                                    <option value="impressoras">Impressoras</option>
+                                    <option value="outros">Outros</option>
+                                </select>
+                                <div class="form-text">Selecione o assunto principal do seu problema</div>
                             </div>
 
                             <!-- Descrição do problema -->
