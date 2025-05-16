@@ -58,10 +58,10 @@ include('conflogin.php');
         $tempo_medio_resposta = "4:34";
         ?>
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
             <div>
                 <h1 class="mb-3 display-5">Bem Vindo, <?php echo htmlspecialchars($_SESSION['Nome']); ?></h1>
-                <p class="text-muted m-0 w-100">Aqui pode acompanhar todos os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real. Utilize esta área para monitorizar o progresso das suas solicitações e garantir um acompanhamento eficaz.</p>
+                <p class="text-muted mb-3 w-100">Aqui pode acompanhar todos os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real. Utilize esta área para monitorizar o progresso das suas solicitações e garantir um acompanhamento eficaz.</p>
             </div>
             <a href="ticket.php" class="btn btn-primary btn-primary"><i class="bi bi-plus-circle me-2"></i>Abrir Novo Ticket</a>
         </div>

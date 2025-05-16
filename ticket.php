@@ -26,7 +26,7 @@ include('conflogin.php');
                                     Assunto:
                                 </label>
                                 <input type="text" class="form-control" id="nome_computador" name="nome_computador" 
-                                      placeholder="Descreva brevemente o problema" maxlength="50" required>
+                                      placeholder="Descreva o problema" maxlength="50" required>
                                 <div class="form-text">Um título claro e conciso (máx. 50 caracteres)</div>
                             </div>
 
@@ -49,12 +49,12 @@ include('conflogin.php');
                                     <i class="bi bi-flag me-1"></i> Prioridade:
                                 </label>
                                 <input type="hidden" id="prioridade" name="prioridade" value="Normal" required><div class="priority-selector">
-                            <div class="priority-item priority-low" data-value="Baixa" onclick="selectPriority(this, 'Baixa')">
+                            <div class="priority-item priority-low selected" data-value="Baixa" onclick="selectPriority(this, 'Baixa')">
                                 <i class="bi bi-flag priority-icon" style="color: #27ae60;"></i>
                                 <span>Baixa</span>
                                 <small class="d-block text-muted">Posso continuar a trabalhar</small>
                             </div>
-                            <div class="priority-item priority-normal selected" data-value="Normal" onclick="selectPriority(this, 'Normal')">
+                            <div class="priority-item priority-normal " data-value="Normal" onclick="selectPriority(this, 'Normal')">
                                 <i class="bi bi-flag-fill priority-icon" style="color: #f39c12;"></i>
                                 <span>Normal</span>
                                 <small class="d-block text-muted">Dificulta o meu trabalho</small>
