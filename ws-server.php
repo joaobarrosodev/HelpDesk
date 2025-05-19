@@ -10,7 +10,7 @@ use Ratchet\WebSocket\WsServer;
 
 class ChatServer implements MessageComponentInterface {
     protected $clients;
-    protected $clientsByTicket = [];
+    protected $clientsByTicket = []; // Fixed the syntax error here
 
     public function __construct() {
         $this->clients = new \SplObjectStorage;

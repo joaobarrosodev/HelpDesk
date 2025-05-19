@@ -1,40 +1,54 @@
 <?php
 /**
- * This script checks if the WebSocket server is running and starts it if needed.
- * It should be included at the top of critical pages like detalhes_ticket.php.
+ * Auto-start WebSocket server script
+ * This file checks if the WebSocket server is running and attempts to start it if not
  */
 
+// Function to check if WebSocket server is running
 function isWebSocketServerRunning() {
-    $host = "localhost";
-    $port = 8080;
-    
-    $socket = @fsockopen($host, $port, $errno, $errstr, 1);
-    
-    if ($socket) {
-        fclose($socket);
+    $connection = @fsockopen('localhost', 8080);
+    if (is_resource($connection)) {
+        fclose($connection);
         return true;
     }
-    
     return false;
 }
 
-// Check if WebSocket server is running
+// Try to start the WebSocket server if it's not running
 if (!isWebSocketServerRunning()) {
-    // Server not running, try to start it
-    $path = dirname(__FILE__);
+    // Path to the WebSocket server script
+    $wsServerScript = __DIR__ . '/ws-server.php';
     
-    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-        // Windows
-        pclose(popen('start /B "HelpDesk WS" cmd /c "cd /D ' . $path . ' && php ws-server.php > ws-server.log 2>&1"', 'r'));
+    // Check if we're on Windows or Linux/Unix
+    if (PHP_OS_FAMILY === 'Windows') {
+        // Windows - use start command to run in background
+        $cmd = sprintf(
+            'start /B php "%s" > "%s\ws-server-output.log" 2>&1',
+            $wsServerScript,
+            __DIR__
+        );
         
-        // Give it a moment to start
-        sleep(1);
+        // Execute the command without waiting
+        pclose(popen($cmd, 'r'));
         
-        // Create a file indicating we've tried to start the server
-        file_put_contents($path . '/ws-server-startup.txt', date('Y-m-d H:i:s') . " - Attempted to start WebSocket server\n", FILE_APPEND);
+        // Log that we tried to start the server
+        error_log("Tried to start WebSocket server: $cmd");
     } else {
-        // Linux/Unix/Mac
-        exec('cd ' . $path . ' && nohup php ws-server.php > ws-server.log 2>&1 &');
+        // Linux/Unix - use nohup to run in background
+        $cmd = sprintf(
+            'nohup php "%s" > "%s/ws-server-output.log" 2>&1 &',
+            $wsServerScript,
+            __DIR__
+        );
+        
+        // Execute the command
+        exec($cmd);
+        
+        // Log that we tried to start the server
+        error_log("Tried to start WebSocket server: $cmd");
     }
+    
+    // Give the server a moment to start
+    sleep(1);
 }
 ?>

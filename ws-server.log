@@ -1,2 +1,20 @@
 HelpDesk WebSocket Server started
 WebSocket server running at 0.0.0.0:8080
+New connection: 50
+Message from 50: {"action":"subscribe","ticketId":"#004","user":"fernando.barbosa@spintos.pt"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 50 subscribed to ticket #004
+New connection: 83
+Message from 83: {"action":"subscribe","ticketId":"#004","user":"fernando.barbosa@spintos.pt"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 83 subscribed to ticket #004
+New connection: 86
+Message from 86: {"action":"subscribe","ticketId":"#004","user":"fernando.barbosa@spintos.pt"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 86 subscribed to ticket #004
