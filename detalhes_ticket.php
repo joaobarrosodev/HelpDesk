@@ -55,7 +55,12 @@ function getPriorityColor($priority) {
     switch(strtolower($priority)) {
         case 'alta':
             return 'danger';
+        case 'normal':
+            return 'warning';
+        case 'baixa':
+            return 'success';
         case 'média':
+        case 'media':
             return 'warning';
         default:
             return 'info';
@@ -64,13 +69,17 @@ function getPriorityColor($priority) {
 
 // Função para determinar a cor do status
 function getStatusColor($status) {
-    switch(strtolower($status)) {
+    switch(strtolower(trim($status))) {
         case 'concluído':
             return 'success';
         case 'em análise':
             return 'info';
         case 'pendente':
             return 'warning';
+        case 'em resolução':
+            return 'warning';
+        case 'aguarda resposta':
+            return 'secondary';
         default:
             return 'primary';
     }
@@ -130,10 +139,11 @@ function getStatusColor($status) {
                 <h1 class="chat-title">A falar com <?php echo !empty($ticket['atribuido_a']) ? $ticket['atribuido_a'] : 'Não atribuído'; ?></h1>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="chat-status badge bg-<?php echo getPriorityColor($ticket['Priority']); ?>"><?php echo $ticket['Priority']; ?></span>
-                <span class="chat-status badge bg-<?php echo getStatusColor($ticket['Status']); ?>">
+            <span class="badge bg-<?php echo getStatusColor($ticket['Status']); ?>">
                     <?php echo $ticket['Status']; ?>
-                </span>
+                </span>    
+            <span class="badge bg-<?php echo getPriorityColor($ticket['Priority']); ?>"><?php echo $ticket['Priority']; ?></span>
+                
             </div>
         </div>
         
@@ -229,12 +239,105 @@ function getStatusColor($status) {
             });
         }
         
+        // Variables for message polling
+        let lastMessageTimestamp = '<?php echo !empty($messages) ? date('Y-m-d H:i:s', strtotime($messages[count($messages)-1]['CommentTime'])) : date('Y-m-d H:i:s'); ?>';
+        let pollingInterval;
+        let isPollingActive = true;
+        
         // Scroll to bottom of chat on load
         window.onload = function() {
             const chatBody = document.getElementById('chatBody');
             if (chatBody) {
                 chatBody.scrollTop = chatBody.scrollHeight;
             }
+            
+            // Start polling for new messages
+            startMessagePolling();
+        }
+        
+        // Start polling for new messages
+        function startMessagePolling() {
+            // Check for new messages every 3 seconds
+            pollingInterval = setInterval(checkForNewMessages, 3000);
+            
+            // Stop polling when the page is not visible to save resources
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    isPollingActive = false;
+                } else {
+                    isPollingActive = true;
+                    // Immediately check for new messages when page becomes visible again
+                    checkForNewMessages();
+                }
+            });
+        }
+        
+        // Function to check for new messages
+        function checkForNewMessages() {
+            // Only check if polling is active (page is visible)
+            if (!isPollingActive) return;
+            
+            const keyId = '<?php echo $ticket_id; ?>';
+            const currentUserId = '<?php echo $_SESSION['usuario_id']; ?>';
+            
+            fetch('get_new_messages.php?keyid=' + keyId + '&timestamp=' + encodeURIComponent(lastMessageTimestamp), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.messages && data.messages.length > 0) {
+                    // Update the last message timestamp
+                    lastMessageTimestamp = data.lastTimestamp;
+                    
+                    // Add new messages to the chat
+                    const chatBody = document.getElementById('chatBody');
+                    
+                    data.messages.forEach(message => {
+                        const isUser = (message.type == 1);
+                        const messageClass = isUser ? 'message-user' : 'message-admin';
+                        const timestamp = new Date(message.CommentTime).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
+                        
+                        // Create message element
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = `message ${messageClass} new-message`;
+                        messageDiv.innerHTML = `
+                            <p class="message-content">${message.Message.replace(/\n/g, '<br>')}</p>
+                            <div class="message-meta">
+                                <span class="message-user-info">${message.user}</span>
+                                <span class="message-time">${timestamp}</span>
+                            </div>
+                        `;
+                        chatBody.appendChild(messageDiv);
+                    });
+                    
+                    // Scroll to bottom of chat
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                    
+                    // Play notification sound if the message is not from current user
+                    const lastMessage = data.messages[data.messages.length - 1];
+                    if (lastMessage.user !== '<?php echo $_SESSION['usuario_email']; ?>') {
+                        playNotificationSound();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error checking for new messages:', error);
+                // Don't stop polling on errors, just log them
+            });
+        }
+        
+        // Function to play notification sound
+        function playNotificationSound() {
+            const audio = new Audio('sounds/notification.mp3');
+            audio.volume = 0.5;
+            audio.play().catch(e => console.log('Could not play notification sound'));
         }
         
         // Submit form with animation
@@ -242,10 +345,14 @@ function getStatusColor($status) {
             e.preventDefault();
             const message = messageInput.value.trim();
             if (message) {
+                // Determine message class based on user type
+                const isAdmin = <?php echo (isset($_SESSION['usuario_admin']) && $_SESSION['usuario_admin']) ? 'true' : 'false'; ?>;
+                const messageClass = isAdmin ? 'message-admin' : 'message-user';
+                
                 // Add message with animation (preview)
                 const chatBody = document.getElementById('chatBody');
                 const messageDiv = document.createElement('div');
-                messageDiv.className = 'message message-admin new-message';
+                messageDiv.className = `message ${messageClass} new-message`;
                 messageDiv.innerHTML = `
                     <p class="message-content">${message.replace(/\n/g, '<br>')}</p>
                     <div class="message-meta">
@@ -257,6 +364,7 @@ function getStatusColor($status) {
                 chatBody.scrollTop = chatBody.scrollHeight;
                 
                 // Reset textarea
+                const messageToSend = message; // Store message before resetting input
                 messageInput.value = '';
                 messageInput.style.height = 'auto';
                 document.getElementById('sendButton').disabled = true;
@@ -264,23 +372,48 @@ function getStatusColor($status) {
                 // Usar AJAX para enviar a mensagem em vez de submit normal
                 const formData = new FormData(this);
                 
+                // Ensure we're sending the right message (in case the form was cleared too early)
+                if (!formData.get('message')) {
+                    formData.set('message', messageToSend);
+                }
+                
                 fetch('inserir_mensagem.php', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
                 })
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Erro ao enviar mensagem');
+                        throw new Error(`Erro ao enviar mensagem: ${response.status}`);
                     }
-                    return response.text();
+                    // Try to parse JSON, but handle if it's not JSON
+                    return response.text().then(text => {
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.log("Response wasn't JSON:", text);
+                            return { status: 'success', message: text };
+                        }
+                    });
                 })
                 .then(data => {
-                    // Mensagem enviada com sucesso
-                    console.log('Mensagem enviada com sucesso');
+                    console.log('Mensagem enviada com sucesso:', data);
+                    // No need to update UI as we already have the preview message
                 })
                 .catch(error => {
                     console.error('Erro:', error);
+                    // Remove the preview message since it failed
+                    if (messageDiv.parentNode) {
+                        messageDiv.parentNode.removeChild(messageDiv);
+                    }
                     alert('Ocorreu um erro ao enviar a mensagem. Por favor, tente novamente.');
+                    // Restore the message so the user doesn't have to retype it
+                    messageInput.value = messageToSend;
+                    messageInput.style.height = 'auto';
+                    messageInput.style.height = (messageInput.scrollHeight) + 'px';
+                    document.getElementById('sendButton').disabled = false;
                 });
             }
         });

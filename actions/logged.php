@@ -10,7 +10,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $senha = $_POST['password'];
 
     // Preparar a consulta SQL
-    $stmt = $pdo->prepare("select entities.KeyId, entities.Name, online.email, online.Password, online.Grupo
+    $stmt = $pdo->prepare("select entities.KeyId, entities.Name, online.Name, online.email, online.Password, online.Grupo
 from online_entity_extrafields online 
 Inner Join entities on online.Entity_KeyId = entities.KeyId where online.email = :email");
     $stmt->bindParam(':email', $email);
