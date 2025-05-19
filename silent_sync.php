@@ -2,12 +2,7 @@
 session_start();
 header('Content-Type: application/json');
 
-// Add proper error reporting for debugging, but don't display errors in the output
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(E_ALL);
-
-// Security check
+// Security check without logging
 if (!isset($_SESSION['usuario_email'])) {
     echo json_encode(['error' => 'Unauthorized']);
     exit;
@@ -15,7 +10,7 @@ if (!isset($_SESSION['usuario_email'])) {
 
 // Define constants
 define('TEMP_DIR', __DIR__ . DIRECTORY_SEPARATOR . 'temp');
-define('DEBUG', true);
+define('DEBUG', false); // Disable debugging
 
 // Create temp directory if it doesn't exist
 if (!file_exists(TEMP_DIR)) {
@@ -25,48 +20,16 @@ if (!file_exists(TEMP_DIR)) {
 
 // Get and validate the ticket ID
 $ticketId = isset($_GET['ticketId']) ? trim($_GET['ticketId']) : '';
-$cleanTicketId = ''; // Initialize this variable to prevent undefined variable error
-
-// Debug the raw input
-if (DEBUG) {
-    error_log('Raw ticketId: ' . $ticketId);
-    error_log('$_GET contents: ' . print_r($_GET, true));
-}
-
-// Handle URL-encoded hash character (#)
 $ticketId = str_replace('%23', '#', $ticketId);
 
-// Clean the ticket ID for internal use (remove any # character if present)
-$cleanTicketId = str_replace('#', '', $ticketId);
-
-// Special handling for '#' character in URL parameters
-// The hash character might be stripped by PHP or the web server
-if (isset($_SERVER['REQUEST_URI'])) {
-    $uri = $_SERVER['REQUEST_URI'];
-    if (strpos($uri, 'ticketId=%23') !== false && $cleanTicketId) {
-        // %23 is the URL encoding for #
-        $ticketId = '#' . $cleanTicketId;
-        if (DEBUG) {
-            error_log('Found encoded # in URI, restored ticketId to: ' . $ticketId);
-        }
-    }
-}
-
 // Check if ticket ID is empty
-if (empty($ticketId) || $ticketId === '#') {
-    if (DEBUG) {
-        error_log('Empty ticketId after processing');
-    }
-    echo json_encode([
-        'error' => 'Missing ticket ID',
-        'debug' => [
-            'raw_get' => $_GET,
-            'request_uri' => $_SERVER['REQUEST_URI'] ?? 'not available',
-            'raw_ticket_id' => isset($_GET['ticketId']) ? $_GET['ticketId'] : 'not set',
-        ]
-    ]);
+if (empty($ticketId)) {
+    echo json_encode(['error' => 'Missing ticket ID']);
     exit;
 }
+
+// Clean the ticket ID for internal use
+$cleanTicketId = str_replace('#', '', $ticketId);
 
 // Get other parameters
 $deviceId = isset($_GET['deviceId']) ? $_GET['deviceId'] : '';
@@ -80,16 +43,6 @@ $result = [
     'deviceId' => $deviceId,
     'ticketId' => $ticketId
 ];
-
-// Process any WebSocket message files first
-$messageFiles = glob(TEMP_DIR . DIRECTORY_SEPARATOR . 'ws_message_*.json');
-if (!empty($messageFiles)) {
-    if (DEBUG) error_log("Found " . count($messageFiles) . " pending WebSocket messages to process");
-    include_once __DIR__ . DIRECTORY_SEPARATOR . 'process_ws_messages.php';
-    if (function_exists('processAllMessageFiles')) {
-        processAllMessageFiles();
-    }
-}
 
 // Now check for sync files
 $syncFiles = glob(TEMP_DIR . DIRECTORY_SEPARATOR . "sync_{$cleanTicketId}_*.txt");
@@ -124,7 +77,6 @@ if (is_array($syncFiles)) {
                         $sourceDeviceId = isset($data['message']['sourceDeviceId']) ? $data['message']['sourceDeviceId'] : null;
                         if (!$deviceId || $deviceId !== $sourceDeviceId) {
                             $result['messages'][] = $data['message'];
-                            $result['sourceFiles'][] = $file;
                             $result['hasNewMessages'] = true;
                         }
                     }
@@ -137,19 +89,6 @@ if (is_array($syncFiles)) {
     }
 }
 
-// Add debug information
-if (DEBUG) {
-    $result['debug'] = [
-        'rawTicketId' => isset($_GET['ticketId']) ? $_GET['ticketId'] : 'not_set',
-        'processedTicketId' => $ticketId,
-        'cleanTicketId' => $cleanTicketId,
-        'ticketIdWithHash' => $ticketIdWithHash,
-        'syncFilesCount' => is_array($syncFiles) ? count($syncFiles) : 0,
-        'syncPattern' => TEMP_DIR . DIRECTORY_SEPARATOR . "sync_{$cleanTicketId}_*.txt", 
-        'syncFilesFound' => is_array($syncFiles) ? array_map('basename', $syncFiles) : [],
-        'userAgent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
-    ];
-}
-
+// No debug information added
 echo json_encode($result);
 ?>

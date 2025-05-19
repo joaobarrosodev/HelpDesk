@@ -1,6 +1,66 @@
 <?php
 session_start();  // Inicia a sessão
 include('conflogin.php');
+include('db.php');  // Incluindo o arquivo de conexão com o banco de dados
+
+// Processamento do formulário quando enviado
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $nome_computador = $_POST['nome_computador'];
+    $descricao_problema = $_POST['descricao_problema'];
+    $prioridade = $_POST['prioridade'];
+    $usuario_id = $_SESSION['usuario_id'];
+    $entidade_codigo = $_SESSION['usuario_email'];
+    $imagem = $_POST['imagem'] ?? ''; // Caminho da imagem recebida (com fallback)
+    
+    try {
+        $stmt = $pdo->query("SELECT KeyId FROM xdfree01 ORDER BY id DESC LIMIT 1");
+        $ultimo_keyid = $stmt->fetchColumn();
+
+        if ($ultimo_keyid) {
+            $ultimo_numero = (int) substr($ultimo_keyid, 1);
+            $novo_numero = $ultimo_numero + 1;
+        } else {
+            $novo_numero = 1;
+        }
+
+        $novo_keyid = "#" . str_pad($novo_numero, 3, "0", STR_PAD_LEFT);
+        $titulo = "Ticket " . $novo_keyid; 
+
+        $stmt = $pdo->prepare("INSERT INTO xdfree01 (KeyId, Name) VALUES (:keyId, :name)");
+        $stmt->bindParam(':keyId', $novo_keyid);
+        $stmt->bindParam(':name', $titulo);
+        $stmt->execute();
+
+        $keyId = $novo_keyid;
+
+        $stmt = $pdo->prepare("INSERT INTO info_xdfree01_extrafields (XDFree01_KeyID, Entity, User, Description, Priority, Status, Image, CreationUser, CreationDate, dateu) 
+                               VALUES (:keyId, :entity, :user, :description, :priority, :status, :image, :creationuser, NOW(), NOW())");
+        $stmt->bindParam(':keyId', $keyId);
+        $stmt->bindParam(':entity', $usuario_id);
+        $stmt->bindParam(':user', $nome_computador);
+        $stmt->bindParam(':description', $descricao_problema);
+        $stmt->bindParam(':priority', $prioridade);
+        $status = "Em Análise";
+        $stmt->bindParam(':status', $status);
+        $stmt->bindParam(':image', $imagem); 
+        $stmt->bindParam(':creationuser', $_SESSION['usuario_email']);
+
+        $stmt->execute();
+
+        echo "<div class='alert alert-success alert-dismissible fade show' role='alert'>
+                Ticket criado com sucesso! O seu KeyId: $novo_keyid
+                <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
+              </div>";
+        header("Refresh: 2; url=index.php");
+        exit;
+
+    } catch (PDOException $e) {
+        echo "<div class='alert alert-danger alert-dismissible fade show' role='alert'>
+                Erro ao criar ticket: " . $e->getMessage() . "
+                <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
+              </div>";
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-pt">
@@ -16,7 +76,7 @@ include('conflogin.php');
              
         <div class="card mt-4">
             <div class="p-4">
-                <form action="criar_ticket.php" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+                <form action="abrir_ticket.php" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
                     <div class="row">
                         <!-- Coluna Esquerda: Assunto e Descrição -->
                         <div class="col-lg-6">
@@ -27,14 +87,14 @@ include('conflogin.php');
                                 </label>
                                 <select class="form-select" id="nome_computador" name="nome_computador" required>
                                     <option value="" disabled selected>Selecione um assunto</option>
-                                    <option value="xd">XD</option>
-                                    <option value="sage">Sage</option>
-                                    <option value="office">Office</option>
-                                    <option value="email">Email</option>
-                                    <option value="site">Site</option>
-                                    <option value="computador">Computador</option>
-                                    <option value="impressoras">Impressoras</option>
-                                    <option value="outros">Outros</option>
+                                    <option value="XD">XD</option>
+                                    <option value="Sage">Sage</option>
+                                    <option value="Office">Office</option>
+                                    <option value="E-mail">Email</option>
+                                    <option value="Site">Site</option>
+                                    <option value="Computador">Computador</option>
+                                    <option value="Impressoras">Impressoras</option>
+                                    <option value="Outros">Outros</option>
                                 </select>
                                 <div class="form-text">Selecione o assunto principal do seu problema</div>
                             </div>
@@ -112,7 +172,21 @@ include('conflogin.php');
             dictDefaultMessage: "<i class='bi bi-cloud-arrow-up' style='font-size: 2rem;'></i><br>Arraste uma imagem ou clique aqui",
             dictRemoveFile: "Remover",
             success: function(file, response) {
-                document.getElementById("imagem_path").value = response.caminho; // Armazena o caminho no input oculto
+                // Parse the JSON response if needed
+                if (typeof response === 'string') {
+                    try {
+                        response = JSON.parse(response);
+                    } catch(e) {
+                        console.error("Error parsing response:", e);
+                        return;
+                    }
+                }
+                
+                if (response.caminho) {
+                    document.getElementById("imagem_path").value = response.caminho;
+                } else {
+                    console.error("Erro ao processar imagem:", response.erro);
+                }
             }
         });
 

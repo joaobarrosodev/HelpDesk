@@ -268,7 +268,6 @@ function getStatusColor($status) {
             // Don't try to reconnect too frequently
             const now = new Date().getTime();
             if (wsLastErrorTime > 0 && now - wsLastErrorTime < 5000) {
-                console.log("Waiting before reconnect attempt...");
                 setTimeout(initWebSocket, 5000);
                 return;
             }
@@ -280,11 +279,9 @@ function getStatusColor($status) {
                     ws.close();
                 }
                 
-                console.log("Connecting to WebSocket server at " + serverUrl);
                 ws = new WebSocket(serverUrl);
                 
                 ws.onopen = function() {
-                    console.log("WebSocket connection established");
                     wsConnected = true;
                     wsReconnectAttempts = 0;
                     
@@ -305,25 +302,21 @@ function getStatusColor($status) {
                 };
                 
                 ws.onclose = function() {
-                    console.log("WebSocket connection closed");
                     wsConnected = false;
                     
                     // Attempt to reconnect if not closing intentionally
                     wsReconnectAttempts++;
                     const delay = Math.min(30000, wsReconnectAttempts * 2000); // Exponential backoff
                     
-                    console.log(`Attempting to reconnect in ${delay/1000} seconds...`);
                     setTimeout(initWebSocket, delay);
                 };
                 
                 ws.onerror = function(error) {
-                    console.error("WebSocket error:", error);
                     wsLastErrorTime = new Date().getTime();
                     wsConnected = false;
                     
                     // Fallback to sync file approach
                     if (!syncCheckInterval) {
-                        console.log("Starting sync file polling as fallback");
                         syncCheckInterval = setInterval(checkSyncFiles, 1000);
                     }
                 };
@@ -331,27 +324,21 @@ function getStatusColor($status) {
                 ws.onmessage = function(event) {
                     try {
                         const data = JSON.parse(event.data);
-                        console.log("WebSocket message received:", data);
                         
                         // Handle different message types
                         if (data.action === 'newMessage' && data.ticketId === '<?php echo $ticket_id; ?>') {
                             // Process new message
                             processNewMessages([data.message]);
-                        } else if (data.action === 'pong') {
-                            // Server ping response, connection is alive
-                            console.log("Server pong received");
                         }
                     } catch (e) {
-                        console.error("Error processing WebSocket message:", e);
+                        // Silent error handling
                     }
                 };
             } catch (e) {
-                console.error("Error initializing WebSocket:", e);
                 wsLastErrorTime = new Date().getTime();
                 
                 // Fallback to sync file approach
                 if (!syncCheckInterval) {
-                    console.log("Starting sync file polling as fallback");
                     syncCheckInterval = setInterval(checkSyncFiles, 1000);
                 }
             }
@@ -360,11 +347,9 @@ function getStatusColor($status) {
         // Subscribe to ticket updates
         function subscribeToTicket(ticketId) {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
-                console.log("Cannot subscribe: WebSocket not connected");
                 return;
             }
             
-            console.log("Subscribing to ticket:", ticketId);
             ws.send(JSON.stringify({
                 action: 'subscribe',
                 ticketId: ticketId,
@@ -375,7 +360,6 @@ function getStatusColor($status) {
         // Send message via WebSocket
         function sendWebSocketMessage(message, ticketId) {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
-                console.log("Cannot send message: WebSocket not connected");
                 return false;
             }
             
@@ -386,11 +370,9 @@ function getStatusColor($status) {
                     message: message,
                     deviceId: deviceId
                 };
-                
                 ws.send(JSON.stringify(messageObj));
                 return true;
             } catch (e) {
-                console.error("Error sending WebSocket message:", e);
                 return false;
             }
         }
@@ -400,13 +382,8 @@ function getStatusColor($status) {
             // Create temp directory if it doesn't exist
             fetch('create_temp_dir.php')
                 .then(response => response.json())
-                .then(data => {
-                    console.log("Temp directory check:", data);
-                })
-                .catch(error => {
-                    console.error("Error checking temp directory:", error);
-                });
-                
+                .catch(() => {});
+            
             // Scroll chat to bottom
             const chatBody = document.getElementById('chatBody');
             if (chatBody) {
@@ -432,23 +409,35 @@ function getStatusColor($status) {
         // Function to check for sync files
         function checkSyncFiles() {
             const timestamp = new Date().getTime();
-            fetch('check_sync.php?ticketId=<?php echo $ticket_id; ?>&deviceId=' + encodeURIComponent(deviceId) + '&lastCheck=' + lastMessageTimestamp + '&_=' + timestamp)
+            // Get the ticket ID directly from the original variable
+            const ticketId = '<?php echo $ticket_id; ?>';
+            
+            // Encode the ticket ID properly for URL
+            const encodedTicketId = encodeURIComponent(ticketId);
+            
+            // Use silent_sync.php instead of check_sync.php to avoid logging
+            fetch('silent_sync.php?ticketId=' + encodedTicketId + 
+                  '&deviceId=' + encodeURIComponent(deviceId) + 
+                  '&lastCheck=' + encodeURIComponent(lastMessageTimestamp) + 
+                  '&_=' + timestamp)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error(`Network response not ok: ${response.status}`);
+                        return null;
                     }
                     return response.json();
                 })
                 .then(data => {
-                    console.log("Sync check result:", data);
+                    // Skip if null response or error
+                    if (!data || data.error) {
+                        return;
+                    }
                     
                     if (data.hasNewMessages && data.messages && data.messages.length > 0) {
-                        // Process new messages
+                        // Process new messages without logging
                         const messagesToProcess = [];
-                        
+                            
                         // Filter out duplicate messages
                         data.messages.forEach(message => {
-                            // Use messageId if available, otherwise create a composite key
                             const messageId = message.messageId || 
                                 `${message.user}-${message.CommentTime}-${message.Message?.substring(0, 20)}`;
                             
@@ -461,7 +450,7 @@ function getStatusColor($status) {
                         if (messagesToProcess.length > 0) {
                             // Process the unique messages
                             processNewMessages(messagesToProcess);
-                            
+                                
                             // Update the last message timestamp if newer messages were found
                             messagesToProcess.forEach(message => {
                                 if (message.CommentTime && message.CommentTime > lastMessageTimestamp) {
@@ -471,12 +460,12 @@ function getStatusColor($status) {
                         }
                     }
                 })
-                .catch(error => {
-                    console.error("Error checking sync files:", error);
+                .catch(() => {
+                    // Silent error handling - no logging
                 });
         }
         
-        // Function to process new messages
+        // Function to process new messages - modified for silent operation
         function processNewMessages(messages) {
             if (!messages || messages.length === 0) {
                 return;
@@ -512,7 +501,6 @@ function getStatusColor($status) {
                     return;
                 }
                 
-                console.log(`Adding new message: ${messageKey}`);
                 newMessagesAdded = true;
                 
                 // Create message element
@@ -562,7 +550,6 @@ function getStatusColor($status) {
                     return timeObj.toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
                 }
             } catch (e) {
-                console.error("Error formatting time:", e);
                 return time;
             }
         }
@@ -641,19 +628,15 @@ function getStatusColor($status) {
                             try {
                                 return JSON.parse(text);
                             } catch (e) {
-                                console.log("Response wasn't JSON:", text);
                                 return { status: 'success', message: text };
                             }
                         });
                     })
                     .then(data => {
-                        console.log('Mensagem enviada com sucesso:', data);
-                        
                         // Force check for sync files to update any other clients
                         setTimeout(checkSyncFiles, 200);
                     })
                     .catch(error => {
-                        console.error('Erro:', error);
                         // Remove the preview message since it failed
                         if (messageDiv.parentNode) {
                             messageDiv.parentNode.removeChild(messageDiv);
@@ -703,6 +686,96 @@ function getStatusColor($status) {
                 ws.close();
             }
         });
+
+        function checkForUpdates() {
+            // Get the ticket ID directly from the keyid parameter in the URL
+            var ticketId = <?php echo json_encode(isset($_GET['keyid']) ? trim($_GET['keyid']) : ''); ?>;
+                        
+            // Only proceed if we have a valid ticket ID
+            if (!ticketId) {
+                return;
+            }
+            
+            // Use the actual ticket ID from PHP (more reliable)
+            ticketId = '<?php echo $ticket_id; ?>';
+            
+            var deviceId = getDeviceId();
+            var lastCheck = localStorage.getItem('lastSyncCheck_' + ticketId) || getCurrentDateTime();
+            
+            // Create the URL manually with proper encoding
+            var url = 'silent_sync.php' +
+                '?ticketId=' + encodeURIComponent(ticketId) +
+                '&deviceId=' + encodeURIComponent(deviceId) +
+                '&lastCheck=' + encodeURIComponent(lastCheck) +
+                '&_=' + new Date().getTime();
+            
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(data) {
+                    if (data.error) {
+                        return;
+                    }
+                    
+                    if (data.hasNewMessages && data.messages && data.messages.length > 0) {
+                        // Process new messages
+                        const messagesToProcess = [];
+                        
+                        // Filter out duplicate messages
+                        data.messages.forEach(message => {
+                            const messageId = message.messageId || 
+                                `${message.user}-${message.CommentTime}-${message.Message?.substring(0, 20)}`;
+                                
+                            if (!processedMessageIds.has(messageId)) {
+                                processedMessageIds.add(messageId);
+                                messagesToProcess.push(message);
+                            }
+                        });
+                        
+                        if (messagesToProcess.length > 0) {
+                            // Process the unique messages
+                            processNewMessages(messagesToProcess);
+                            
+                            // Update the last message timestamp if newer messages were found
+                            messagesToProcess.forEach(message => {
+                                if (message.CommentTime && message.CommentTime > lastCheck) {
+                                    lastCheck = message.CommentTime;
+                                    localStorage.setItem('lastSyncCheck_' + ticketId, lastCheck);
+                                }
+                            });
+                        }
+                    }
+                    
+                    // Check if ticket status has changed
+                    if (data.statusChanged) {
+                        location.reload();
+                    }
+                    
+                    // Schedule the next check
+                    setTimeout(checkForUpdates, 1000);
+                },
+                error: function() {
+                    // Silent error handling
+                    setTimeout(checkForUpdates, 5000);
+                }
+            });
+        }
+        
+        // Helper function to get current date time in MySQL format
+        function getCurrentDateTime() {
+            const now = new Date();
+            return now.getFullYear() + '-' + 
+                  String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                  String(now.getDate()).padStart(2, '0') + ' ' + 
+                  String(now.getHours()).padStart(2, '0') + ':' + 
+                  String(now.getMinutes()).padStart(2, '0') + ':' + 
+                  String(now.getSeconds()).padStart(2, '0');
+        }
+        
+        // Helper for device ID - reuse the existing function
+        function getDeviceId() {
+            return deviceId || generateDeviceId(); 
+        }
     </script>
 </body>
 </html>

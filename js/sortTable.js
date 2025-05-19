@@ -1,4 +1,4 @@
-V/**
+/**
  * Função para ordenar tabela HTML
  * @param {number} n - O número da coluna a ser ordenada (baseado em zero)
  * @param {string} tableId - ID da tabela a ser ordenada
@@ -174,39 +174,9 @@ function formatDateRange(startDate, endDate) {
  * Define o intervalo de datas padrão (da primeira fatura até hoje)
  */
 function setDefaultDateRange() {
-  const table = document.getElementById('account-table');
-  if (!table) return;
-  
-  const rows = table.getElementsByTagName('tr');
-  if (rows.length <= 1) return; // Se não houver dados, não faz nada
-  
-  // Obtém a data da primeira transação
-  let firstTransactionDate = null;
-  let today = new Date();
-  
-  // Itera pelas linhas para encontrar a data mais antiga
-  for (let i = 1; i < rows.length; i++) {
-    const dateCell = rows[i].getElementsByTagName('td')[1]; // Coluna de data de criação
-    if (dateCell) {
-      const dateParts = dateCell.textContent.trim().split('/');
-      if (dateParts.length === 3) {
-        const rowDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
-        if (!firstTransactionDate || rowDate < firstTransactionDate) {
-          firstTransactionDate = rowDate;
-        }
-      }
-    }
-  }
-  
-  // Se encontrou uma data inicial, define os valores dos campos de data
-  if (firstTransactionDate) {
-    document.getElementById('start-date').valueAsDate = firstTransactionDate;
-    document.getElementById('end-date').valueAsDate = today;
-    
-    // Atualiza o texto do intervalo
-    const dateRangeText = formatDateRange(firstTransactionDate, today);
-    document.getElementById('date-range-text').textContent = dateRangeText;
-  }
+  // Função modificada para não definir datas padrão
+  // Mantemos a função, mas removemos o código que define valores padrão
+  return;
 }
 
 // Inicializa a data padrão quando a página carregar
@@ -233,7 +203,7 @@ function toggleFilterPopup() {
 
 // Inicializa tudo quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
-  setDefaultDateRange();
+  // Remover chamada para setDefaultDateRange() para evitar preencher datas automaticamente
   
   // Adiciona evento de clique fora do popup para fechá-lo
   document.addEventListener('click', function(event) {

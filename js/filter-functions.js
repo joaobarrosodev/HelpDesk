@@ -156,9 +156,11 @@ function clearAllFilters() {
     rows[i].style.display = '';
   }
   
-  // Restaura o texto do intervalo de datas
-  document.getElementById('date-range-text').textContent = 'Todos os registros';
-  
+  // Esconde a área de resultados filtrados
+  const filterResultsDiv = document.getElementById('filter-results');
+  if (filterResultsDiv) {
+    filterResultsDiv.style.display = 'none';
+  }
 }
 
 /**
@@ -176,24 +178,8 @@ document.addEventListener('click', function(event) {
   }
 });
 
-// Inicializa o estado dos filtros e popula os campos com valores padrão
+// Inicializa o estado dos filtros - REMOVE default date setting
 document.addEventListener('DOMContentLoaded', function() {
-  // Define as datas padrão (mês atual)
-  const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  
-  // Formata as datas no formato esperado pelo input (YYYY-MM-DD)
-  const formatDateForInput = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-  
-  // Preenche os campos de data com valores padrão
-  document.getElementById('start-date').value = formatDateForInput(firstDayOfMonth);
-  document.getElementById('end-date').value = formatDateForInput(today);
-  
-  // Atualiza o texto do intervalo de datas
-  document.getElementById('date-range-text').textContent = formatDateRange(firstDayOfMonth, today);
+  // Não definir datas padrão - deixar campos vazios
+  // Remover código que preenchia os campos de data automaticamente
 });
