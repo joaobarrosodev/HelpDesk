@@ -114,24 +114,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 <label class="form-label fw-bold">
                                     <i class="bi bi-flag me-1"></i> Prioridade:
                                 </label>
-                                <input type="hidden" id="prioridade" name="prioridade" value="Normal" required><div class="priority-selector">
-                            <div class="priority-item priority-low selected" data-value="Baixa" onclick="selectPriority(this, 'Baixa')">
-                                <i class="bi bi-flag priority-icon" style="color: #27ae60;"></i>
-                                <span>Baixa</span>
-                                <small class="d-block text-muted">Posso continuar a trabalhar</small>
+                                <input type="hidden" id="prioridade" name="prioridade" value="Baixa" required>
+                                <div class="priority-selector">
+                                    <div class="priority-item priority-low selected" data-value="Baixa" onclick="selectPriority(this, 'Baixa')">
+                                        <i class="bi bi-flag priority-icon" style="color: #27ae60;"></i>
+                                        <span>Baixa</span>
+                                        <small class="d-block text-muted">Posso continuar a trabalhar</small>
+                                    </div>
+                                    <div class="priority-item priority-normal" data-value="Normal" onclick="selectPriority(this, 'Normal')">
+                                        <i class="bi bi-flag-fill priority-icon" style="color: #f39c12;"></i>
+                                        <span>Normal</span>
+                                        <small class="d-block text-muted">Dificulta o meu trabalho</small>
+                                    </div>
+                                    <div class="priority-item priority-high" data-value="Alta" onclick="selectPriority(this, 'Alta')">
+                                        <i class="bi bi-exclamation-triangle priority-icon" style="color: #e74c3c;"></i>
+                                        <span>Alta</span>
+                                        <small class="d-block text-muted">Não consigo trabalhar</small>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="priority-item priority-normal " data-value="Normal" onclick="selectPriority(this, 'Normal')">
-                                <i class="bi bi-flag-fill priority-icon" style="color: #f39c12;"></i>
-                                <span>Normal</span>
-                                <small class="d-block text-muted">Dificulta o meu trabalho</small>
-                            </div>
-                            <div class="priority-item priority-high" data-value="Alta" onclick="selectPriority(this, 'Alta')">
-                                <i class="bi bi-exclamation-triangle priority-icon" style="color: #e74c3c;"></i>
-                                <span>Alta</span>
-                                <small class="d-block text-muted">Não consigo trabalhar</small>
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- Upload de Imagem (Drag & Drop) -->
                     <div class="mb-4">
