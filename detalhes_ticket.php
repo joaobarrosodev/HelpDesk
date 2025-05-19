@@ -239,10 +239,11 @@ function getStatusColor($status) {
             });
         }
         
-        // Variables for message polling
+        // Variables for message polling & websocket
         let lastMessageTimestamp = '<?php echo !empty($messages) ? date('Y-m-d H:i:s', strtotime($messages[count($messages)-1]['CommentTime'])) : date('Y-m-d H:i:s'); ?>';
         let pollingInterval;
         let isPollingActive = true;
+        let socket;
         
         // Scroll to bottom of chat on load
         window.onload = function() {
@@ -251,11 +252,74 @@ function getStatusColor($status) {
                 chatBody.scrollTop = chatBody.scrollHeight;
             }
             
-            // Start polling for new messages
+            // Try to connect via WebSocket first
+            setupWebSocket();
+            
+            // Also start polling as a fallback
             startMessagePolling();
         }
         
-        // Start polling for new messages
+        // Setup WebSocket connection
+        function setupWebSocket() {
+            // Check if WebSocket is supported
+            if ("WebSocket" in window) {
+                // Create WebSocket connection using secure or insecure connection based on current protocol
+                const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                const socketUrl = `${protocol}${window.location.host}/infoexe/HelpDesk/ws_server.php`;
+                
+                try {
+                    socket = new WebSocket(socketUrl);
+                    
+                    socket.onopen = function() {
+                        console.log("WebSocket connection established");
+                        
+                        // Register this client for a specific ticket
+                        const ticketId = '<?php echo $ticket_id; ?>';
+                        socket.send(JSON.stringify({
+                            type: 'register',
+                            ticketId: ticketId,
+                            userId: '<?php echo $_SESSION['usuario_id']; ?>'
+                        }));
+                        
+                        // Reduce polling frequency when WebSocket is connected
+                        clearInterval(pollingInterval);
+                        pollingInterval = setInterval(checkForNewMessages, 10000); // Poll every 10 seconds as backup
+                    };
+                    
+                    socket.onmessage = function(event) {
+                        const data = JSON.parse(event.data);
+                        console.log("WebSocket message received:", data);
+                        
+                        if (data.type === 'new_message') {
+                            // Process new message received via WebSocket
+                            processNewMessages([data.message]);
+                            
+                            // Update last timestamp
+                            if (data.message.CommentTime > lastMessageTimestamp) {
+                                lastMessageTimestamp = data.message.CommentTime;
+                            }
+                        }
+                    };
+                    
+                    socket.onclose = function() {
+                        console.log("WebSocket connection closed");
+                        // Resume normal polling if WebSocket closes
+                        clearInterval(pollingInterval);
+                        pollingInterval = setInterval(checkForNewMessages, 3000);
+                    };
+                    
+                    socket.onerror = function(error) {
+                        console.error("WebSocket error:", error);
+                        // Just log errors, polling will handle messaging
+                    };
+                } catch (e) {
+                    console.error("WebSocket connection error:", e);
+                    // Continue with normal polling if WebSocket fails
+                }
+            }
+        }
+        
+        // Start polling for new messages (backup method)
         function startMessagePolling() {
             // Check for new messages every 3 seconds
             pollingInterval = setInterval(checkForNewMessages, 3000);
@@ -278,7 +342,6 @@ function getStatusColor($status) {
             if (!isPollingActive) return;
             
             const keyId = '<?php echo $ticket_id; ?>';
-            const currentUserId = '<?php echo $_SESSION['usuario_id']; ?>';
             
             fetch('get_new_messages.php?keyid=' + keyId + '&timestamp=' + encodeURIComponent(lastMessageTimestamp), {
                 headers: {
@@ -293,38 +356,13 @@ function getStatusColor($status) {
             })
             .then(data => {
                 if (data.messages && data.messages.length > 0) {
+                    console.log("New messages received via polling:", data.messages);
+                    
                     // Update the last message timestamp
                     lastMessageTimestamp = data.lastTimestamp;
                     
-                    // Add new messages to the chat
-                    const chatBody = document.getElementById('chatBody');
-                    
-                    data.messages.forEach(message => {
-                        const isUser = (message.type == 1);
-                        const messageClass = isUser ? 'message-user' : 'message-admin';
-                        const timestamp = new Date(message.CommentTime).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
-                        
-                        // Create message element
-                        const messageDiv = document.createElement('div');
-                        messageDiv.className = `message ${messageClass} new-message`;
-                        messageDiv.innerHTML = `
-                            <p class="message-content">${message.Message.replace(/\n/g, '<br>')}</p>
-                            <div class="message-meta">
-                                <span class="message-user-info">${message.user}</span>
-                                <span class="message-time">${timestamp}</span>
-                            </div>
-                        `;
-                        chatBody.appendChild(messageDiv);
-                    });
-                    
-                    // Scroll to bottom of chat
-                    chatBody.scrollTop = chatBody.scrollHeight;
-                    
-                    // Play notification sound if the message is not from current user
-                    const lastMessage = data.messages[data.messages.length - 1];
-                    if (lastMessage.user !== '<?php echo $_SESSION['usuario_email']; ?>') {
-                        playNotificationSound();
-                    }
+                    // Process new messages
+                    processNewMessages(data.messages);
                 }
             })
             .catch(error => {
@@ -333,11 +371,51 @@ function getStatusColor($status) {
             });
         }
         
-        // Function to play notification sound
-        function playNotificationSound() {
-            const audio = new Audio('sounds/notification.mp3');
-            audio.volume = 0.5;
-            audio.play().catch(e => console.log('Could not play notification sound'));
+        // Function to process new messages (used by both WebSocket and polling)
+        function processNewMessages(messages) {
+            // Add new messages to the chat
+            const chatBody = document.getElementById('chatBody');
+            
+            messages.forEach(message => {
+                const isUser = (parseInt(message.type) === 1);
+                const messageClass = isUser ? 'message-user' : 'message-admin';
+                
+                // Skip if message is already in the chat (check by content and time)
+                const messageKey = `${message.user}-${message.CommentTime}-${message.Message.substring(0, 20)}`;
+                if (document.querySelector(`[data-message-key="${messageKey}"]`)) {
+                    return;
+                }
+                
+                // Create message element
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${messageClass} new-message`;
+                messageDiv.setAttribute('data-message-key', messageKey);
+                
+                let timeDisplay;
+                try {
+                    timeDisplay = new Date(message.CommentTime).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
+                } catch (e) {
+                    timeDisplay = message.CommentTime;
+                }
+                
+                messageDiv.innerHTML = `
+                    <p class="message-content">${message.Message}</p>
+                    <div class="message-meta">
+                        <span class="message-user-info">${message.user}</span>
+                        <span class="message-time">${timeDisplay}</span>
+                    </div>
+                `;
+                chatBody.appendChild(messageDiv);
+            });
+            
+            // Scroll to bottom of chat
+            chatBody.scrollTop = chatBody.scrollHeight;
+            
+            // Play notification sound if the message is not from current user
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage.user !== '<?php echo $_SESSION['usuario_email']; ?>') {
+                playNotificationSound();
+            }
         }
         
         // Submit form with animation
@@ -400,7 +478,9 @@ function getStatusColor($status) {
                 })
                 .then(data => {
                     console.log('Mensagem enviada com sucesso:', data);
-                    // No need to update UI as we already have the preview message
+                    
+                    // If WebSocket is connected, there's no need to do anything else
+                    // The message will come back through the WebSocket or polling
                 })
                 .catch(error => {
                     console.error('Erro:', error);

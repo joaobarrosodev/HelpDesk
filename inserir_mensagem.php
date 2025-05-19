@@ -3,6 +3,10 @@ session_start();
 include('conflogin.php');
 include('db.php');
 
+// For debugging
+error_log("Request to inserir_mensagem.php");
+error_log("POST data: " . print_r($_POST, true));
+
 // Check if user is logged in
 if (!isset($_SESSION['usuario_email'])) {
     if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
@@ -23,6 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
     $ticket_id = $_POST['id'];
     $user = $_SESSION['usuario_email'];
     
+    error_log("Message: $message | KeyID: $keyid | User: $user");
+    
     // Determine message type (0 for admin, 1 for user)
     $type = (isset($_SESSION['usuario_admin']) && $_SESSION['usuario_admin']) ? 0 : 1;
     
@@ -40,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
             $stmt->bindParam(':user', $user);
             
             $result = $stmt->execute();
+            error_log("Insert result: " . ($result ? "Success" : "Failed"));
             
             if ($result) {
                 // Update the last update time for the ticket
@@ -50,6 +57,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
                 $stmt_update = $pdo->prepare($sql_update);
                 $stmt_update->bindParam(':keyid', $keyid);
                 $stmt_update->execute();
+                
+                // Also notify WebSocket server about new message (if available)
+                try {
+                    $ws_data = [
+                        'type' => 'new_message',
+                        'ticketId' => $keyid,
+                        'message' => [
+                            'Message' => $message,
+                            'type' => $type,
+                            'CommentTime' => date('Y-m-d H:i:s'),
+                            'user' => $user
+                        ]
+                    ];
+                    
+                    // Try to send to WebSocket server
+                    $client = new WebSocket\Client('ws://localhost:8080');
+                    $client->send(json_encode($ws_data));
+                    $client->close();
+                } catch (Exception $e) {
+                    // Just log error, don't interrupt flow
+                    error_log("WebSocket notification failed: " . $e->getMessage());
+                }
                 
                 // Check if this is AJAX request
                 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
@@ -69,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
                     exit;
                 }
             } else {
+                error_log("Database error: " . print_r($stmt->errorInfo(), true));
                 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
                     header('Content-Type: application/json');
                     http_response_code(500);
@@ -79,6 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
                 }
             }
         } catch (PDOException $e) {
+            error_log("PDOException: " . $e->getMessage());
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
                 header('Content-Type: application/json');
                 http_response_code(500);
