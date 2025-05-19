@@ -2,7 +2,7 @@
 session_start();
 include('conflogin.php');
 include('db.php');
-include('ws-manager.php'); // Include WebSocket manager
+include('ws-manager.php');
 
 // Check if user is logged in
 if (!isset($_SESSION['usuario_email'])) {
@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
     $keyid = $_POST['keyid'];
     $ticket_id = $_POST['id'];
     $user = $_SESSION['usuario_email'];
+    $deviceId = isset($_POST['deviceId']) ? $_POST['deviceId'] : null;
     
     // Determine message type (0 for admin, 1 for user)
     $type = (isset($_SESSION['usuario_admin']) && $_SESSION['usuario_admin']) ? 0 : 1;
@@ -52,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
                 $stmt_update->bindParam(':keyid', $keyid);
                 $stmt_update->execute();
                 
-                // Get the exact timestamp of the inserted message (important for real-time sync)
+                // Get the exact timestamp of the inserted message
                 $sql_get_timestamp = "SELECT Date FROM comments_xdfree01_extrafields 
                                      WHERE XDFree01_KeyID = :keyid 
                                      AND user = :user
@@ -63,25 +64,38 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
                 $stmt_timestamp->execute();
                 $exactTimestamp = $stmt_timestamp->fetchColumn();
                 
-                // Broadcast message to WebSocket server for real-time updates
+                // Generate a unique message ID to help with deduplication
+                $messageId = uniqid('msg_');
+                
+                // Prepare the message data
                 $messageData = [
-                    'Message' => $message,
+                    'Message' => nl2br(htmlspecialchars($message)),
                     'type' => $type,
                     'CommentTime' => $exactTimestamp,
-                    'user' => $user
+                    'user' => $user,
+                    'sourceDeviceId' => $deviceId,
+                    'messageId' => $messageId
                 ];
                 
-                // Try to broadcast via WebSocket
-                broadcastMessageToWebSocket($keyid, $messageData);
+                // Create temp directory if it doesn't exist
+                $tempDir = __DIR__ . '/temp';
+                if (!file_exists($tempDir)) {
+                    mkdir($tempDir, 0777, true);
+                    chmod($tempDir, 0777);
+                }
                 
-                // Update immediately in all sessions viewing this ticket
-                $force_sync_file = "sync_{$keyid}_" . time() . ".txt";
-                @file_put_contents("temp/$force_sync_file", date('Y-m-d H:i:s'));
-                @chmod("temp/$force_sync_file", 0666);
+                // Create a sync file - this is the most reliable method
+                $syncId = uniqid();
+                $cleanKeyId = str_replace('#', '', $keyid); // Remove # for consistency
+                $syncFile = "temp/sync_{$cleanKeyId}_{$syncId}.txt";
+                file_put_contents($syncFile, json_encode([
+                    'timestamp' => $exactTimestamp,
+                    'message' => $messageData
+                ]));
+                @chmod($syncFile, 0666);
                 
-                // Check if this is AJAX request
+                // Success response
                 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
-                    // For AJAX requests, return success status as JSON
                     header('Content-Type: application/json');
                     echo json_encode([
                         'status' => 'success',
@@ -89,11 +103,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
                         'type' => $type,
                         'user' => $user,
                         'time' => date('H:i'),
-                        'exactTimestamp' => $exactTimestamp
+                        'exactTimestamp' => $exactTimestamp,
+                        'messageId' => $messageId,
+                        'syncFile' => $syncFile,
+                        'deviceId' => $deviceId
                     ]);
                     exit;
                 } else {
-                    // For normal form submits, redirect back to ticket details
                     header("Location: detalhes_ticket.php?keyid=" . $ticket_id);
                     exit;
                 }

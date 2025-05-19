@@ -1,97 +1,158 @@
 <?php
 /**
- * WebSocket Manager - Functions to interact with the WebSocket server
+ * Simple WebSocket Manager - Functions to handle message synchronization
  */
 
+// Define constants
+define('TEMP_DIR', __DIR__ . DIRECTORY_SEPARATOR . 'temp');
+define('DEBUG', false);
+
 /**
- * Broadcasts a message to all clients connected to a specific ticket
+ * Creates a message file that will be processed and forwarded to users
+ * viewing the same ticket
  *
- * @param string $ticketId The ID of the ticket
- * @param array $messageData The message data to broadcast
+ * @param string $ticketId The ticket ID
+ * @param array $messageData The message data
  * @return bool Success status
  */
 function broadcastMessageToWebSocket($ticketId, $messageData) {
-    // WebSocket server address
-    $host = "localhost";
-    $port = 8080;
-    
-    // Create a socket connection
-    $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-    if (!$socket) {
-        error_log('Unable to create socket: ' . socket_strerror(socket_last_error()));
-        return false;
-    }
-
-    // Set socket options
-    socket_set_option($socket, SOL_SOCKET, SO_RCVTIMEO, array('sec' => 1, 'usec' => 0));
-    socket_set_option($socket, SOL_SOCKET, SO_SNDTIMEO, array('sec' => 1, 'usec' => 0));
-
-    // Try to connect to the WebSocket server
-    $result = @socket_connect($socket, $host, $port);
-    if (!$result) {
-        error_log('WebSocket server not running on ' . $host . ':' . $port);
-        socket_close($socket);
-        return false;
-    }
-
-    // Prepare the WebSocket handshake
-    $key = base64_encode(openssl_random_pseudo_bytes(16));
-    $headers = "GET / HTTP/1.1\r\n" .
-               "Host: " . $host . ":" . $port . "\r\n" .
-               "Upgrade: websocket\r\n" .
-               "Connection: Upgrade\r\n" .
-               "Sec-WebSocket-Key: " . $key . "\r\n" .
-               "Sec-WebSocket-Version: 13\r\n\r\n";
-
-    // Send the headers
-    socket_write($socket, $headers, strlen($headers));
-
-    // Read the response
-    $response = socket_read($socket, 2048);
-    if (!$response) {
-        error_log('No response from WebSocket server');
-        socket_close($socket);
-        return false;
-    }
-
-    // Create message payload
-    $payload = json_encode([
-        'action' => 'newMessage',
-        'ticketId' => $ticketId,
-        'message' => $messageData
-    ]);
-    
-    // Frame the payload according to WebSocket protocol
-    $frameHead = [];
-    $payloadLength = strlen($payload);
-    
-    $frameHead[0] = 129; // FIN + text frame (0x81)
-    
-    if ($payloadLength <= 125) {
-        $frameHead[1] = $payloadLength;
-    } else if ($payloadLength <= 65535) {
-        $frameHead[1] = 126;
-        $frameHead[2] = ($payloadLength >> 8) & 255;
-        $frameHead[3] = $payloadLength & 255;
-    } else {
-        $frameHead[1] = 127;
-        for ($i = 0; $i < 8; $i++) { // Fixed for loop syntax here
-            $frameHead[$i + 2] = ($payloadLength >> ((7 - $i) * 8)) & 255;
+    // Create temp directory if it doesn't exist
+    if (!file_exists(TEMP_DIR)) {
+        $created = @mkdir(TEMP_DIR, 0777, true);
+        if ($created) {
+            @chmod(TEMP_DIR, 0777);
+        } else if (DEBUG) {
+            error_log("Could not create temp directory: " . TEMP_DIR);
         }
     }
     
-    // Convert frameHead to string
-    $header = '';
-    foreach ($frameHead as $byte) {
-        $header .= chr($byte);
+    // Ensure we have a ticket ID
+    if (empty($ticketId)) {
+        if (DEBUG) error_log("Cannot broadcast message: Missing ticket ID");
+        return false;
     }
     
-    // Send the framed message
-    $framedMessage = $header . $payload;
-    socket_write($socket, $framedMessage, strlen($framedMessage));
+    // Generate a unique ID for this message
+    if (!isset($messageData['messageId'])) {
+        $messageData['messageId'] = uniqid('msg_');
+    }
     
-    // Close the socket
-    socket_close($socket);
+    // Format the payload
+    $payload = json_encode([
+        'action' => 'newMessage',
+        'ticketId' => $ticketId,
+        'message' => $messageData,
+        'timestamp' => time()
+    ]);
+    
+    // Write to file for processing
+    $wsFilename = 'ws_message_' . uniqid() . '.json';
+    $wsFile = TEMP_DIR . DIRECTORY_SEPARATOR . $wsFilename;
+    
+    $result = @file_put_contents($wsFile, $payload);
+    
+    if ($result === false) {
+        if (DEBUG) error_log("Failed to create WebSocket message file: $wsFilename");
+        $syncResult = createSyncFile($ticketId, $messageData);
+        return $syncResult;
+    }
+    
+    @chmod($wsFile, 0666);
+    if (DEBUG) error_log("Created WebSocket message file: $wsFilename");
+    
+    // Also create sync file as backup (more reliable)
+    $syncResult = createSyncFile($ticketId, $messageData);
     
     return true;
+}
+
+/**
+ * Creates a sync file directly (bypassing WebSocket)
+ *
+ * @param string $ticketId The ticket ID
+ * @param array $messageData The message data
+ * @return bool Success status
+ */
+function createSyncFile($ticketId, $messageData) {
+    // Create temp directory if it doesn't exist
+    if (!file_exists(TEMP_DIR)) {
+        $created = @mkdir(TEMP_DIR, 0777, true);
+        if ($created) {
+            @chmod(TEMP_DIR, 0777);
+        } else if (DEBUG) {
+            error_log("Could not create temp directory: " . TEMP_DIR);
+            return false;
+        }
+    }
+    
+    $syncId = uniqid();
+    $cleanTicketId = str_replace('#', '', $ticketId);
+    $syncFile = TEMP_DIR . DIRECTORY_SEPARATOR . "sync_{$cleanTicketId}_{$syncId}.txt";
+    
+    $syncData = [
+        'timestamp' => date('Y-m-d H:i:s'),
+        'message' => $messageData
+    ];
+    
+    $result = @file_put_contents($syncFile, json_encode($syncData));
+    if ($result === false) {
+        if (DEBUG) error_log("Failed to create sync file");
+        return false;
+    }
+    
+    @chmod($syncFile, 0666);
+    if (DEBUG) error_log("Created sync file: " . basename($syncFile));
+    
+    return true;
+}
+
+/**
+ * Send a direct HTTP request to the WebSocket server using cURL
+ * 
+ * @param string $ticketId Ticket ID
+ * @param array $messageData Message data
+ * @return bool Success status
+ */
+function sendDirectHttpRequest($ticketId, $messageData) {
+    // Skip if cURL is not available
+    if (!function_exists('curl_init')) {
+        error_log('cURL is not available. Cannot send direct HTTP request.');
+        return false;
+    }
+    
+    try {
+        // Create a message data payload that can be sent via HTTP
+        $data = [
+            'action' => 'httpMessage',
+            'ticketId' => $ticketId,
+            'message' => $messageData,
+            'timestamp' => time(),
+            'secret' => 'ws_secret_key' // Add a secret key for security
+        ];
+        
+        // Initialize cURL
+        $ch = curl_init('http://localhost/infoexe/HelpDesk/ws-http-bridge.php');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 3); // 3 seconds timeout
+        
+        // Send the request
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode === 200) {
+            $result = json_decode($response, true);
+            error_log("Direct HTTP request successful. Response: " . $response);
+            return isset($result['success']) && $result['success'] === true;
+        } else {
+            error_log("Direct HTTP request failed with code $httpCode: $response");
+            return false;
+        }
+    } catch (Exception $e) {
+        error_log('Exception in direct HTTP request: ' . $e->getMessage());
+        return false;
+    }
 }

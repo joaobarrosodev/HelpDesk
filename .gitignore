@@ -1,2 +1,32 @@
+# Ignore temporary files
+/temp/*
+!/temp/.gitkeep
+
+# Logs
+*.log
 log_messages.txt
-ws-server.log
+
+# IDE and editor folders
+.idea/
+.vscode/
+*.sublime-*
+
+# Configuration files with sensitive info
+config.php
+conflogin.php
+db.php
+
+# Composer
+/vendor/
+composer.lock
+
+# Uploaded files
+/uploads/
+/docs/
+
+# Cache and session files
+/cache/
+/sessions/
+
+/temp/*
+vendor/*

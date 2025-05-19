@@ -1,54 +1,75 @@
 <?php
 /**
- * Auto-start WebSocket server script
- * This file checks if the WebSocket server is running and attempts to start it if not
+ * Simple initialization script with no WebSocket server auto-start
+ * Uses file-based synchronization instead
  */
 
-// Function to check if WebSocket server is running
-function isWebSocketServerRunning() {
-    $connection = @fsockopen('localhost', 8080);
-    if (is_resource($connection)) {
-        fclose($connection);
-        return true;
-    }
-    return false;
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
-// Try to start the WebSocket server if it's not running
-if (!isWebSocketServerRunning()) {
-    // Path to the WebSocket server script
-    $wsServerScript = __DIR__ . '/ws-server.php';
-    
-    // Check if we're on Windows or Linux/Unix
-    if (PHP_OS_FAMILY === 'Windows') {
-        // Windows - use start command to run in background
-        $cmd = sprintf(
-            'start /B php "%s" > "%s\ws-server-output.log" 2>&1',
-            $wsServerScript,
-            __DIR__
-        );
-        
-        // Execute the command without waiting
-        pclose(popen($cmd, 'r'));
-        
-        // Log that we tried to start the server
-        error_log("Tried to start WebSocket server: $cmd");
-    } else {
-        // Linux/Unix - use nohup to run in background
-        $cmd = sprintf(
-            'nohup php "%s" > "%s/ws-server-output.log" 2>&1 &',
-            $wsServerScript,
-            __DIR__
-        );
-        
-        // Execute the command
-        exec($cmd);
-        
-        // Log that we tried to start the server
-        error_log("Tried to start WebSocket server: $cmd");
+// Define constants
+define('TEMP_DIR', __DIR__ . DIRECTORY_SEPARATOR . 'temp');
+define('SYNC_FILE_AGE_LIMIT', 300); // 5 minutes in seconds
+
+// Create temp directory if it doesn't exist
+if (!file_exists(TEMP_DIR)) {
+    $created = @mkdir(TEMP_DIR, 0777, true);
+    if ($created) {
+        @chmod(TEMP_DIR, 0777);
     }
-    
-    // Give the server a moment to start
-    sleep(1);
+}
+
+// Process any WebSocket messages
+$messageFiles = glob(TEMP_DIR . DIRECTORY_SEPARATOR . 'ws_message_*.json');
+if (!empty($messageFiles)) {
+    include_once __DIR__ . DIRECTORY_SEPARATOR . 'process_ws_messages.php';
+    if (function_exists('processAllMessageFiles')) {
+        processAllMessageFiles();
+    }
+}
+
+// Clean up old files
+$syncFiles = glob(TEMP_DIR . DIRECTORY_SEPARATOR . 'sync_*.txt');
+$oldFiles = 0;
+
+// Process message files with proper error handling
+if (is_array($messageFiles)) {
+    foreach ($messageFiles as $file) {
+        try {
+            if (file_exists($file) && is_readable($file)) {
+                $fileTime = @filemtime($file);
+                if ($fileTime && (time() - $fileTime > SYNC_FILE_AGE_LIMIT)) {
+                    @unlink($file);
+                    $oldFiles++;
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error processing file: " . $e->getMessage());
+        }
+    }
+}
+
+// Process sync files with proper error handling
+if (is_array($syncFiles)) {
+    foreach ($syncFiles as $file) {
+        try {
+            if (file_exists($file) && is_readable($file)) {
+                $fileTime = @filemtime($file);
+                if ($fileTime && (time() - $fileTime > SYNC_FILE_AGE_LIMIT)) {
+                    @unlink($file);
+                    $oldFiles++;
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error processing file: " . $e->getMessage());
+        }
+    }
+}
+
+// Log cleanup information if debugging is enabled
+if ($oldFiles > 0 && defined('DEBUG') && DEBUG) {
+    error_log("Cleaned up $oldFiles old files from temp directory");
 }
 ?>

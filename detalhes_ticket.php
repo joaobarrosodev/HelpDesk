@@ -2,7 +2,7 @@
 // Try to auto-start the WebSocket server if needed
 include('auto-start.php');
 
-session_start();  // Inicia a sessão
+// The session_start() call was removed from here to prevent "session already started" errors
 
 include('conflogin.php');
 include('db.php');
@@ -236,221 +236,192 @@ function getStatusColor($status) {
             });
         }
         
-        // WebSocket connection and polling variables
+        // Simplified approach - only keep track of the last message timestamp
+        // and use sync files for communication
         let lastMessageTimestamp = '<?php echo !empty($messages) ? date('Y-m-d H:i:s', strtotime($messages[count($messages)-1]['CommentTime'])) : date('Y-m-d H:i:s'); ?>';
-        let pollingInterval = null;
-        let wsConnection = null;
-        let wsRetryCount = 0;
-        const MAX_WS_RETRIES = 5;
+        let deviceId = generateDeviceId(); // Generate unique device ID
+        let syncCheckInterval = null;
         
-        // Auto-start WebSocket connection when page loads
+        // Keep track of processed message IDs to avoid duplicates
+        const processedMessageIds = new Set();
+        
+        // Generate a unique device ID for this browser/device
+        function generateDeviceId() {
+            let id = localStorage.getItem('helpdesk_device_id');
+            if (!id) {
+                id = 'device_' + Math.random().toString(36).substring(2, 15) + 
+                    Math.random().toString(36).substring(2, 15);
+                localStorage.setItem('helpdesk_device_id', id);
+            }
+            return id;
+        }
+        
+        // Initialize chat when page loads
         window.addEventListener('DOMContentLoaded', function() {
+            // Create temp directory if it doesn't exist
+            fetch('create_temp_dir.php')
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Temp directory check:", data);
+                })
+                .catch(error => {
+                    console.error("Error checking temp directory:", error);
+                });
+                
             // Scroll chat to bottom
             const chatBody = document.getElementById('chatBody');
             if (chatBody) {
                 chatBody.scrollTop = chatBody.scrollHeight;
             }
             
-            // Start WebSocket connection
-            connectWebSocket();
+            // Check for sync files every 1 second
+            syncCheckInterval = setInterval(checkSyncFiles, 1000);
             
-            // Also start polling as fallback
-            startPolling();
-            
-            // Check WebSocket status periodically and reconnect if needed
-            setInterval(function() {
-                if (wsConnection === null || wsConnection.readyState !== WebSocket.OPEN) {
-                    console.log("WebSocket not connected. Attempting to reconnect...");
-                    connectWebSocket();
-                }
-            }, 10000); // Check every 10 seconds
+            // Add existing message IDs to the set
+            document.querySelectorAll('.message').forEach(msg => {
+                const user = msg.querySelector('.message-user-info')?.textContent || 'unknown';
+                const time = msg.querySelector('.message-time')?.textContent || '';
+                const text = msg.querySelector('.message-content')?.textContent.substring(0, 20) || '';
+                const compositeId = `${user}-${time}-${text}`;
+                processedMessageIds.add(compositeId);
+            });
         });
         
-        // Connect to WebSocket server
-        function connectWebSocket() {
-            if (wsConnection !== null && wsConnection.readyState === WebSocket.CONNECTING) {
-                console.log("WebSocket already connecting, waiting...");
-                return;
-            }
-            
-            if (wsRetryCount >= MAX_WS_RETRIES) {
-                console.log("Max WebSocket retry attempts reached, using polling only");
-                return;
-            }
-            
-            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${wsProtocol}//${location.hostname}:8080`;
-            
-            try {
-                console.log(`Connecting to WebSocket at ${wsUrl}`);
-                wsConnection = new WebSocket(wsUrl);
-                
-                wsConnection.onopen = function() {
-                    console.log('WebSocket connected successfully');
-                    wsRetryCount = 0; // Reset retry counter on successful connection
-                    
-                    // Subscribe to this ticket's updates
-                    wsConnection.send(JSON.stringify({
-                        action: 'subscribe',
-                        ticketId: '<?php echo $ticket_id; ?>',
-                        user: '<?php echo htmlspecialchars($_SESSION['usuario_email']); ?>'
-                    }));
-                    
-                    // Slow down polling when WebSocket is working
-                    if (pollingInterval) {
-                        clearInterval(pollingInterval);
-                        pollingInterval = setInterval(checkForNewMessages, 10000); // 10 seconds
+        // Function to check for sync files
+        function checkSyncFiles() {
+            const timestamp = new Date().getTime();
+            fetch('check_sync.php?ticketId=<?php echo $ticket_id; ?>&deviceId=' + encodeURIComponent(deviceId) + '&lastCheck=' + lastMessageTimestamp + '&_=' + timestamp)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Network response not ok: ${response.status}`);
                     }
-                };
-                
-                wsConnection.onmessage = function(event) {
-                    try {
-                        const data = JSON.parse(event.data);
-                        console.log('WebSocket message received:', data);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Sync check result:", data);
+                    
+                    if (data.hasNewMessages && data.messages && data.messages.length > 0) {
+                        // Process new messages
+                        const messagesToProcess = [];
                         
-                        if (data.action === 'newMessage' && data.message) {
-                            // Process new message from WebSocket
-                            processNewMessages([data.message]);
+                        // Filter out duplicate messages
+                        data.messages.forEach(message => {
+                            // Use messageId if available, otherwise create a composite key
+                            const messageId = message.messageId || 
+                                `${message.user}-${message.CommentTime}-${message.Message?.substring(0, 20)}`;
                             
-                            // Update timestamp if newer
-                            if (data.message.CommentTime > lastMessageTimestamp) {
-                                lastMessageTimestamp = data.message.CommentTime;
+                            if (!processedMessageIds.has(messageId)) {
+                                processedMessageIds.add(messageId);
+                                messagesToProcess.push(message);
                             }
+                        });
+                        
+                        if (messagesToProcess.length > 0) {
+                            // Process the unique messages
+                            processNewMessages(messagesToProcess);
+                            
+                            // Update the last message timestamp if newer messages were found
+                            messagesToProcess.forEach(message => {
+                                if (message.CommentTime && message.CommentTime > lastMessageTimestamp) {
+                                    lastMessageTimestamp = message.CommentTime;
+                                }
+                            });
                         }
-                    } catch (e) {
-                        console.error('Error processing WebSocket message:', e);
                     }
-                };
-                
-                wsConnection.onclose = function(event) {
-                    console.log(`WebSocket connection closed: ${event.code} ${event.reason}`);
-                    wsConnection = null;
-                    
-                    // Increment retry counter
-                    wsRetryCount++;
-                    
-                    // Switch back to fast polling when WebSocket is not available
-                    if (pollingInterval) {
-                        clearInterval(pollingInterval);
-                        pollingInterval = setInterval(checkForNewMessages, 1000); // 1 second
-                    }
-                    
-                    // Try to reconnect after a delay that increases with each retry
-                    const delay = Math.min(1000 * Math.pow(2, wsRetryCount), 30000); // Exponential backoff, max 30s
-                    console.log(`Will retry WebSocket connection in ${delay/1000} seconds`);
-                    setTimeout(connectWebSocket, delay);
-                };
-                
-                wsConnection.onerror = function(error) {
-                    console.error('WebSocket error:', error);
-                    // Error will trigger onclose
-                };
-            } catch (error) {
-                console.error('Error creating WebSocket:', error);
-                wsConnection = null;
-                wsRetryCount++;
-            }
-        }
-        
-        // Start polling as fallback
-        function startPolling() {
-            pollingInterval = setInterval(checkForNewMessages, 1000); // 1 second
-            
-            // Handle page visibility changes
-            document.addEventListener('visibilitychange', function() {
-                if (document.hidden) {
-                    // Slow down polling when tab is not visible
-                    if (pollingInterval) {
-                        clearInterval(pollingInterval);
-                        pollingInterval = setInterval(checkForNewMessages, 5000); // 5 seconds
-                    }
-                } else {
-                    // Speed up polling when tab becomes visible again
-                    if (pollingInterval) {
-                        clearInterval(pollingInterval);
-                        pollingInterval = setInterval(checkForNewMessages, 1000); // 1 second
-                    }
-                    // Immediately check for new messages
-                    checkForNewMessages();
-                }
-            });
-        }
-        
-        // Function to check for new messages via AJAX
-        function checkForNewMessages() {
-            const keyId = '<?php echo $ticket_id; ?>';
-            const timestamp = encodeURIComponent(lastMessageTimestamp);
-            const cacheBuster = new Date().getTime();
-            
-            fetch(`get_new_messages.php?keyid=${keyId}&timestamp=${timestamp}&_=${cacheBuster}`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Cache-Control': 'no-cache, no-store, must-revalidate'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Network response not ok: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.messages && data.messages.length > 0) {
-                    console.log("New messages received via polling:", data.messages);
-                    
-                    // Update the last message timestamp
-                    lastMessageTimestamp = data.lastTimestamp;
-                    
-                    // Process new messages
-                    processNewMessages(data.messages);
-                }
-            })
-            .catch(error => {
-                console.error('Error checking for messages:', error);
-            });
+                })
+                .catch(error => {
+                    console.error("Error checking sync files:", error);
+                });
         }
         
         // Function to process new messages
         function processNewMessages(messages) {
+            if (!messages || messages.length === 0) {
+                return;
+            }
+            
             // Add new messages to the chat
             const chatBody = document.getElementById('chatBody');
+            let newMessagesAdded = false;
             
             messages.forEach(message => {
-                const isUser = (parseInt(message.type) === 1);
+                // Skip if message is invalid
+                if (!message || typeof message !== 'object') {
+                    return;
+                }
+                
+                // Determine message type and class
+                const type = parseInt(message.type);
+                const isUser = (type === 1);
                 const messageClass = isUser ? 'message-user' : 'message-admin';
                 
-                // Skip if message is already in the chat (check by content and time)
-                const messageKey = `${message.user}-${message.CommentTime}-${message.Message.substring(0, 20)}`;
+                // Get message text with fallback
+                const messageText = message.Message || '';
+                
+                // Create a unique key to identify this message
+                const user = message.user || 'unknown';
+                const time = message.CommentTime || new Date().toISOString();
+                
+                // Use messageId if available, otherwise create a composite key
+                const messageKey = message.messageId || `${user}-${time}-${messageText.substring(0, 20)}`;
+                
+                // Skip if we already have this message in the DOM
                 if (document.querySelector(`[data-message-key="${messageKey}"]`)) {
                     return;
                 }
+                
+                console.log(`Adding new message: ${messageKey}`);
+                newMessagesAdded = true;
                 
                 // Create message element
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${messageClass} new-message`;
                 messageDiv.setAttribute('data-message-key', messageKey);
                 
-                let timeDisplay;
-                try {
-                    timeDisplay = new Date(message.CommentTime).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
-                } catch (e) {
-                    timeDisplay = message.CommentTime;
-                }
+                // Format time display
+                let timeDisplay = formatMessageTime(time);
                 
+                // Set content with safe fallbacks
                 messageDiv.innerHTML = `
-                    <p class="message-content">${message.Message}</p>
+                    <p class="message-content">${messageText}</p>
                     <div class="message-meta">
-                        <span class="message-user-info">${message.user}</span>
+                        <span class="message-user-info">${user}</span>
                         <span class="message-time">${timeDisplay}</span>
                     </div>
                 `;
+                
+                // Add message to chat
                 chatBody.appendChild(messageDiv);
             });
             
-            // Scroll to bottom of chat if user is already at bottom
-            const isAtBottom = chatBody.scrollHeight - chatBody.clientHeight <= chatBody.scrollTop + 100;
-            if (isAtBottom) {
-                chatBody.scrollTop = chatBody.scrollHeight;
+            // Scroll to bottom if we added new messages
+            if (newMessagesAdded) {
+                const isAtBottom = chatBody.scrollHeight - chatBody.clientHeight <= chatBody.scrollTop + 100;
+                if (isAtBottom) {
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                }
+            }
+        }
+        
+        // Helper function to format message time
+        function formatMessageTime(time) {
+            try {
+                const timeObj = new Date(time);
+                if (isNaN(timeObj)) {
+                    // If not a valid date string, try to parse it as a MySQL datetime
+                    const parts = time.split(/[- :]/);
+                    if (parts.length >= 6) {
+                        const timeObj = new Date(parts[0], parts[1]-1, parts[2], parts[3], parts[4], parts[5]);
+                        return timeObj.toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
+                    } else {
+                        return time;
+                    }
+                } else {
+                    return timeObj.toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
+                }
+            } catch (e) {
+                console.error("Error formatting time:", e);
+                return time;
             }
         }
         
@@ -491,6 +462,9 @@ function getStatusColor($status) {
                     formData.set('message', messageToSend);
                 }
                 
+                // Add device ID to the form data
+                formData.append('deviceId', deviceId);
+                
                 fetch('inserir_mensagem.php', {
                     method: 'POST',
                     body: formData,
@@ -515,8 +489,8 @@ function getStatusColor($status) {
                 .then(data => {
                     console.log('Mensagem enviada com sucesso:', data);
                     
-                    // If WebSocket is connected, there's no need to do anything else
-                    // The message will come back through the WebSocket or polling
+                    // Force check for sync files to update any other clients
+                    setTimeout(checkSyncFiles, 200);
                 })
                 .catch(error => {
                     console.error('Erro:', error);
@@ -554,6 +528,11 @@ function getStatusColor($status) {
                 window.location.href = 'fechar_ticket.php?id=' + id;
             }
         }
+        
+        // Cleanup when leaving the page
+        window.addEventListener('beforeunload', function() {
+            if (syncCheckInterval) clearInterval(syncCheckInterval);
+        });
     </script>
 </body>
 </html>

@@ -27,19 +27,19 @@ if (!isset($_GET['keyid']) || !isset($_GET['timestamp'])) {
 
 $keyid = $_GET['keyid'];
 $timestamp = $_GET['timestamp'];
+$deviceId = isset($_GET['deviceId']) ? $_GET['deviceId'] : null;
 
-// Buscar novas mensagens a partir do timestamp fornecido - with a small buffer to avoid missing messages
-// Subtract 2 seconds from the timestamp to ensure we don't miss any messages
-$adjusted_timestamp = date('Y-m-d H:i:s', strtotime($timestamp) - 2);
+// Adjust timestamp to avoid missing messages (subtract 5 seconds)
+$adjusted_timestamp = date('Y-m-d H:i:s', strtotime($timestamp) - 5);
 
 // Log the timestamps for debugging
 file_put_contents($debug_log, date('Y-m-d H:i:s') . " - Original timestamp: $timestamp, Adjusted: $adjusted_timestamp\n", FILE_APPEND);
 
-$sql = "SELECT Message, type, Date as CommentTime, user
-        FROM comments_xdfree01_extrafields
-        WHERE XDFree01_KeyID = :keyid
-        AND Date > :timestamp
-        ORDER BY Date ASC";
+$sql = "SELECT c.Message, c.type, c.Date as CommentTime, c.user
+        FROM comments_xdfree01_extrafields c
+        WHERE c.XDFree01_KeyID = :keyid
+        AND c.Date > :timestamp
+        ORDER BY c.Date ASC";
 
 try {
     $stmt = $pdo->prepare($sql);
@@ -62,6 +62,9 @@ try {
         // Process message content for HTML display
         foreach ($messages as &$message) {
             $message['Message'] = nl2br(htmlspecialchars($message['Message']));
+            
+            // Add device ID to help avoid duplicate messages
+            $message['sourceDeviceId'] = null;
         }
     }
 
@@ -70,9 +73,10 @@ try {
         'messages' => $messages,
         'lastTimestamp' => $lastTimestamp,
         'status' => 'success',
-        'serverTime' => date('Y-m-d H:i:s.u'),
+        'serverTime' => date('Y-m-d H:i:s'),
         'requestTimestamp' => $timestamp,
-        'queryTimestamp' => $adjusted_timestamp
+        'queryTimestamp' => $adjusted_timestamp,
+        'clientDeviceId' => $deviceId
     ]);
     
     file_put_contents($debug_log, date('Y-m-d H:i:s') . " - Response sent\n", FILE_APPEND);
