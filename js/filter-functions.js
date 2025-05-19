@@ -3,6 +3,8 @@
  * - Intervalo de datas
  * - Tipo de documento
  * - Intervalo de valores
+ * 
+ * TODO: Improved to filter automatically on key press and changes
  */
 function filterTableByAll() {
   const startDate = document.getElementById('start-date').value;
@@ -10,12 +12,6 @@ function filterTableByAll() {
   const documentType = document.getElementById('document-type').value;
   const minValue = document.getElementById('min-value').value ? parseFloat(document.getElementById('min-value').value) : null;
   const maxValue = document.getElementById('max-value').value ? parseFloat(document.getElementById('max-value').value) : null;
-  
-  // Verifica se pelo menos um filtro foi selecionado
-  if (!startDate && !endDate && documentType === 'all' && minValue === null && maxValue === null) {
-    alert('Por favor, selecione pelo menos um filtro.');
-    return;
-  }
   
   const table = document.getElementById('account-table');
   const rows = table.getElementsByTagName('tr');
@@ -27,8 +23,10 @@ function filterTableByAll() {
     startDateObj = new Date(startDate);
     endDateObj = new Date(endDate);
     
-    // Atualiza o texto do intervalo de datas
-    const dateRangeText = formatDateRange(startDateObj, endDateObj);
+    // Atualiza o texto do intervalo de datas (se existir)
+    if (typeof formatDateRange === 'function') {
+      const dateRangeText = formatDateRange(startDateObj, endDateObj);
+    }
     document.getElementById('date-range-text').textContent = dateRangeText;
   }
   

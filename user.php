@@ -177,8 +177,9 @@ try {
     <div class="content p-4">
         <div class="container-fluid">
             <div class="row mb-4">
-                <div class="col-12">                    <h1 class="display-5 mb-0">O Meu Perfil</h1>
-                    <p class="text-muted">Gerencie as suas informações pessoais e veja estatísticas de atendimento</p>
+                <div class="col-12">                    
+                    <h1 class="display-5 mb-0">O Meu Perfil</h1>
+                    <p class="text-muted">Gira as suas informações pessoais e veja estatísticas de atendimento</p>
                 </div>
             </div>
             

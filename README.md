@@ -23,7 +23,6 @@ Este é um sistema de HelpDesk desenvolvido exclusivamente para os clientes da I
   - `index.php`: Página inicial
   - `login.php`: Página de login
   - `ticket.php`: Criação de tickets
-  - `consultar_tickets.php`: Consulta de tickets abertos
   - `consultar_tickets_fechados.php`: Consulta de tickets fechados
 
 - **Admin:**

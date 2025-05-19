@@ -1,50 +1,89 @@
 <?php
 session_start();
-
 include('conflogin.php');
 include('db.php');
 
-// Verificar se a mensagem foi enviada
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Captura a mensagem e o KeyId do ticket
-    $keyid = $_POST['keyid']; // KeyId do ticket
-    $id = $_POST['id'];
-    $message = $_POST['message']; // Mensagem
+// Check if user is logged in
+if (!isset($_SESSION['usuario_email'])) {
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') {
+        // If AJAX request
+        http_response_code(401);
+        echo "Não autorizado";
+        exit;
+    } else {
+        // If normal form submit
+        header("Location: index.php");
+        exit;
+    }
+}
 
-    // Verificar se a mensagem não está vazia
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_POST['keyid']) && isset($_POST['id'])) {
+    $message = trim($_POST['message']);
+    $keyid = $_POST['keyid'];
+    $ticket_id = $_POST['id'];
+    $user = $_SESSION['usuario_email'];
+    
+    // Determine message type (0 for admin, 1 for user)
+    $type = isset($_SESSION['usuario_admin']) && $_SESSION['usuario_admin'] ? 0 : 1;
+    
     if (!empty($message)) {
-        // Preparar o SQL para inserir a mensagem na tabela 'comments_xdfree01_extrafields'
-        $sql = "INSERT INTO comments_xdfree01_extrafields (xdfree01_KeyId, Date, Message, Type, user) 
-                VALUES (:keyid, NOW(), :message, 1, :email)";
+        // Insert message into database
+        $sql = "INSERT INTO comments_xdfree01_extrafields 
+                (XDFree01_KeyID, Date, Message, Type, user) 
+                VALUES (:keyid, NOW(), :message, :type, :user)";
         
         $stmt = $pdo->prepare($sql);
         $stmt->bindParam(':keyid', $keyid);
         $stmt->bindParam(':message', $message);
-        $stmt->bindParam(':email', $_SESSION['usuario_email']);
+        $stmt->bindParam(':type', $type);
+        $stmt->bindParam(':user', $user);
         
-        // Executa o comando para inserir a mensagem
         if ($stmt->execute()) {
-            // Atualizar a data de atualização na tabela 'info_xdfree01_extrafields'
-            $update_sql = "UPDATE info_xdfree01_extrafields 
-                           SET dateu = NOW() 
-                           WHERE XDfree01_KeyId = :keyid";
+            // Update the last update time for the ticket
+            $sql_update = "UPDATE info_xdfree01_extrafields 
+                          SET dateu = NOW() 
+                          WHERE XDFree01_KeyID = :keyid";
             
-            $update_stmt = $pdo->prepare($update_sql);
-            $update_stmt->bindParam(':keyid', $keyid);
+            $stmt_update = $pdo->prepare($sql_update);
+            $stmt_update->bindParam(':keyid', $keyid);
+            $stmt_update->execute();
             
-            // Executa o comando de update
-            if ($update_stmt->execute()) {
-                // Redireciona de volta para a página do ticket após inserir a mensagem
-                header("Location: detalhes_ticket.php?keyid=$id");
+            // Check if this is AJAX request
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') {
+                // For AJAX requests, return success status
+                http_response_code(200);
+                echo "Mensagem enviada com sucesso";
                 exit;
             } else {
-                echo "Erro ao atualizar a data de atualização. Tente novamente.";
+                // For normal form submits, redirect back to ticket details
+                header("Location: detalhes_ticket.php?keyid=" . $ticket_id);
+                exit;
             }
         } else {
-            echo "Erro ao enviar a mensagem. Tente novamente.";
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') {
+                http_response_code(500);
+                echo "Erro ao enviar a mensagem";
+                exit;
+            } else {
+                echo "Erro ao enviar a mensagem. <a href='detalhes_ticket.php?keyid=" . $ticket_id . "'>Voltar</a>";
+            }
         }
     } else {
-        echo "Por favor, digite uma mensagem.";
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') {
+            http_response_code(400);
+            echo "Mensagem vazia";
+            exit;
+        } else {
+            echo "A mensagem não pode estar vazia. <a href='detalhes_ticket.php?keyid=" . $ticket_id . "'>Voltar</a>";
+        }
+    }
+} else {
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') {
+        http_response_code(400);
+        echo "Dados incompletos";
+        exit;
+    } else {
+        echo "Requisição inválida. <a href='meus_tickets.php'>Voltar aos meus tickets</a>";
     }
 }
 ?>

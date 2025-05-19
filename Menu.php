@@ -113,9 +113,11 @@
     </div>   <!-- Área do Usuário -->
     <?php if (isset($_SESSION['usuario_id'])): ?>
         <a href="user.php" class="mt-auto text-decoration-none user-profile-link p-3 d-flex align-items-center rounded-2 mx-2 mb-1 bg-light" title="Ver perfil de utilizador">
-            <div class="user-avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" aria-hidden="true">
-                <?php 
-                if (isset($_SESSION['usuario_email'])) {
+            <div class="user-avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" aria-hidden="true">                <?php 
+                if (isset($_SESSION['Nome'])) {
+                    $primeira_letra = strtoupper($_SESSION['Nome'][0]); // Pega a primeira letra do nome e coloca em maiúscula
+                    echo $primeira_letra;
+                } elseif (isset($_SESSION['usuario_email'])) {
                     $email = $_SESSION['usuario_email'];
                     $primeira_letra = strtoupper($email[0]); // Pega a primeira letra do email e coloca em maiúscula
                     echo $primeira_letra;
@@ -123,19 +125,8 @@
                     echo "U";
                 }
                 ?>
-            </div>
-            <div class="ms-3 flex-grow-1 overflow-hidden">
-                <p class="fw-semibold m-0 text-truncate text-dark">
-                    <?php 
-                    if (isset($_SESSION['usuario_nome'])) {
-                        echo htmlspecialchars($_SESSION['usuario_nome']);
-                    } elseif (isset($_SESSION['usuario_email'])) {
-                        $parts = explode('@', $_SESSION['usuario_email']);
-                        echo htmlspecialchars($parts[0]);
-                    } else {
-                        echo "Utilizador";
-                    }
-                    ?>
+            </div>            <div class="ms-3 flex-grow-1 overflow-hidden">                <p class="fw-semibold m-0 text-truncate text-dark">
+                    <?php echo isset($_SESSION['Nome']) ? htmlspecialchars($_SESSION['Nome']) : 'Utilizador'; ?>
                 </p>
                 <p class="small text-muted m-0 text-truncate">
                     <?php echo isset($_SESSION['usuario_email']) ? htmlspecialchars($_SESSION['usuario_email']) : 'email@exemplo.com'; ?>

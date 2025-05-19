@@ -19,7 +19,8 @@ include('conflogin.php');
         $stmt->execute();
         $cc = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$cc) {            echo "Ticket não encontrado.";
+        if (!$cc) {      
+            echo "Ticket não encontrado.";
             exit;
         }
 
@@ -30,7 +31,7 @@ include('conflogin.php');
         if ($valor_formatado > 0) {
             $cor = 'bg-danger'; // Se houver dívida, fica vermelho
         } else {
-            $cor = 'bg-primary'; // Se houver crédito, fica azul
+            $cor = 'bg-success'; // Se houver crédito, fica verde
         }
 
         $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields WHERE (status = 'Em Análise' OR status = 'Em Resolução' OR status = 'Aguarda Resposta Cliente') AND Entity = :usuario_id";
@@ -58,9 +59,8 @@ include('conflogin.php');
         $tempo_medio_resposta = "4:34";
         ?>
 
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
-            <div>
-                <h1 class="mb-3 display-5">Bem Vindo, <?php echo htmlspecialchars($_SESSION['Nome']); ?></h1>
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">            <div>
+                <h1 class="mb-3 display-5">Bem Vindo, S. PINTOS - Engenharia e Construção, S.A.</h1>
                 <p class="text-muted mb-3 w-100">Aqui pode acompanhar os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real.</p>
             </div>
             <a href="ticket.php" class="btn btn-primary btn-primary"><i class="bi bi-plus-circle me-2"></i>Abrir Novo Ticket</a>
