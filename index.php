@@ -30,7 +30,7 @@ include('conflogin.php');
         if ($valor_formatado > 0) {
             $cor = 'bg-danger'; // Se houver dívida, fica vermelho
         } else {
-            $cor = 'bg-success'; // Se houver crédito, fica verde
+            $cor = 'bg-primary'; // Se houver crédito, fica azul
         }
 
         $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields WHERE (status = 'Em Análise' OR status = 'Em Resolução' OR status = 'Aguarda Resposta Cliente') AND Entity = :usuario_id";
@@ -61,84 +61,94 @@ include('conflogin.php');
         <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
             <div>
                 <h1 class="mb-3 display-5">Bem Vindo, <?php echo htmlspecialchars($_SESSION['Nome']); ?></h1>
-                <p class="text-muted mb-3 w-100">Aqui pode acompanhar todos os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real. Utilize esta área para monitorizar o progresso das suas solicitações e garantir um acompanhamento eficaz.</p>
+                <p class="text-muted mb-3 w-100">Aqui pode acompanhar os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real.</p>
             </div>
             <a href="ticket.php" class="btn btn-primary btn-primary"><i class="bi bi-plus-circle me-2"></i>Abrir Novo Ticket</a>
         </div>
 
         <!-- Dashboard Cards -->
         <div class="row">
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card dashboard-card h-100">
+            <div class="col-xl-4 col-md-6 mb-4 flex-1">
+                <div class="card dashboard-card">
                     <div class="card-body d-flex flex-column">
                         <h5 class="card-title">Categoria dos Tickets</h5>
-                        <div class="mt-auto chart-container">
+                        <div class="chart-container">
                             <canvas id="categoriaTicketsChart"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card dashboard-card h-100">
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title">Prioridade dos Tickets</h5>
-                        <div class="mt-auto chart-container">
+            
+            <div class="col-xl-4 col-md-6 mb-4 flex-1">
+                
+                <div class="col-12 mb-4">
+                    <div class="card dashboard-card">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">Prioridade dos Tickets</h5>
                             <canvas id="prioridadeTicketsChart"></canvas> 
                         </div>
                     </div>
                 </div>
+
+                <div class="col-12">
+                    <div class="card dashboard-card">
+                        <div class="flex-row d-flex card-body" style="gap: 10px;">
+                            <p class="m-0">Tempo Médio de Resposta</p>
+                            <p class="m-0 fw-bold text-primary"><?php echo $tempo_medio_resposta; ?>min</p>
+                        </div>
+                    </div>
+            
+                </div>
             </div>
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card dashboard-card h-100">
+            
+            <div class="col-xl-4 col-md-6 mb-4 flex-1">
+                <div class="card dashboard-card h-100 ">
                     <div class="card-body">
                         <h5 class="card-title">Avaliação dos Clientes</h5>
-                        <p class="text-muted mb-2 card-subtitle">Respostas Recebidas: <strong><?php echo $respostas_recebidas; ?> Clientes</strong></p>
+                        <div class="row w-100">
+                            <div class="col-6 d-flex justify-content-center align-items-center flex-column mb-3">
+                                <p class="w-100 text-muted">Respostas:</p>
+                                <p class="w-100"><strong><?php echo $respostas_recebidas; ?> Clientes</strong></p>
+                            </div>
 
-                        <div class="evaluation-item">
-                            <div class="icon icon-positive"><i class="bi bi-hand-thumbs-up-fill"></i></div>
-                            <div class="details">
-                                <div class="label-percent"><span>Positive</span><span><strong><?php echo $positive_percentage; ?>%</strong></span></div>
-                                <div class="progress" style="height: 6px;"><div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $positive_percentage; ?>%;" aria-valuenow="<?php echo $positive_percentage; ?>" aria-valuemin="0" aria-valuemax="100"></div></div>
+                            <div class="col-6 d-flex justify-content-center align-items-center flex-row mb-3">
+                                    <i class="bi bi-hand-thumbs-up-fill text-success fs-4"></i>
+                                    <div class="flex-column w-100 justify-content-center align-items-center d-flex">
+                                        <span class="text-muted">Positivo</span>
+                                            <div class="progress w-75 mt-1"  style=" height: 6px;">
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $positive_percentage; ?>%"></div>
+                                            </div>       
+                                    </div>
+                                    <div>
+                                        <span class="client-rating-number"><?php echo $positive_percentage; ?>%</span>
+                                    </div>
                             </div>
-                        </div>
-                        <div class="evaluation-item mt-2">
-                            <div class="icon icon-negative"><i class="bi bi-hand-thumbs-down-fill"></i></div>
-                            <div class="details">
-                                <div class="label-percent"><span>Negative</span><span><strong><?php echo $negative_percentage; ?>%</strong></span></div>
-                                <div class="progress" style="height: 6px;"><div class="progress-bar bg-danger" role="progressbar" style="width: <?php echo $negative_percentage; ?>%;" aria-valuenow="<?php echo $negative_percentage; ?>" aria-valuemin="0" aria-valuemax="100"></div></div>
+
+                            <div class="col-6 d-flex justify-content-center align-items-center flex-row mb-3">
+                                 <i class="bi bi-hand-thumbs-down-fill text-danger fs-4"></i>
+                                <div class="flex-column w-100 justify-content-center align-items-center d-flex">
+                                    <span class="text-muted">Negativo</span>
+                                    <div class="progress w-75 mt-1"  style=" height: 6px;">
+                                        <div class="progress-bar bg-danger" role="progressbar" style="width: <?php echo $negative_percentage; ?>%"></div>
+                                    </div>
+                                </div>
+                                <span class="client-rating-number"><?php echo $negative_percentage; ?>%</span>
                             </div>
-                        </div>
-                        <div class="evaluation-item mt-2">
-                            <div class="icon icon-neutral"><i class="bi bi-emoji-neutral-fill"></i></div>
-                            <div class="details">
-                                <div class="label-percent"><span>Neutral</span><span><strong><?php echo $neutral_percentage; ?>%</strong></span></div>
-                                <div class="progress" style="height: 6px;"><div class="progress-bar bg-warning" role="progressbar" style="width: <?php echo $neutral_percentage; ?>%;" aria-valuenow="<?php echo $neutral_percentage; ?>" aria-valuemin="0" aria-valuemax="100"></div></div>
+
+                            <div class="col-6 d-flex justify-content-center align-items-center flex-row mb-3">
+                                 <i class="bi bi-emoji-neutral-fill text-warning fs-4"></i>   
+                                <div class="flex-column w-100 justify-content-center align-items-center d-flex">
+                                    <span class="text-muted">Neutro</span>
+                                    <div class="progress w-75 mt-1"  style=" height: 6px;">
+                                        <div class="progress-bar bg-warning" role="progressbar" style="width: <?php echo $neutral_percentage; ?>%"></div>
+                                   </div>
+                                </div>
+                                <span class="client-rating-number"><?php echo $neutral_percentage; ?>%</span>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div class="col-xl-3 col-md-6 mb-4">
-                 <div class="card dashboard-card h-100">
-                    <div class="card-body text-center d-flex flex-column justify-content-center align-items-center">
-                        <h5 class="card-title mb-3">Tempo Médio de Resposta</h5>
-                        <p class="display-4 fw-bold m-0 tempo-medio-valor"><?php echo $tempo_medio_resposta; ?> <span class="tempo-medio-unidade">min</span></p>
-                    </div>
-                </div>
-            </div>
         </div>
-        </div> <!-- This closes the div.content -->
-
-        <!-- ISSUE Section - SKIPPED FOR NOW as per user request -->
-        <?php /*
-        <div class="card mt-4">
-            <div class="card-header issue-table-header d-flex justify-content-between align-items-center py-3">
-        // ... (rest of the ISSUE section HTML commented out or removed)
-        </div>
-        */ ?>
-
-    </div> <!-- This was an extra closing div, ensure it matches your layout or remove if not needed -->
-
+    </div> 
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -158,7 +168,7 @@ include('conflogin.php');
                             '#dc3545'  // Office (Red)
                         ],
                         borderColor: '#fff',
-                        borderWidth: 2
+                        borderWidth: 5
                     }]
                 },
                 options: {
@@ -175,55 +185,103 @@ include('conflogin.php');
                         }
                     }
                 }
-            });
+            });   
 
             // Prioridade dos Tickets Chart (Horizontal Bar)
             const prioridadeCtx = document.getElementById('prioridadeTicketsChart').getContext('2d');
-            new Chart(prioridadeCtx, {
-                type: 'bar',
+            new Chart(prioridadeCtx, {                type: 'bar',
                 data: {
                     labels: <?php echo json_encode($prioridade_labels); ?>,
                     datasets: [{
                         label: 'Prioridade',
-                        data: <?php echo json_encode($prioridade_counts); ?>,
-                        backgroundColor: [
-                            '#28a745', // Baixo
-                            '#ffc107', // Médio
-                            '#dc3545'  // Alto
+                        data: <?php echo json_encode($prioridade_counts); ?>,                        backgroundColor: [
+                            '#000000', // All bars in black
+                            '#000000',
+                            '#000000'
                         ],
-                        borderColor: [
-                            '#28a745',
-                            '#ffc107',
-                            '#dc3545'
-                        ],
-                        borderWidth: 1
+                        borderWidth: 0,
+                        categoryPercentage: 1.0, // Use full category width
+                        barPercentage: 0.4 // Make bars take 40% of category height, leaving 60% as spacing
                     }]
-                },
-                options: {
+                },                options: {
                     indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            right: 30 // Add padding for percentage labels
+                        }
+                    },
+                    barThickness: 18, // Keep medium bar thickness
+                    maxBarThickness: 18,
+                    minBarLength: 2,
                     scales: {
                         x: {
                             beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return value + "%"
-                                }
-                            }
+                            grid: {
+                                display: false,
+                            },
+                            display: false // Hide x-axis
                         },
                         y: {
                             grid: {
                                 display: false
+                            },
+                            ticks: {
+                                padding: 1, // Minimal padding
+                                font: {
+                                    size: 12 // Smaller font for labels
+                                }
+                            },
+                            afterFit: function(scaleInstance) {
+                                // Make the height smaller to reduce spacing
+                                scaleInstance.height = 80;
                             }
                         }
                     },
                     plugins: {
                         legend: {
-                            display: false // Hide legend for this chart as per image
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: false
+                        },
+                        datalabels: {
+                            align: 'end',
+                            anchor: 'end',
+                            color: '#000',
+                            font: {
+                                weight: 'bold'
+                            },
+                            formatter: function(value, context) {
+                                return value + '%';
+                            }
                         }
                     }
-                }
+                },                plugins: [{
+                    id: 'compactBars',
+                    beforeLayout: function(chart) {
+                        // Force chart to be compact
+                        chart.height = 100;
+                    },
+                    afterDraw: function(chart) {
+                        const ctx = chart.ctx;
+                        const yAxis = chart.scales.y;
+                        const xAxis = chart.scales.x;
+                        
+                        // Draw percentage values
+                        chart.data.datasets[0].data.forEach((dataValue, index) => {
+                            const yPosition = yAxis.getPixelForTick(index);
+                            const xPosition = xAxis.getPixelForValue(dataValue) + 10;
+                            
+                            ctx.fillStyle = "#000";
+                            ctx.font = "bold 12px Arial";
+                            ctx.textAlign = "left";
+                            ctx.textBaseline = "middle";
+                            ctx.fillText(dataValue + "%", xPosition, yPosition);
+                        });
+                    }
+                }]
             });
         });
     </script>
