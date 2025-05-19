@@ -47,12 +47,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $stmt->execute();
 
-        echo "<div class='alert alert-success alert-dismissible fade show' role='alert'>
-                Ticket criado com sucesso! O seu KeyId: $novo_keyid
-                <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
-              </div>";
-        header("Refresh: 2; url=index.php");
-        exit;
+        // Set success flag and ticket ID in session instead of showing alert
+        $_SESSION['ticket_created'] = true;
+        $_SESSION['novo_keyid'] = $novo_keyid;
 
     } catch (PDOException $e) {
         echo "<div class='alert alert-danger alert-dismissible fade show' role='alert'>
@@ -156,6 +153,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
     </div>
 
+    <!-- Modal de Sucesso -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="successModalLabel">Ticket Criado com Sucesso!</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                    <h4 class="mt-3">Ticket registrado com sucesso!</h4>
+                    <p class="lead">O seu número de ticket é: <strong id="ticketId"></strong></p>
+                    <p>Um técnico irá analisar sua solicitação em breve.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Inclusão do JS do Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -224,6 +242,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     }, false)
                 })
         })()
+
+        // Verifica se um ticket foi criado e exibe o modal
+        document.addEventListener('DOMContentLoaded', function() {
+            <?php if(isset($_SESSION['ticket_created']) && $_SESSION['ticket_created']): ?>
+                var successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                document.getElementById('ticketId').textContent = "<?php echo $_SESSION['novo_keyid']; ?>";
+                successModal.show();
+                
+                // Redirecionar após fechar o modal
+                document.getElementById('successModal').addEventListener('hidden.bs.modal', function () {
+                    window.location.href = 'index.php';
+                });
+                
+                <?php 
+                // Limpa as variáveis de sessão após uso
+                unset($_SESSION['ticket_created']);
+                unset($_SESSION['novo_keyid']);
+                ?>
+            <?php endif; ?>
+        });
     </script>
 </body>
 </html>
