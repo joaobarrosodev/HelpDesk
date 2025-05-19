@@ -256,25 +256,9 @@ include('db.php');
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('pending-amount').innerHTML = '-<?php echo number_format(abs($totalDueValue), 2, ',', '.'); ?>€';
             
-            // Configura a data padrão inicial como primeiro dia do mês atual
-            const today = new Date();
-            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            // Implement automatic filtering
             
-            // Formata as datas no formato YYYY-MM-DD para os inputs
-            const formatDateForInput = (date) => {
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            };
-            
-            // Define os valores iniciais para os campos de data
-            document.getElementById('start-date').value = formatDateForInput(firstDayOfMonth);
-            document.getElementById('end-date').value = formatDateForInput(today);
-            
-            // TODO: Add event listeners for automatic filtering
-            
-            // 1. Listen for Enter key on all filter inputs
+            // 1. Listen for Enter key on all filter inputs - already implemented
             const filterForm = document.getElementById('filterForm');
             filterForm.addEventListener('keypress', function(event) {
                 if (event.key === 'Enter') {
@@ -283,12 +267,12 @@ include('db.php');
                 }
             });
             
-            // 2. Listen for change events on select and date inputs
+            // 2. Listen for change events on select and date inputs - already implemented
             document.getElementById('document-type').addEventListener('change', filterTableByAll);
             document.getElementById('start-date').addEventListener('change', filterTableByAll);
             document.getElementById('end-date').addEventListener('change', filterTableByAll);
             
-            // 3. Listen for input events on value fields with a small delay
+            // 3. Listen for input events on value fields with a small delay - already implemented
             const valueInputs = [
                 document.getElementById('min-value'),
                 document.getElementById('max-value')
@@ -301,13 +285,44 @@ include('db.php');
                     valueTimeout = setTimeout(filterTableByAll, 500);
                 });
             });
+            
+            // Clear any date fields to ensure they're empty on page load
+            document.getElementById('start-date').value = '';
+            document.getElementById('end-date').value = '';
+            
+            const table = document.getElementById('account-table');
+            if (table) {
+                const rows = table.getElementsByTagName('tr');
+                for (let i = 1; i < rows.length; i++) {
+                    rows[i].style.display = '';
+                }
+            }
+            
+            // Show initial count of all records
+            const filterResults = document.getElementById('filter-results');
+            if (filterResults) {
+                const table = document.getElementById('account-table');
+                if (table) {
+                    const totalRows = table.getElementsByTagName('tr').length - 1; // Subtract header row
+                    document.querySelector('#filter-results span').innerHTML = 
+                        `Mostrando todos os <strong>${totalRows}</strong> registros`;
+                    
+                    filterResults.removeAttribute('style');
+                    filterResults.style.display = 'flex';
+                }
+            }
         });
         
         // Função para limpar todos os filtros
         function clearAllFilters() {
             // Limpa os campos do formulário
             document.getElementById('filterForm').reset();
-              // Restaura a visualização de todas as linhas da tabela
+            
+            // Explicitly clear date fields (in case reset doesn't work properly)
+            document.getElementById('start-date').value = '';
+            document.getElementById('end-date').value = '';
+            
+            // Restaura a visualização de todas as linhas da tabela
             const table = document.getElementById('account-table');
             const rows = table.getElementsByTagName('tr');
             
@@ -315,28 +330,20 @@ include('db.php');
                 rows[i].style.display = '';
                 rows[i].classList.remove('filtered-row');
             }
-         
-            // Configura a data padrão inicial como primeiro dia do mês atual
-            const today = new Date();
-            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
             
-            // Formata as datas no formato YYYY-MM-DD para os inputs
-            const formatDateForInput = (date) => {
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            };
-              // Define os valores iniciais para os campos de data            
-            document.getElementById('start-date').value = formatDateForInput(firstDayOfMonth);
-            document.getElementById('end-date').value = formatDateForInput(today);
+            // Show all records count after clearing filters
+            const totalRows = rows.length - 1; // Subtract header row
+            const filterResults = document.getElementById('filter-results');
+            document.querySelector('#filter-results span').innerHTML = 
+                `Mostrando todos os <strong>${totalRows}</strong> registros`;
             
-            // Esconde a área de resultados filtrados
-            document.getElementById('filter-results').style.display = 'none';
+            filterResults.removeAttribute('style');
+            filterResults.style.display = 'flex';
         }
-          // Função para filtrar a tabela por todos os critérios
+        
+        // Função para filtrar a tabela por todos os critérios
         function filterTableByAll() {
-            // TODO: Improved filtering implementation with Enter key and auto-filter
+            // Improved filtering implementation
             console.log('Filtering table...');
             
             const startDate = document.getElementById('start-date').value;
@@ -466,7 +473,7 @@ include('db.php');
                 }
             }
             
-            // TODO: Mostra informações sobre os resultados filtrados
+            // Atualiza informações sobre os resultados filtrados
             updateFilteredResults();
         }
           // Função para atualizar as informações sobre os resultados filtrados
@@ -477,7 +484,6 @@ include('db.php');
             
             let filteredCount = 0;
             let totalRows = 0;
-            let activeFilter = false;
             
             // Verifica se algum filtro está ativo
             const documentType = document.getElementById('document-type').value;
@@ -486,9 +492,7 @@ include('db.php');
             const minValue = document.getElementById('min-value').value;
             const maxValue = document.getElementById('max-value').value;
             
-            if (documentType !== 'all' || (startDate && endDate) || minValue || maxValue) {
-                activeFilter = true;
-            }
+            const activeFilter = (documentType !== 'all' || (startDate && endDate) || minValue || maxValue);
             
             // Conta as linhas visíveis (começando em 1 para pular o cabeçalho)
             for (let i = 1; i < rows.length; i++) {
@@ -498,19 +502,24 @@ include('db.php');
                 }
             }
             
-            console.log(`Filtered results: ${filteredCount} of ${totalRows} rows, active filter: ${activeFilter}`);
-            
             // Atualiza o contador na UI
             const filterResultsDiv = document.getElementById('filter-results');
-            const filteredCountSpan = document.getElementById('filtered-count');
+            
+            // Remove style attribute to clear any !important declarations
+            filterResultsDiv.removeAttribute('style');
             
             if (activeFilter) {
-                // Mostrando resultados filtrados
-                filteredCountSpan.textContent = filteredCount;
+                // Mostrando resultados filtrados 
+                document.querySelector('#filter-results span').innerHTML = 
+                    `Mostrando <strong>${filteredCount}</strong> de ${totalRows} registros`;
+                
                 filterResultsDiv.style.display = 'flex';
             } else {
-                // Nenhum filtro aplicado
-                filterResultsDiv.style.display = 'none';
+                // Nenhum filtro aplicado - mostra o total de registros
+                document.querySelector('#filter-results span').innerHTML = 
+                    `Mostrando todos os <strong>${totalRows}</strong> registros`;
+                
+                filterResultsDiv.style.display = 'flex';
             }
         }
     </script>    </div>
