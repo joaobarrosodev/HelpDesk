@@ -44,8 +44,7 @@ include('conflogin.php');
         $sql_categorias = "SELECT User as categoria, COUNT(*) as total FROM info_xdfree01_extrafields 
                           WHERE Entity = :usuario_id 
                           GROUP BY User 
-                          ORDER BY total DESC 
-                          LIMIT 6";
+                          ORDER BY total DESC";
         $stmt_categorias = $pdo->prepare($sql_categorias);
         $stmt_categorias->bindParam(':usuario_id', $_SESSION['usuario_id']);
         $stmt_categorias->execute();
