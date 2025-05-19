@@ -905,3 +905,10 @@ PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsCo
 Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
 Client 350 subscribed to ticket #012
 Connection 350 disconnected
+New connection: 353
+Message from 353: {"action":"subscribe","ticketId":"#013","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 353 subscribed to ticket #013
+Message from 353: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747690838007}
