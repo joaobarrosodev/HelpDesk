@@ -13,6 +13,7 @@
   <link href="css/account-extract.css" rel="stylesheet">
   <link href="css/ticket.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
       <style>
         /* Add fade-in animation */
@@ -86,7 +87,7 @@
         .card-body h3.text-primary {
             font-size: 1.75rem;
             font-weight: 600;
-            color: #4285F4 !important;
+            color: #529ebe !important;
         }
         
         .table-borderless tbody tr {

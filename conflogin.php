@@ -1,7 +1,7 @@
 <?php
-// Verificar se o usuário está logado
+// Verificar se o utilizador está autenticado
 if (!isset($_SESSION['usuario_id'])) {
-    // Se não estiver logado, redireciona para o login
+    // Se não estiver autenticado, redireciona para a página de login
     header("Location: login.php");
     exit;
 }

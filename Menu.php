@@ -31,7 +31,7 @@
                 <li class="nav-item px-2 py-1">
                     <a href="index.php" id="dashboard" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'page' : 'false'; ?>">
                         <i class="bi bi-speedometer2 me-3 nav-menu-item" aria-hidden="true"></i> 
-                        <span>Dashboard</span>
+                        <span>Painel Principal</span>
                     </a>
                 </li>
                 
@@ -44,7 +44,7 @@
                   <li class="nav-item px-2 py-1">
                     <a href="meus_tickets.php" id="tickets" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'meus_tickets.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'meus_tickets.php' ? 'page' : 'false'; ?>">
                         <i class="bi bi-ticket-detailed me-3 nav-menu-item" aria-hidden="true"></i> 
-                        <span>Meus Tickets</span>
+                        <span>Os Meus Tickets</span>
                     </a>
                 </li>
         
@@ -105,17 +105,19 @@
                 <li class="nav-item px-2 py-1">
                     <a href="login.php" id="login" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark">
                         <i class="bi bi-box-arrow-in-right me-3 nav-menu-item" aria-hidden="true"></i> 
-                        <span>Login</span>
+                        <span>Iniciar Sessão</span>
                     </a>
                 </li>
             <?php endif; ?>
         </ul>
     </div>   <!-- Área do Usuário -->
     <?php if (isset($_SESSION['usuario_id'])): ?>
-        <a href="user.php" class="mt-auto text-decoration-none user-profile-link p-3 d-flex align-items-center rounded-2 mx-2 mb-1 bg-light" title="Ver perfil de usuário">
-            <div class="user-avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" aria-hidden="true">
-                <?php 
-                if (isset($_SESSION['usuario_email'])) {
+        <a href="user.php" class="mt-auto text-decoration-none user-profile-link p-3 d-flex align-items-center rounded-2 mx-2 mb-1 bg-light" title="Ver perfil de utilizador">
+            <div class="user-avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" aria-hidden="true">                <?php 
+                if (isset($_SESSION['Nome'])) {
+                    $primeira_letra = strtoupper($_SESSION['Nome'][0]); // Pega a primeira letra do nome e coloca em maiúscula
+                    echo $primeira_letra;
+                } elseif (isset($_SESSION['usuario_email'])) {
                     $email = $_SESSION['usuario_email'];
                     $primeira_letra = strtoupper($email[0]); // Pega a primeira letra do email e coloca em maiúscula
                     echo $primeira_letra;
@@ -123,19 +125,8 @@
                     echo "U";
                 }
                 ?>
-            </div>
-            <div class="ms-3 flex-grow-1 overflow-hidden">
-                <p class="fw-semibold m-0 text-truncate text-dark">
-                    <?php 
-                    if (isset($_SESSION['usuario_nome'])) {
-                        echo htmlspecialchars($_SESSION['usuario_nome']);
-                    } elseif (isset($_SESSION['usuario_email'])) {
-                        $parts = explode('@', $_SESSION['usuario_email']);
-                        echo htmlspecialchars($parts[0]);
-                    } else {
-                        echo "Usuário";
-                    }
-                    ?>
+            </div>            <div class="ms-3 flex-grow-1 overflow-hidden">                <p class="fw-semibold m-0 text-truncate text-dark">
+                    <?php echo isset($_SESSION['Nome']) ? htmlspecialchars($_SESSION['Nome']) : 'Utilizador'; ?>
                 </p>
                 <p class="small text-muted m-0 text-truncate">
                     <?php echo isset($_SESSION['usuario_email']) ? htmlspecialchars($_SESSION['usuario_email']) : 'email@exemplo.com'; ?>
@@ -144,7 +135,7 @@
         </a>
         <div class="px-2 mb-3">
             <a href="logout.php" class="btn btn-danger text-white w-100 d-flex align-items-center justify-content-between py-2 px-3" role="button">
-                <span>Logout</span> 
+                <span>Terminar Sessão</span> 
             </a>
         </div>
     <?php endif; ?>

@@ -11,10 +11,8 @@ $sql = "SELECT * FROM online_entity_extrafields WHERE email = :email";
 $stmt = $pdo->prepare($sql);
 $stmt->bindParam(':email', $_SESSION['usuario_email']);
 $stmt->execute();
-$usuario = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$usuario) {
-    echo "Usuário não encontrado.";
+$usuario = $stmt->fetch(PDO::FETCH_ASSOC);    if (!$usuario) {
+    echo "Utilizador não encontrado.";
     exit;
 }
 
@@ -85,9 +83,8 @@ try {
     $empresa = $stmt_empresa->fetch(PDO::FETCH_ASSOC);
       // Adicionar debug condicional para desenvolvimento
     if (isset($_GET['debug']) && $_GET['debug'] == 1) {
-        echo "<pre style='background:#f5f5f5;padding:15px;border:1px solid #ddd;'>";
-        echo "<strong>DEBUG INFORMAÇÃO:</strong><br>";
-        echo "Email do usuário: " . $_SESSION['usuario_email'] . "<br>";
+        echo "<pre style='background:#f5f5f5;padding:15px;border:1px solid #ddd;'>";        echo "<strong>DEBUG INFORMAÇÃO:</strong><br>";
+        echo "Email do utilizador: " . $_SESSION['usuario_email'] . "<br>";
         echo "Entity_KeyId: " . $usuario['Entity_KeyId'] . "<br><br>";
         
         echo "<strong>QUERY PRINCIPAL:</strong><br>";
@@ -141,7 +138,7 @@ try {
         
         // Se ainda não encontrou dados, usar valores padrão
         if (!$empresa) {
-            error_log("Não foi possível encontrar dados da empresa para o usuário: " . $_SESSION['usuario_email']);
+            error_log("Não foi possível encontrar dados da empresa para o utilizador: " . $_SESSION['usuario_email']);
             
             $empresa = [
                 'nome' => 'Empresa não encontrada',
@@ -180,9 +177,9 @@ try {
     <div class="content p-4">
         <div class="container-fluid">
             <div class="row mb-4">
-                <div class="col-12">
-                    <h1 class="display-5 mb-0">Meu Perfil</h1>
-                    <p class="text-muted">Gerencie suas informações pessoais e veja estatísticas de atendimento</p>
+                <div class="col-12">                    
+                    <h1 class="display-5 mb-0">O Meu Perfil</h1>
+                    <p class="text-muted">Gira as suas informações pessoais e veja estatísticas de atendimento</p>
                 </div>
             </div>
             
@@ -201,7 +198,7 @@ try {
                                 </div>
                             </div>
                             
-                            <h6 class="fw-bold mb-3">Informações de Contato</h6>
+                            <h6 class="fw-bold mb-3">Informações de Contacto</h6>
                             <ul class="list-unstyled">
                                 <li class="mb-2">
                                     <span class="text-muted me-2"><i class="bi bi-envelope"></i></span>
@@ -348,19 +345,18 @@ try {
                                         <input type="text" class="form-control bg-light" id="permissions" name="grupo" value="<?php echo $usuario['Grupo']; ?>" readonly>
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label for="password" class="form-label fw-bold">Senha</label>
+                                        <label for="password" class="form-label fw-bold">Palavra-passe</label>
                                         <div class="input-group">
                                             <input type="password" class="form-control" id="password" name="password" value="<?php echo $usuario['Password']; ?>">
                                             <button type="button" class="btn btn-outline-secondary" id="togglePassword">
                                                 <i class="bi bi-eye"></i>
                                             </button>
                                         </div>
-                                        <small class="form-text text-muted">Deixe em branco para manter a senha atual</small>
+                                        <small class="form-text text-muted">Deixe em branco para manter a palavra-passe atual</small>
                                     </div>
                                 </div>
                                 
-                                <div class="mt-4">
-                                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                                <div class="mt-4">                                    <button type="submit" class="btn btn-primary">Guardar Alterações</button>
                                     <button type="reset" class="btn btn-outline-secondary ms-2">Cancelar</button>
                                 </div>
                             </form>

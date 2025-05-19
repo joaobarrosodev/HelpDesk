@@ -1,14 +1,44 @@
  /* Garantir que a página não faça scroll */
-        html, body {
-            height: 100%;
-            margin: 0;
-            overflow: hidden;
-            font-family: 'Roboto', sans-serif;
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    font-family: 'DM Sans', sans-serif;
     font-weight: 400; /* Peso regular */
     line-height: 1.6;
-        }
+}
 
-        /* Configuração da Sidebar */
+/* Layout base para corpo da página */
+body {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Configuração da Sidebar */
+.sidebar-helpdesk {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 300px !important;
+    min-width: 300px !important;
+    max-width: 300px !important;
+    z-index: 1030;
+    overflow-y: auto;
+    box-sizing: border-box;
+    flex: 0 0 300px !important;
+}
+
+/* Área de conteúdo principal */
+.content-area {
+    margin-left: 300px;
+    width: calc(100% - 300px);
+    padding: 20px;
+    overflow-y: auto;
+    height: 100vh;
+}
         .sidebar {
             position: fixed;
             top: 0;
@@ -100,7 +130,7 @@
     display: inline-block;
     width: 40px; /* Tamanho do círculo */
     height: 40px; /* Tamanho do círculo */
-    background-color: #007bff; /* Cor de fundo do círculo (pode alterar) */
+    background-color: #529ebe; /* Cor de fundo do círculo (pode alterar) */
     color: white; /* Cor da letra */
     text-align: center; /* Centraliza a letra */
     line-height: 40px; /* Alinha a letra verticalmente */
@@ -146,11 +176,11 @@ a {
 
 /* Efeito ao passar o mouse (hover) */
 a:hover {
-    color: #007bff; /* Cor azul para o efeito de hover */
+    color: #529ebe; /* Cor azul para o efeito de hover */
 }
 
 a:hover .bi {
-    color: #007bff; /* Altera a cor do ícone quando o mouse passar sobre o link */
+    color: #529ebe; /* Altera a cor do ícone quando o mouse passar sobre o link */
 }
 
 

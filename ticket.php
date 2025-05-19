@@ -20,14 +20,23 @@ include('conflogin.php');
                     <div class="row">
                         <!-- Coluna Esquerda: Assunto e Descrição -->
                         <div class="col-lg-6">
-                            <!-- Nome do Computador/de -->
+                            <!-- Assunto -->
                             <div class="mb-4">
                                 <label for="nome_computador" class="form-label fw-bold">
                                     Assunto:
                                 </label>
-                                <input type="text" class="form-control" id="nome_computador" name="nome_computador" 
-                                      placeholder="Descreva brevemente o problema" maxlength="50" required>
-                                <div class="form-text">Um título claro e conciso (máx. 50 caracteres)</div>
+                                <select class="form-select" id="nome_computador" name="nome_computador" required>
+                                    <option value="" disabled selected>Selecione um assunto</option>
+                                    <option value="xd">XD</option>
+                                    <option value="sage">Sage</option>
+                                    <option value="office">Office</option>
+                                    <option value="email">Email</option>
+                                    <option value="site">Site</option>
+                                    <option value="computador">Computador</option>
+                                    <option value="impressoras">Impressoras</option>
+                                    <option value="outros">Outros</option>
+                                </select>
+                                <div class="form-text">Selecione o assunto principal do seu problema</div>
                             </div>
 
                             <!-- Descrição do problema -->
@@ -49,15 +58,15 @@ include('conflogin.php');
                                     <i class="bi bi-flag me-1"></i> Prioridade:
                                 </label>
                                 <input type="hidden" id="prioridade" name="prioridade" value="Normal" required><div class="priority-selector">
-                            <div class="priority-item priority-low" data-value="Baixa" onclick="selectPriority(this, 'Baixa')">
+                            <div class="priority-item priority-low selected" data-value="Baixa" onclick="selectPriority(this, 'Baixa')">
                                 <i class="bi bi-flag priority-icon" style="color: #27ae60;"></i>
                                 <span>Baixa</span>
-                                <small class="d-block text-muted">Posso continuar trabalhando</small>
+                                <small class="d-block text-muted">Posso continuar a trabalhar</small>
                             </div>
-                            <div class="priority-item priority-normal selected" data-value="Normal" onclick="selectPriority(this, 'Normal')">
+                            <div class="priority-item priority-normal " data-value="Normal" onclick="selectPriority(this, 'Normal')">
                                 <i class="bi bi-flag-fill priority-icon" style="color: #f39c12;"></i>
                                 <span>Normal</span>
-                                <small class="d-block text-muted">Dificulta meu trabalho</small>
+                                <small class="d-block text-muted">Dificulta o meu trabalho</small>
                             </div>
                             <div class="priority-item priority-high" data-value="Alta" onclick="selectPriority(this, 'Alta')">
                                 <i class="bi bi-exclamation-triangle priority-icon" style="color: #e74c3c;"></i>
@@ -70,7 +79,7 @@ include('conflogin.php');
                     <!-- Upload de Imagem (Drag & Drop) -->
                     <div class="mb-4">
                         <label class="form-label fw-bold">
-                            <i class="bi bi-image me-1"></i> Anexar Imagem:
+                            <i class="bi bi-image me-1"></i> Anexar Imagem do Problema:
                         </label>
                         <div id="dropzone" class="dropzone"></div>
                         <div class="form-text">Arraste uma imagem ou clique para selecionar (opcional)</div>
@@ -78,7 +87,7 @@ include('conflogin.php');
 
                     <!-- Botão de envio -->
                     <div class="text-end mt-4">
-                        <button type="submit" class="btn btn-primary btn-lg submit-btn">
+                        <button type="submit" class="btn btn-success submit-btn">
                             <i class="bi bi-send me-2"></i>Criar Ticket
                         </button>
                     </div>

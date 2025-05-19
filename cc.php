@@ -6,6 +6,7 @@ include('db.php');
 <!DOCTYPE html>
 <html lang="pt-pt">
 <?php include('head.php'); ?>
+<link rel="stylesheet" href="css/filter.css">
 
 <body>
     <?php include('menu.php'); ?>    <div class="content p-5">    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
@@ -13,6 +14,7 @@ include('db.php');
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/sortTable.js"></script>
     <script src="js/filter-functions.js"></script>
+    <script src="js/auto-filter.js"></script>
     <script src="js/script.js"></script>
                     <h1 class="mb-3 display-5">Extrato de Conta Corrente</h1>
                     <p class="">Aqui tem um pequena lista de compras que fez</p>        <div class=" mt-4">
@@ -75,20 +77,22 @@ include('db.php');
                                 <input type="number" class="form-control" id="min-value" placeholder="Mín" step="0.01">
                                 <input type="number" class="form-control" id="max-value" placeholder="Máx" step="0.01">
                             </div>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
+                        </div>                        <div class="col-md-2 d-flex align-items-end">
                             <div class="d-flex gap-2 w-100">
-                                <button type="button" class="btn btn-primary" onclick="filterTableByAll()">Filtrar</button>
+                                <!-- Removed filter button as it's now automatic -->
                                 <button type="button" class="btn btn-outline-danger" onclick="clearAllFilters()">
                                     <i class="bi bi-x-circle"></i> Limpar
                                 </button>
                             </div>
                         </div>
+                        <!-- TODO: Show filter statistics -->
+                        <div class="col-12 mt-2">
+                            <div class="alert alert-info p-2 d-flex align-items-center" id="filter-results" style="display: none !important;">
+                                <i class="bi bi-funnel-fill me-2"></i>
+                                <span>Mostrando <strong id="filtered-count">0</strong> registros filtrados</span>
+                            </div>
+                        </div>
                     </form>
-
-                    <!-- Indicador de filtros ativos -->
-                    <div id="filter-badge" class="badge bg-primary me-2 fs-6 mb-3" style="display: none;">Filtros Ativos</div>
-
            
 <?php
         // Consulta SQL
@@ -196,9 +200,19 @@ include('db.php');
             
             // Formatar a data de expiração (vencimento)
             $data_vencimento = date('d/m/Y', strtotime($transaction['ExpirationDate']));            // Verificar se há valor em dívida
-            $divida_class = $transaction['DueValue'] != 0 ? 'text-danger' : '';            // Criar uma borda entre as linhas com estilo leve
-            echo "<tr class='border-top border-bottom' style='background-color: #fff;'>
-                <td>Fatura Nº " . $transaction['SerieId'] . "/" . $transaction['DocNumber'] . "</td>
+            $divida_class = $transaction['DueValue'] != 0 ? 'text-danger' : '';            // Criar uma borda entre as linhas com estilo leve            // Mapear siglas para nomes completos de documentos
+            $tiposDocumentos = [
+                "FAC" => "Fatura",
+                "REC" => "Recibo",
+                "NC" => "Nota de Crédito",
+                "DOC" => "Documento"
+            ];
+            
+            // Obter o nome do tipo de documento
+            $tipoDocumento = isset($tiposDocumentos[$sigla]) ? $tiposDocumentos[$sigla] : "Documento";
+            
+            echo "<tr class='border-top border-bottom' style='background-color: #fff;' data-doc-type='" . $sigla . "'>
+                <td>" . $tipoDocumento . " Nº " . $transaction['SerieId'] . "/" . $transaction['DocNumber'] . "</td>
                 <td>" . $data_registro . "</td>
                 <td>" . number_format($transaction['MovD'], 2, ',', '.') . "</td>
                 <td>" . number_format($transaction['MovC'], 2, ',', '.') . "</td>
@@ -257,6 +271,36 @@ include('db.php');
             // Define os valores iniciais para os campos de data
             document.getElementById('start-date').value = formatDateForInput(firstDayOfMonth);
             document.getElementById('end-date').value = formatDateForInput(today);
+            
+            // TODO: Add event listeners for automatic filtering
+            
+            // 1. Listen for Enter key on all filter inputs
+            const filterForm = document.getElementById('filterForm');
+            filterForm.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    filterTableByAll();
+                }
+            });
+            
+            // 2. Listen for change events on select and date inputs
+            document.getElementById('document-type').addEventListener('change', filterTableByAll);
+            document.getElementById('start-date').addEventListener('change', filterTableByAll);
+            document.getElementById('end-date').addEventListener('change', filterTableByAll);
+            
+            // 3. Listen for input events on value fields with a small delay
+            const valueInputs = [
+                document.getElementById('min-value'),
+                document.getElementById('max-value')
+            ];
+            
+            let valueTimeout = null;
+            valueInputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    clearTimeout(valueTimeout);
+                    valueTimeout = setTimeout(filterTableByAll, 500);
+                });
+            });
         });
         
         // Função para limpar todos os filtros
@@ -271,10 +315,7 @@ include('db.php');
                 rows[i].style.display = '';
                 rows[i].classList.remove('filtered-row');
             }
-            
-            // Esconde o badge de filtros ativos
-            document.getElementById('filter-badge').style.display = 'none';
-            
+         
             // Configura a data padrão inicial como primeiro dia do mês atual
             const today = new Date();
             const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -286,13 +327,18 @@ include('db.php');
                 const day = String(date.getDate()).padStart(2, '0');
                 return `${year}-${month}-${day}`;
             };
-            
-            // Define os valores iniciais para os campos de data            document.getElementById('start-date').value = formatDateForInput(firstDayOfMonth);
+              // Define os valores iniciais para os campos de data            
+            document.getElementById('start-date').value = formatDateForInput(firstDayOfMonth);
             document.getElementById('end-date').value = formatDateForInput(today);
+            
+            // Esconde a área de resultados filtrados
+            document.getElementById('filter-results').style.display = 'none';
         }
-        
-        // Função para filtrar a tabela por todos os critérios
+          // Função para filtrar a tabela por todos os critérios
         function filterTableByAll() {
+            // TODO: Improved filtering implementation with Enter key and auto-filter
+            console.log('Filtering table...');
+            
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
             const documentType = document.getElementById('document-type').value;
@@ -305,13 +351,19 @@ include('db.php');
             // Prepara datas se filtro de data estiver ativo
             let startDateObj = null;
             let endDateObj = null;
-            if (startDate && endDate) {                startDateObj = new Date(startDate);
+            if (startDate && endDate) {                
+                startDateObj = new Date(startDate);
                 endDateObj = new Date(endDate);
             }
             
-            // Mostra o badge de filtros ativos
-            document.getElementById('filter-badge').style.display = 'inline-block';
+            // Mapear os tipos de documentos para seus identificadores no texto
+            const docTypeMappings = {
+                'FAC': 'Fatura',
+                'REC': 'Recibo',
+                'NC': 'Nota de Crédito'
+            };
             
+      
             // Itera pelas linhas da tabela (começando em 1 para pular o cabeçalho)
             for (let i = 1; i < rows.length; i++) {
                 let showRow = true; // Por padrão, mostra a linha
@@ -331,15 +383,54 @@ include('db.php');
                             }
                         }
                     }
-                }
-                
-                // Filtra por tipo de documento
+                }                  // Filtra por tipo de documento
                 if (showRow && documentType !== 'all') {
-                    const documentCell = rows[i].getElementsByTagName('td')[0]; // Coluna de documento
-                    if (documentCell) {
-                        // Verifica se o texto contém o tipo selecionado
-                        const documentText = documentCell.textContent.trim();
-                        if (!documentText.includes(documentType)) {
+                    // Check the data attribute first (most reliable)
+                    const rowDocType = rows[i].getAttribute('data-doc-type');
+                    
+                    if (rowDocType === documentType) {
+                        // Data attribute matches, keep showing the row
+                        showRow = true;
+                    } else {
+                        // Try fallback methods
+                        const documentCell = rows[i].getElementsByTagName('td')[0]; // Coluna de documento
+                        if (documentCell) {
+                            // Get document text for debugging
+                            const documentText = documentCell.textContent.trim();
+                            console.log(`Filtering: ${documentType}, Row type: ${rowDocType}, Text: ${documentText}`);
+                            
+                            // If data attribute didn't match, check document text
+                            let isMatch = false;
+                            
+                            // Check if document text contains the type name
+                            if (documentType === 'FAC' && documentText.toLowerCase().includes('fatura')) {
+                                isMatch = true;
+                            } else if (documentType === 'REC' && documentText.toLowerCase().includes('recibo')) {
+                                isMatch = true;
+                            } else if (documentType === 'NC' && documentText.toLowerCase().includes('nota')) {
+                                isMatch = true;
+                            }
+                            
+                            // Final check with download link if available
+                            if (!isMatch) {
+                                const downloadCell = rows[i].getElementsByTagName('td')[7]; // Last column with download link
+                                if (downloadCell) {
+                                    const anchor = downloadCell.querySelector('a');
+                                    if (anchor && anchor.getAttribute('href')) {
+                                        const href = anchor.getAttribute('href');
+                                        if (href.includes(`${documentType}_`)) {
+                                            isMatch = true;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // If no match found, hide the row
+                            if (!isMatch) {
+                                showRow = false;
+                            }
+                        } else {
+                            // No document cell found, hide the row
                             showRow = false;
                         }
                     }
@@ -364,8 +455,7 @@ include('db.php');
                         }
                     }
                 }
-                
-                // Aplica a visibilidade com base nos filtros
+                  // Aplica a visibilidade com base nos filtros
                 rows[i].style.display = showRow ? '' : 'none';
                 
                 // Aplica um efeito de destaque às linhas filtradas
@@ -374,6 +464,53 @@ include('db.php');
                 } else {
                     rows[i].classList.remove('filtered-row');
                 }
+            }
+            
+            // TODO: Mostra informações sobre os resultados filtrados
+            updateFilteredResults();
+        }
+          // Função para atualizar as informações sobre os resultados filtrados
+        function updateFilteredResults() {
+            // Conta quantas linhas estão visíveis (filtradas)
+            const table = document.getElementById('account-table');
+            const rows = table.getElementsByTagName('tr');
+            
+            let filteredCount = 0;
+            let totalRows = 0;
+            let activeFilter = false;
+            
+            // Verifica se algum filtro está ativo
+            const documentType = document.getElementById('document-type').value;
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const minValue = document.getElementById('min-value').value;
+            const maxValue = document.getElementById('max-value').value;
+            
+            if (documentType !== 'all' || (startDate && endDate) || minValue || maxValue) {
+                activeFilter = true;
+            }
+            
+            // Conta as linhas visíveis (começando em 1 para pular o cabeçalho)
+            for (let i = 1; i < rows.length; i++) {
+                totalRows++;
+                if (rows[i].style.display !== 'none') {
+                    filteredCount++;
+                }
+            }
+            
+            console.log(`Filtered results: ${filteredCount} of ${totalRows} rows, active filter: ${activeFilter}`);
+            
+            // Atualiza o contador na UI
+            const filterResultsDiv = document.getElementById('filter-results');
+            const filteredCountSpan = document.getElementById('filtered-count');
+            
+            if (activeFilter) {
+                // Mostrando resultados filtrados
+                filteredCountSpan.textContent = filteredCount;
+                filterResultsDiv.style.display = 'flex';
+            } else {
+                // Nenhum filtro aplicado
+                filterResultsDiv.style.display = 'none';
             }
         }
     </script>    </div>

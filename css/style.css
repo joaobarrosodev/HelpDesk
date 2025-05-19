@@ -1,4 +1,4 @@
- /* Garantir que a página não faça scroll */
+/* Garantir que a página não faça scroll */
 html, body {
     height: 100%;
     margin: 0;
@@ -201,7 +201,7 @@ body {
     display: inline-block;
     width: 40px; /* Tamanho do círculo */
     height: 40px; /* Tamanho do círculo */
-    background-color: #007bff; /* Cor de fundo do círculo (pode alterar) */
+    background-color: #529ebe; /* Cor de fundo do círculo (pode alterar) */
     color: white; /* Cor da letra */
     text-align: center; /* Centraliza a letra */
     line-height: 40px; /* Alinha a letra verticalmente */
@@ -247,11 +247,11 @@ a {
 
 /* Efeito ao passar o mouse (hover) */
 a:hover {
-    color: #007bff; /* Cor azul para o efeito de hover */
+    color: #529ebe; /* Cor azul para o efeito de hover */
 }
 
 a:hover .bi {
-    color: #007bff; /* Altera a cor do ícone quando o mouse passar sobre o link */
+    color: #529ebe; /* Altera a cor do ícone quando o mouse passar sobre o link */
 }
 
 
@@ -279,4 +279,411 @@ th.sortable.asc::after {
 
 th.sortable.desc::after {
     opacity: 1;
+}
+
+/* Dashboard Specific Styles */
+.dashboard-card {
+    border: 1px solid #e9ecef; /* Softer border */
+    border-radius: .75rem; /* Adjusted from 10px */
+    padding: .5rem; /* Adjusted from 20px */
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); /* Softer shadow */
+    transition: all 0.3s ease-in-out;
+    background-color: #fff; /* Ensure white background */
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
+}
+
+.dashboard-card .card-title {
+    font-weight: 600; /* Slightly bolder */
+    color: #343a40; /* Darker color */
+    margin-bottom: 1rem;
+    font-size: 1rem; /* Adjusted from 14px */
+}
+
+.dashboard-header {
+    color: #333;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.dashboard-subtext {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 30px;
+}
+
+#categoriaTicketsChart, #prioridadeTicketsChart {
+    max-height: 220px; /* Adjusted for new card padding */
+    width: 100% !important;
+}
+
+.chart-container {
+    position: relative;
+    height: 135px; /* Fixed height for chart containers */
+}
+
+/* Custom Chart.js spacing tweaks */
+#prioridadeTicketsChart {
+    padding: 0;
+    margin: 0;
+}
+
+.chart-container {
+    position: relative;
+    height: 120px; /* Control chart height */
+}
+
+/* Force smaller chart height */
+canvas#prioridadeTicketsChart {
+    height: 100px !important;
+    max-height: 100px !important;
+}
+
+/* Fix for priority chart labels */
+.priority-label {
+    font-size: 12px;
+    line-height: 1;
+    margin: 0;
+    padding: 0;
+}
+
+/* Styling for client evaluation section */
+.rating-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.rating-icon {
+    font-size: 20px;
+    width: 30px;
+    text-align: center;
+    margin-right: 10px;
+}
+
+.rating-bar {
+    flex-grow: 1;
+}
+
+.rating-label {
+    min-width: 60px;
+    margin-right: 10px;
+}
+
+.rating-value {
+    min-width: 40px;
+    text-align: right;
+    font-weight: bold;
+}
+
+/* Progress bar styles */
+.progress {
+    height: 10px;
+    border-radius: 5px;
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    font-weight: bold;
+    font-size: 0;  /* Hide text inside progress bar */
+}
+
+.progress-bar.bg-success {
+    background-color: #28a745 !important;
+}
+
+.progress-bar.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+.progress-bar.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+/* Styling for client evaluation section */
+.evaluation-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem; /* Adjusted spacing */
+}
+
+.evaluation-item .icon {
+    font-size: 1.5rem; /* Larger icons */
+    margin-right: 1rem;
+    width: 30px; /* Fixed width for icon container */
+    text-align: center;
+}
+
+.evaluation-item .icon-positive {
+    color: #28a745;
+}
+
+.evaluation-item .icon-negative {
+    color: #dc3545;
+}
+
+.evaluation-item .icon-neutral {
+    color: #ffc107;
+}
+
+.evaluation-item .details {
+    flex-grow: 1;
+}
+
+.evaluation-item .label-percent {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.875rem; /* 14px */
+    color: #495057; /* Subtler text color */
+    margin-bottom: 0.25rem;
+}
+
+.evaluation-item .label-percent strong {
+    color: #212529; /* Darker percentage text */
+}
+
+/* Style for response time display */
+.tempo-resposta {
+    display: flex;
+    align-items: baseline;
+}
+
+.tempo-valor {
+    font-size: 18px;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.tempo-unidade {
+    font-size: 14px;
+    color: #666;
+}
+
+.tempo-medio-valor {
+    font-size: 2.5rem; /* Larger font for time */
+    font-weight: 700; /* Bolder */
+    color: #529ebe; /* Primary color for emphasis */
+}
+
+.tempo-medio-unidade {
+    font-size: 1rem;
+    color: #6c757d; /* Muted color for unit */
+    font-weight: 400;
+    margin-left: 0.25rem;
+}
+
+/* Button style */
+.btn-abrir-ticket {
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 15px;
+    font-size: 14px;
+}
+
+.btn-abrir-ticket:hover {
+    background-color: #0b5ed7;
+    color: white;
+}
+
+/* Button style for Abrir Novo Ticket */
+.btn-primary {
+    background-color: #e7f3ff; /* Light blue background */
+    color: #529ebe; /* Primary blue text */
+    border: 1px solid #529ebe; /* Primary blue border */
+    border-radius: .25rem;
+    padding: .5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    text-wrap: nowrap;
+}
+
+.btn-primary:hover {
+    background-color: #529ebe;
+    color: #fff;
+    border-color: #529ebe;
+}
+
+.btn-primary i {
+    transition: transform 0.2s ease-in-out;
+}
+
+.btn-primary:hover i {
+    transform: rotate(90deg);
+}
+
+/* Priority bar styles */
+.prioridade-container {
+    margin-bottom: 10px;
+}
+
+.prioridade-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.prioridade-nome {
+    font-size: 14px;
+}
+
+.prioridade-valor {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.prioridade-barra {
+    height: 20px;
+    background-color: #333;
+    border-radius: 4px;
+}
+
+.user-avatar-sm {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    color: white;
+    text-align: center;
+    line-height: 30px;
+    font-weight: bold;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.table th {
+    font-weight: 500; /* Ensure table headers are appropriately styled */
+}
+
+.table .badge {
+    font-size: 0.85em;
+    padding: 0.5em 0.75em;
+}
+
+.card-header h5 {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.progress {
+    height: 20px; /* Consistent height for progress bars */
+    border-radius: 5px;
+}
+
+.progress-bar {
+    font-weight: bold;
+}
+
+/* Client Evaluation Styles */
+.icon-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bg-success-light {
+    background-color: rgba(40, 167, 69, 0.15);
+}
+
+.bg-danger-light {
+    background-color: rgba(220, 53, 69, 0.15);
+}
+
+.bg-warning-light {
+    background-color: rgba(255, 193, 7, 0.15);
+}
+
+.client-rating-number {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* Progress bar custom widths */
+.progress {
+    background-color: #f5f5f5;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+
+/* Rating icons styling */
+.icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+}
+
+/* Tempo Medio styling */
+.tempo-medio-valor {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #529ebe;
+    line-height: 1;
+}
+
+.tempo-medio-unidade {
+    font-size: 1rem;
+    color: #6c757d;
+    font-weight: 400;
+}
+
+/* Dashboard layout improvements */
+.dashboard-card {
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    height: 100%;
+    background-color: #fff;
+    transition: transform 0.2s;
+    border: none;
+}
+
+.chart-container {
+    height: 180px;
+}
+
+/* Legend styling */
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 10px;
+    font-size: 0.8rem;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.bg-success {
+    background-color: #28a745 !important;
+}
+
+.bg-primary {
+    background-color: #529ebe !important;
+}
+
+.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+/* Fix padding on cards */
+.card-body {
+    padding: 0.75rem;
 }

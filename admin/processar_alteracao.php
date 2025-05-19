@@ -59,7 +59,7 @@ try {
     [$user, $description, $extra_info, $time_formatted, $keyid],
     $sql1
 );
-echo "Final SQL1: " . $sql1_final . "<br>";
+echo "SQL1 Final: " . $sql1_final . "<br>";
         echo "<script>alert('Erro ao atualizar o ticket: " . $e->getMessage() . "'); window.history.back();</script>";
     }
 } else {

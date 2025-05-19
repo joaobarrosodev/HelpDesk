@@ -1,50 +1,113 @@
 <?php
 session_start();
-
 include('conflogin.php');
 include('db.php');
+include('ws-manager.php'); // Include WebSocket manager functions
 
-// Verificar se a mensagem foi enviada
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Captura a mensagem e o KeyId do ticket
-    $keyid = $_POST['keyid']; // KeyId do ticket
-    $id = $_POST['id'];
-    $message = $_POST['message']; // Mensagem
+// Check if user is logged in
+if (!isset($_SESSION['usuario_email'])) {
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'error', 'message' => 'User not logged in']);
+    exit;
+}
 
-    // Verificar se a mensagem não está vazia
-    if (!empty($message)) {
-        // Preparar o SQL para inserir a mensagem na tabela 'comments_xdfree01_extrafields'
-        $sql = "INSERT INTO comments_xdfree01_extrafields (xdfree01_KeyId, Date, Message, Type, user) 
-                VALUES (:keyid, NOW(), :message, 1, :email)";
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindParam(':keyid', $keyid);
-        $stmt->bindParam(':message', $message);
-        $stmt->bindParam(':email', $_SESSION['usuario_email']);
-        
-        // Executa o comando para inserir a mensagem
-        if ($stmt->execute()) {
-            // Atualizar a data de atualização na tabela 'info_xdfree01_extrafields'
-            $update_sql = "UPDATE info_xdfree01_extrafields 
-                           SET dateu = NOW() 
-                           WHERE XDfree01_KeyId = :keyid";
-            
-            $update_stmt = $pdo->prepare($update_sql);
-            $update_stmt->bindParam(':keyid', $keyid);
-            
-            // Executa o comando de update
-            if ($update_stmt->execute()) {
-                // Redireciona de volta para a página do ticket após inserir a mensagem
-                header("Location: detalhes_ticket.php?keyid=$id");
-                exit;
-            } else {
-                echo "Erro ao atualizar a data de atualização. Tente novamente.";
-            }
-        } else {
-            echo "Erro ao enviar a mensagem. Tente novamente.";
-        }
+$isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+// Check for required parameters
+if (!isset($_POST['keyid']) || !isset($_POST['id']) || !isset($_POST['message'])) {
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Missing required parameters']);
     } else {
-        echo "Por favor, digite uma mensagem.";
+        header('Location: meus_tickets.php?error=1');
+    }
+    exit;
+}
+
+$keyid = $_POST['keyid'];
+$id = $_POST['id'];
+$message = trim($_POST['message']);
+$user = $_SESSION['usuario_email'];
+$date = date('Y-m-d H:i:s');
+
+// Get device ID if provided
+$deviceId = isset($_POST['deviceId']) ? $_POST['deviceId'] : null;
+
+// Determine message type (1 for user, 2 for admin/support)
+$messageType = (isset($_SESSION['usuario_admin']) && $_SESSION['usuario_admin']) ? 2 : 1;
+
+try {
+    // Insert the message into the database
+    $stmt = $pdo->prepare("INSERT INTO comments_xdfree01_extrafields (XDFree01_KeyID, Message, Date, user, type) 
+                          VALUES (:keyid, :message, :date, :user, :type)");
+    
+    $stmt->bindParam(':keyid', $keyid);
+    $stmt->bindParam(':message', $message);
+    $stmt->bindParam(':date', $date);
+    $stmt->bindParam(':user', $user);
+    $stmt->bindParam(':type', $messageType);
+    
+    $stmt->execute();
+    $messageId = $pdo->lastInsertId();
+    
+    // Prepare the message data for WebSocket
+    $messageData = [
+        'Message' => $message,
+        'user' => $user,
+        'type' => $messageType,
+        'CommentTime' => $date,
+        'deviceId' => $deviceId,
+        'messageId' => 'db_' . $messageId
+    ];
+    
+    // Update status to "Em análise" for new tickets or if status is "Pendente"
+    $updateStatus = false;
+    
+    // Get current status
+    $stmtStatus = $pdo->prepare("SELECT Status FROM info_xdfree01_extrafields WHERE XDFree01_KeyID = :keyid");
+    $stmtStatus->bindParam(':keyid', $keyid);
+    $stmtStatus->execute();
+    $currentStatus = $stmtStatus->fetchColumn();
+    
+    // Update status if necessary
+    if ($currentStatus == 'Pendente' && $messageType == 2) {
+        $newStatus = 'Em análise';
+        $updateStatus = true;
+    }
+    else if ($currentStatus == 'Em análise' && $messageType == 1) {
+        $newStatus = 'Aguarda resposta';
+        $updateStatus = true;
+    }
+    
+    if ($updateStatus) {
+        $stmtUpdateStatus = $pdo->prepare("UPDATE info_xdfree01_extrafields SET Status = :status WHERE XDFree01_KeyID = :keyid");
+        $stmtUpdateStatus->bindParam(':status', $newStatus);
+        $stmtUpdateStatus->bindParam(':keyid', $keyid);
+        $stmtUpdateStatus->execute();
+    }
+    
+    // Broadcast the message via WebSocket
+    broadcastMessageToWebSocket($keyid, $messageData);
+    
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 'success', 
+            'messageId' => $messageId,
+            'websocketBroadcast' => true,
+            'statusUpdated' => $updateStatus,
+            'newStatus' => $updateStatus ? $newStatus : null
+        ]);
+    } else {
+        header('Location: detalhes_ticket.php?keyid=' . urlencode($id));
+    }
+    
+} catch (PDOException $e) {
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
+    } else {
+        header('Location: meus_tickets.php?error=2');
     }
 }
 ?>

@@ -10,13 +10,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $senha = $_POST['password'];
 
     // Preparar a consulta SQL
-    $stmt = $pdo->prepare("select entities.KeyId, entities.Name, online.email, online.Password, online.Grupo
+    $stmt = $pdo->prepare("select entities.KeyId, entities.Name, online.Name, online.email, online.Password, online.Grupo
 from online_entity_extrafields online 
 Inner Join entities on online.Entity_KeyId = entities.KeyId where online.email = :email");
     $stmt->bindParam(':email', $email);
     $stmt->execute();
 
-    // Verificar se o usuário foi encontrado
+    // Verificar se o utilizador foi encontrado
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($usuario && $senha == $usuario['Password']) {
@@ -29,9 +29,10 @@ Inner Join entities on online.Entity_KeyId = entities.KeyId where online.email =
         // Redirecionar para a página principal ou dashboard
         header("Location: index.php");
         exit;
-    } else {
-        // Se a autenticação falhar, mostrar mensagem de erro
-        $erro = "E-mail ou senha incorretos.";
+    } else {        // Se a autenticação falhar, mostrar mensagem de erro
+        $erro = "Correio eletrónico ou palavra-passe incorretos.";
+        header("Location: login.php?error=" . urlencode($erro));
+        exit;
     }
 }
 ?>

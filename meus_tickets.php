@@ -4,7 +4,7 @@ session_start();  // Inicia a sessão
 include('conflogin.php');
 include('db.php');
 
-// Consultar os tickets do usuário logado (abertos e resolvidos)
+// Consultar os tickets do utilizador autenticado (abertos e resolvidos)
 $usuario_id = $_SESSION['usuario_id'];
 
 // Verifica se existe um filtro de data
@@ -24,14 +24,16 @@ $sql = "SELECT
             DATE_FORMAT(i.CreationDate, '%d/%m/%Y') as criado,
             i.Status as status,
             i.Priority as prioridade,
-            '1' as nivel, -- Valor padrão já que i.Level não existe
-            u.Name as atribuido_a            
+            u.Name as atribuido_a,
+            (SELECT oee.Name FROM comments_xdfree01_extrafields c JOIN online_entity_extrafields oee ON c.user = oee.email WHERE c.XDFree01_KeyID = t.KeyId ORDER BY c.Date DESC LIMIT 1) as LastCommentUser
         FROM 
             xdfree01 t
-        JOIN 
-            info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
         LEFT JOIN 
-            users u ON i.AttUser = u.id
+            info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
+            LEFT JOIN 
+            internal_xdfree01_extrafields ie ON t.KeyId = ie.XDFree01_KeyID
+        LEFT JOIN 
+            users u ON ie.User = u.id
         WHERE 
             i.Entity = :usuario_id";
 
@@ -49,8 +51,8 @@ if (!empty($prioridade_filtro)) {
 }
 
 if (!empty($status_filtro)) {
-    $sql .= " AND i.Status = :status_filtro";
-    $params[':status_filtro'] = $status_filtro;
+    $sql .= " AND LOWER(TRIM(i.Status)) = :processed_status_filtro";
+    $params[':processed_status_filtro'] = strtolower(trim($status_filtro));
 }
 
 $sql .= " ORDER BY i.dateu DESC";
@@ -67,13 +69,13 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php include('menu.php'); ?>
     <div class="content">
         <div class="container-fluid p-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
-                    <h1 class="mb-3 display-5">Meus Tickets</h1>
-                    <p class="">Lista de todos os seus tickets, incluindo tickets em aberto e resolvidos. Use os filtros abaixo para refinar a visualização.</p>
+                    <h1 class="mb-3 display-5">Os Meus Tickets</h1>
+                    <p class="">Lista de todos os seus tickets, incluindo tickets em aberto e resolvidos. Utilize os filtros abaixo para refinar a visualização.</p>
                 </div>
                 <a href="ticket.php" class="btn btn-primary d-flex align-items-center">
-                    <i class="bi bi-plus-circle me-2"></i> Abrir Novo Ticket
+                    Abrir Novo Ticket
                 </a>
             </div>
             
@@ -86,12 +88,12 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
                        
                         <div class="col-md-3">
-                            <label for="status" class="form-label">Status</label>
+                            <label for="status" class="form-label">Estado</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="">Todos</option>
                                 <option value="Em Análise" <?php echo $status_filtro == 'Em Análise' ? 'selected' : ''; ?>>Em Análise</option>
                                 <option value="Em Resolução" <?php echo $status_filtro == 'Em Resolução' ? 'selected' : ''; ?>>Em Resolução</option>
-                                <option value="Aguarda Resposta Cliente" <?php echo $status_filtro == 'Aguarda Resposta Cliente' ? 'selected' : ''; ?>>Aguarda Resposta Cliente</option>
+                                <option value="Aguarda Resposta" <?php echo $status_filtro == 'Aguarda Resposta' ? 'selected' : ''; ?>>Aguarda Resposta</option>
                                 <option value="Concluído" <?php echo $status_filtro == 'Concluído' ? 'selected' : ''; ?>>Concluído</option>
                             </select>
                         </div>
@@ -104,25 +106,30 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </select>
                         </div>
                         <div class="col-md-1 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+                            <button type="submit" class="btn btn-dark w-100">Filtrar</button>
                         </div>
                     </form>
                         
                     
                     <!-- Table -->                    <div class="table-responsive">
-                        <table class="table align-middle">                            <thead class="table-dark">                                <tr>
-                                    <th scope="col" class="sortable">Título do Ticket</th>
-                                    <th scope="col" class="sortable">Assunto</th>
-                                    <th scope="col" class="sortable">Atualizado</th>
-                                    <th scope="col" class="sortable">Criado</th>
-                                    <th scope="col" class="sortable">Status</th>
-                                    <th scope="col" class="sortable">Prioridade</th>
-                                    <th scope="col" class="sortable">Atribuído a</th>
+                        <table class="table align-middle">                            
+                            <thead class="table-dark">                
+                                <tr>
+                                    <th scope="col" class="sortable text-nowrap">Título</th>
+                                    <th scope="col" class="sortable text-nowrap">Assunto</th>
+                                    <th scope="col" class="sortable text-nowrap">Atualizado</th>
+                                    <th scope="col" class="sortable text-nowrap">Criado</th>
+                                    <th scope="col" class="sortable text-nowrap">Estado</th>
+                                    <th scope="col" class="sortable text-nowrap">Prioridade</th>
+                                    <th scope="col" class="sortable text-nowrap">Atribuído a</th>
+                                    <th scope="col" class="sortable text-nowrap">Última Mensagem Por</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if (count($tickets) > 0): ?>                                    <?php foreach ($tickets as $ticket): ?>                                        <tr>                                            <td>
-                                                <a href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>" class="text-decoration-none text-dark d-flex align-items-center">
+                                <?php if (count($tickets) > 0): ?>                                    
+                                    <?php foreach ($tickets as $ticket): ?>                                     
+                                           <tr>                                            <td>
+                                                <a href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>" class="text-decoration-none text-dark d-flex align-items-center text-nowrap">
                                                     <i class="bi bi-arrow-right-circle me-2"></i> 
                                                     <?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?>
                                                 </a>
@@ -135,32 +142,33 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                 $status = $ticket['status'];
                                                 $statusClass = '';
                                                 if ($status == 'Em Análise') {
-                                                    $statusClass = 'badge bg-info';
+                                                    $statusClass = 'badge w-100 bg-info';
                                                 } elseif ($status == 'Em Resolução') {
-                                                    $statusClass = 'badge bg-warning';
-                                                } elseif ($status == 'Aguarda Resposta Cliente') {
-                                                    $statusClass = 'badge bg-secondary';
+                                                    $statusClass = 'badge w-100 bg-warning';
+                                                } elseif ($status == 'Aguarda Resposta') {
+                                                    $statusClass = 'badge w-100 bg-secondary';
                                                 } elseif ($status == 'Concluído') {
-                                                    $statusClass = 'badge bg-success';
+                                                    $statusClass = 'badge w-100 bg-success';
                                                 } else {
-                                                    $statusClass = 'badge bg-dark';
+                                                    $statusClass = 'badge w-100 bg-dark';
                                                 }
                                                 ?>
                                                 <span class="<?php echo $statusClass; ?>"><?php echo $status; ?></span>
                                             </td>                                            <td>
                                                 <?php 
-                                                $badgeClass = 'bg-success';
+                                                $badgeClass = 'w-100 bg-success';
                                                 if ($ticket['prioridade'] == 'Normal') {
-                                                    $badgeClass = 'bg-warning text-dark';
+                                                    $badgeClass = 'w-100 bg-warning';
                                                 } else if ($ticket['prioridade'] == 'Alta') {
-                                                    $badgeClass = 'bg-danger';
+                                                    $badgeClass = 'w-100 bg-danger';
                                                 }
                                                 ?>
                                                 <span class="badge <?php echo $badgeClass; ?>"><?php echo $ticket['prioridade']; ?></span>
                                             </td>
                                             <td><?php echo !empty($ticket['atribuido_a']) ? htmlspecialchars($ticket['atribuido_a']) : '-'; ?></td>
+                                            <td><?php echo !empty($ticket['LastCommentUser']) ? htmlspecialchars($ticket['LastCommentUser']) : '-'; ?></td>
                                         </tr>
-                                    <?php endforeach; ?>                                <?php else: ?>                                    <tr>                                        <td colspan="7" class="text-center py-4">
+                                    <?php endforeach; ?>                                <?php else: ?>                                    <tr>                                        <td colspan="8" class="text-center py-4">
                                             <div class="alert alert-info mb-0">                                                <i class="bi bi-info-circle me-2"></i> Não há tickets para exibir.
                                             </div>
                                         </td>
@@ -179,6 +187,11 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
         // Sorting functionality
         const table = document.querySelector('table');
         const headers = table.querySelectorAll('th.sortable');
+        const priorityMap = {
+            'Baixa': 1,
+            'Normal': 2,
+            'Alta': 3
+        };
         
         headers.forEach(function(header, index) {
             header.addEventListener('click', function() {
@@ -196,12 +209,19 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
                 // Sort the rows
                 rows.sort(function(rowA, rowB) {
-                    const cellA = rowA.cells[index].textContent.trim();
-                    const cellB = rowB.cells[index].textContent.trim();
+                    const cellAContent = rowA.cells[index].textContent.trim();
+                    const cellBContent = rowB.cells[index].textContent.trim();
+                    
+                    // Special sorting for "Prioridade" column (index 5)
+                    if (index === 5) {
+                        const priorityA = priorityMap[cellAContent] || 0;
+                        const priorityB = priorityMap[cellBContent] || 0;
+                        return isAscending ? priorityA - priorityB : priorityB - priorityA;
+                    }
                     
                     // Try to sort as dates if possible
-                    const dateA = parseDate(cellA);
-                    const dateB = parseDate(cellB);
+                    const dateA = parseDate(cellAContent);
+                    const dateB = parseDate(cellBContent);
                     
                     if (dateA && dateB) {
                         return isAscending ? dateA - dateB : dateB - dateA;
@@ -209,8 +229,8 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     
                     // Otherwise sort as strings
                     return isAscending ? 
-                        cellA.localeCompare(cellB) : 
-                        cellB.localeCompare(cellA);
+                        cellAContent.localeCompare(cellBContent) : 
+                        cellBContent.localeCompare(cellAContent);
                 });
                 
                 // Reorder the rows
