@@ -1,54 +1,40 @@
 <?php
 /**
- * Simple script to create temp directory for WebSocket messages
+ * Simple helper to create temp directory for WebSocket messages
  */
+
 header('Content-Type: application/json');
 
-// Define temp directory path
-$tempDir = __DIR__ . '/temp';
+$tempDir = __DIR__ . DIRECTORY_SEPARATOR . 'temp';
+$result = ['success' => false];
 
-// Create directory if it doesn't exist
 if (!file_exists($tempDir)) {
-    $created = mkdir($tempDir, 0777, true);
+    $created = @mkdir($tempDir, 0777, true);
+    $result['created'] = $created;
     if ($created) {
-        // Try to set permissions (may not work on Windows)
         @chmod($tempDir, 0777);
-        echo json_encode([
-            'success' => true, 
-            'message' => 'Temp directory created successfully', 
-            'path' => $tempDir
-        ]);
+        $result['success'] = true;
+        $result['message'] = 'Temp directory created successfully';
     } else {
-        echo json_encode([
-            'success' => false, 
-            'message' => 'Failed to create temp directory',
-            'path' => $tempDir
-        ]);
+        $result['error'] = 'Failed to create temp directory';
+        $result['path'] = $tempDir;
     }
 } else {
-    // Directory already exists
-    echo json_encode([
-        'success' => true, 
-        'message' => 'Temp directory already exists',
-        'path' => $tempDir
-    ]);
-}
-
-// Clean up old files while we're here
-$oldFiles = array_merge(
-    glob($tempDir . '/sync_*_*.txt'),
-    glob($tempDir . '/ws_message_*.json')
-);
-
-$removedCount = 0;
-foreach ($oldFiles as $file) {
-    // Remove files older than 5 minutes
-    if (time() - filemtime($file) > 300) {
-        @unlink($file);
-        $removedCount++;
+    $result['success'] = true;
+    $result['message'] = 'Temp directory already exists';
+    
+    // Check if directory is writable
+    $result['writable'] = is_writable($tempDir);
+    
+    // Try to create a test file
+    $testFile = $tempDir . DIRECTORY_SEPARATOR . 'test_' . time() . '.txt';
+    $writeTest = @file_put_contents($testFile, 'Test');
+    $result['writeTest'] = ($writeTest !== false);
+    
+    if ($writeTest !== false) {
+        // Clean up test file
+        @unlink($testFile);
     }
 }
 
-if ($removedCount > 0) {
-    error_log("Removed $removedCount old files from temp directory");
-}
+echo json_encode($result);
