@@ -2,10 +2,7 @@
 session_start();
 include('conflogin.php');
 include('db.php');
-
-// For debugging
-error_log("Request to inserir_mensagem.php");
-error_log("POST data: " . print_r($_POST, true));
+include('ws-manager.php'); // Include WebSocket manager
 
 // Check if user is logged in
 if (!isset($_SESSION['usuario_email'])) {
@@ -27,8 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
     $ticket_id = $_POST['id'];
     $user = $_SESSION['usuario_email'];
     
-    error_log("Message: $message | KeyID: $keyid | User: $user");
-    
     // Determine message type (0 for admin, 1 for user)
     $type = (isset($_SESSION['usuario_admin']) && $_SESSION['usuario_admin']) ? 0 : 1;
     
@@ -46,7 +41,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
             $stmt->bindParam(':user', $user);
             
             $result = $stmt->execute();
-            error_log("Insert result: " . ($result ? "Success" : "Failed"));
             
             if ($result) {
                 // Update the last update time for the ticket
@@ -58,27 +52,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
                 $stmt_update->bindParam(':keyid', $keyid);
                 $stmt_update->execute();
                 
-                // Also notify WebSocket server about new message (if available)
-                try {
-                    $ws_data = [
-                        'type' => 'new_message',
-                        'ticketId' => $keyid,
-                        'message' => [
-                            'Message' => $message,
-                            'type' => $type,
-                            'CommentTime' => date('Y-m-d H:i:s'),
-                            'user' => $user
-                        ]
-                    ];
-                    
-                    // Try to send to WebSocket server
-                    $client = new WebSocket\Client('ws://localhost:8080');
-                    $client->send(json_encode($ws_data));
-                    $client->close();
-                } catch (Exception $e) {
-                    // Just log error, don't interrupt flow
-                    error_log("WebSocket notification failed: " . $e->getMessage());
-                }
+                // Get the exact timestamp of the inserted message (important for real-time sync)
+                $sql_get_timestamp = "SELECT Date FROM comments_xdfree01_extrafields 
+                                     WHERE XDFree01_KeyID = :keyid 
+                                     AND user = :user
+                                     ORDER BY Date DESC LIMIT 1";
+                $stmt_timestamp = $pdo->prepare($sql_get_timestamp);
+                $stmt_timestamp->bindParam(':keyid', $keyid);
+                $stmt_timestamp->bindParam(':user', $user);
+                $stmt_timestamp->execute();
+                $exactTimestamp = $stmt_timestamp->fetchColumn();
+                
+                // Broadcast message to WebSocket server for real-time updates
+                $messageData = [
+                    'Message' => $message,
+                    'type' => $type,
+                    'CommentTime' => $exactTimestamp,
+                    'user' => $user
+                ];
+                
+                // Try to broadcast via WebSocket
+                broadcastMessageToWebSocket($keyid, $messageData);
+                
+                // Update immediately in all sessions viewing this ticket
+                $force_sync_file = "sync_{$keyid}_" . time() . ".txt";
+                @file_put_contents("temp/$force_sync_file", date('Y-m-d H:i:s'));
+                @chmod("temp/$force_sync_file", 0666);
                 
                 // Check if this is AJAX request
                 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
@@ -89,7 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
                         'message' => 'Mensagem enviada com sucesso',
                         'type' => $type,
                         'user' => $user,
-                        'time' => date('H:i')
+                        'time' => date('H:i'),
+                        'exactTimestamp' => $exactTimestamp
                     ]);
                     exit;
                 } else {
@@ -98,7 +98,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
                     exit;
                 }
             } else {
-                error_log("Database error: " . print_r($stmt->errorInfo(), true));
                 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
                     header('Content-Type: application/json');
                     http_response_code(500);
@@ -109,7 +108,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['message']) && isset($_
                 }
             }
         } catch (PDOException $e) {
-            error_log("PDOException: " . $e->getMessage());
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
                 header('Content-Type: application/json');
                 http_response_code(500);

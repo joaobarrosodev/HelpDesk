@@ -130,7 +130,7 @@ body {
     display: inline-block;
     width: 40px; /* Tamanho do círculo */
     height: 40px; /* Tamanho do círculo */
-    background-color: #007bff; /* Cor de fundo do círculo (pode alterar) */
+    background-color: #529ebe; /* Cor de fundo do círculo (pode alterar) */
     color: white; /* Cor da letra */
     text-align: center; /* Centraliza a letra */
     line-height: 40px; /* Alinha a letra verticalmente */
@@ -176,11 +176,11 @@ a {
 
 /* Efeito ao passar o mouse (hover) */
 a:hover {
-    color: #007bff; /* Cor azul para o efeito de hover */
+    color: #529ebe; /* Cor azul para o efeito de hover */
 }
 
 a:hover .bi {
-    color: #007bff; /* Altera a cor do ícone quando o mouse passar sobre o link */
+    color: #529ebe; /* Altera a cor do ícone quando o mouse passar sobre o link */
 }
 
 

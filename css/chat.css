@@ -88,7 +88,7 @@
     justify-content: center;
     color: white;
     font-weight: bold;
-    background-color: #007bff;
+    background-color: #529ebe;
 }
 
 .chat-footer {
@@ -128,7 +128,7 @@
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background-color: #007bff;
+    background-color: #529ebe;
     color: #fff;
     border: none;
     display: flex;
@@ -150,7 +150,7 @@
 
 .ticket-info {
     background-color: #f8f9fa;
-    border-left: 4px solid #007bff;
+    border-left: 4px solid #529ebe;
     padding: 15px;
     margin-bottom: 20px;
     border-radius: 4px;

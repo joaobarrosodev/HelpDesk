@@ -1,4 +1,7 @@
 <?php
+// Try to auto-start the WebSocket server if needed
+include('auto-start.php');
+
 session_start();  // Inicia a sessão
 
 include('conflogin.php');
@@ -221,12 +224,6 @@ function getStatusColor($status) {
     <!-- Inclusão do JS do Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function showImage(src) {
-            document.getElementById('modalImage').src = src;
-            var myModal = new bootstrap.Modal(document.getElementById('imageModal'));
-            myModal.show();
-        }
-        
         // Auto-resize textarea
         const messageInput = document.getElementById('messageInput');
         if (messageInput) {
@@ -239,118 +236,161 @@ function getStatusColor($status) {
             });
         }
         
-        // Variables for message polling & websocket
+        // WebSocket connection and polling variables
         let lastMessageTimestamp = '<?php echo !empty($messages) ? date('Y-m-d H:i:s', strtotime($messages[count($messages)-1]['CommentTime'])) : date('Y-m-d H:i:s'); ?>';
-        let pollingInterval;
-        let isPollingActive = true;
-        let socket;
+        let pollingInterval = null;
+        let wsConnection = null;
+        let wsRetryCount = 0;
+        const MAX_WS_RETRIES = 5;
         
-        // Scroll to bottom of chat on load
-        window.onload = function() {
+        // Auto-start WebSocket connection when page loads
+        window.addEventListener('DOMContentLoaded', function() {
+            // Scroll chat to bottom
             const chatBody = document.getElementById('chatBody');
             if (chatBody) {
                 chatBody.scrollTop = chatBody.scrollHeight;
             }
             
-            // Try to connect via WebSocket first
-            setupWebSocket();
+            // Start WebSocket connection
+            connectWebSocket();
             
-            // Also start polling as a fallback
-            startMessagePolling();
-        }
+            // Also start polling as fallback
+            startPolling();
+            
+            // Check WebSocket status periodically and reconnect if needed
+            setInterval(function() {
+                if (wsConnection === null || wsConnection.readyState !== WebSocket.OPEN) {
+                    console.log("WebSocket not connected. Attempting to reconnect...");
+                    connectWebSocket();
+                }
+            }, 10000); // Check every 10 seconds
+        });
         
-        // Setup WebSocket connection
-        function setupWebSocket() {
-            // Check if WebSocket is supported
-            if ("WebSocket" in window) {
-                // Create WebSocket connection using secure or insecure connection based on current protocol
-                const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-                const socketUrl = `${protocol}${window.location.host}/infoexe/HelpDesk/ws_server.php`;
+        // Connect to WebSocket server
+        function connectWebSocket() {
+            if (wsConnection !== null && wsConnection.readyState === WebSocket.CONNECTING) {
+                console.log("WebSocket already connecting, waiting...");
+                return;
+            }
+            
+            if (wsRetryCount >= MAX_WS_RETRIES) {
+                console.log("Max WebSocket retry attempts reached, using polling only");
+                return;
+            }
+            
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${location.hostname}:8080`;
+            
+            try {
+                console.log(`Connecting to WebSocket at ${wsUrl}`);
+                wsConnection = new WebSocket(wsUrl);
                 
-                try {
-                    socket = new WebSocket(socketUrl);
+                wsConnection.onopen = function() {
+                    console.log('WebSocket connected successfully');
+                    wsRetryCount = 0; // Reset retry counter on successful connection
                     
-                    socket.onopen = function() {
-                        console.log("WebSocket connection established");
-                        
-                        // Register this client for a specific ticket
-                        const ticketId = '<?php echo $ticket_id; ?>';
-                        socket.send(JSON.stringify({
-                            type: 'register',
-                            ticketId: ticketId,
-                            userId: '<?php echo $_SESSION['usuario_id']; ?>'
-                        }));
-                        
-                        // Reduce polling frequency when WebSocket is connected
+                    // Subscribe to this ticket's updates
+                    wsConnection.send(JSON.stringify({
+                        action: 'subscribe',
+                        ticketId: '<?php echo $ticket_id; ?>',
+                        user: '<?php echo htmlspecialchars($_SESSION['usuario_email']); ?>'
+                    }));
+                    
+                    // Slow down polling when WebSocket is working
+                    if (pollingInterval) {
                         clearInterval(pollingInterval);
-                        pollingInterval = setInterval(checkForNewMessages, 10000); // Poll every 10 seconds as backup
-                    };
-                    
-                    socket.onmessage = function(event) {
+                        pollingInterval = setInterval(checkForNewMessages, 10000); // 10 seconds
+                    }
+                };
+                
+                wsConnection.onmessage = function(event) {
+                    try {
                         const data = JSON.parse(event.data);
-                        console.log("WebSocket message received:", data);
+                        console.log('WebSocket message received:', data);
                         
-                        if (data.type === 'new_message') {
-                            // Process new message received via WebSocket
+                        if (data.action === 'newMessage' && data.message) {
+                            // Process new message from WebSocket
                             processNewMessages([data.message]);
                             
-                            // Update last timestamp
+                            // Update timestamp if newer
                             if (data.message.CommentTime > lastMessageTimestamp) {
                                 lastMessageTimestamp = data.message.CommentTime;
                             }
                         }
-                    };
+                    } catch (e) {
+                        console.error('Error processing WebSocket message:', e);
+                    }
+                };
+                
+                wsConnection.onclose = function(event) {
+                    console.log(`WebSocket connection closed: ${event.code} ${event.reason}`);
+                    wsConnection = null;
                     
-                    socket.onclose = function() {
-                        console.log("WebSocket connection closed");
-                        // Resume normal polling if WebSocket closes
+                    // Increment retry counter
+                    wsRetryCount++;
+                    
+                    // Switch back to fast polling when WebSocket is not available
+                    if (pollingInterval) {
                         clearInterval(pollingInterval);
-                        pollingInterval = setInterval(checkForNewMessages, 3000);
-                    };
+                        pollingInterval = setInterval(checkForNewMessages, 1000); // 1 second
+                    }
                     
-                    socket.onerror = function(error) {
-                        console.error("WebSocket error:", error);
-                        // Just log errors, polling will handle messaging
-                    };
-                } catch (e) {
-                    console.error("WebSocket connection error:", e);
-                    // Continue with normal polling if WebSocket fails
-                }
+                    // Try to reconnect after a delay that increases with each retry
+                    const delay = Math.min(1000 * Math.pow(2, wsRetryCount), 30000); // Exponential backoff, max 30s
+                    console.log(`Will retry WebSocket connection in ${delay/1000} seconds`);
+                    setTimeout(connectWebSocket, delay);
+                };
+                
+                wsConnection.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                    // Error will trigger onclose
+                };
+            } catch (error) {
+                console.error('Error creating WebSocket:', error);
+                wsConnection = null;
+                wsRetryCount++;
             }
         }
         
-        // Start polling for new messages (backup method)
-        function startMessagePolling() {
-            // Check for new messages every 3 seconds
-            pollingInterval = setInterval(checkForNewMessages, 3000);
+        // Start polling as fallback
+        function startPolling() {
+            pollingInterval = setInterval(checkForNewMessages, 1000); // 1 second
             
-            // Stop polling when the page is not visible to save resources
+            // Handle page visibility changes
             document.addEventListener('visibilitychange', function() {
                 if (document.hidden) {
-                    isPollingActive = false;
+                    // Slow down polling when tab is not visible
+                    if (pollingInterval) {
+                        clearInterval(pollingInterval);
+                        pollingInterval = setInterval(checkForNewMessages, 5000); // 5 seconds
+                    }
                 } else {
-                    isPollingActive = true;
-                    // Immediately check for new messages when page becomes visible again
+                    // Speed up polling when tab becomes visible again
+                    if (pollingInterval) {
+                        clearInterval(pollingInterval);
+                        pollingInterval = setInterval(checkForNewMessages, 1000); // 1 second
+                    }
+                    // Immediately check for new messages
                     checkForNewMessages();
                 }
             });
         }
         
-        // Function to check for new messages
+        // Function to check for new messages via AJAX
         function checkForNewMessages() {
-            // Only check if polling is active (page is visible)
-            if (!isPollingActive) return;
-            
             const keyId = '<?php echo $ticket_id; ?>';
+            const timestamp = encodeURIComponent(lastMessageTimestamp);
+            const cacheBuster = new Date().getTime();
             
-            fetch('get_new_messages.php?keyid=' + keyId + '&timestamp=' + encodeURIComponent(lastMessageTimestamp), {
+            fetch(`get_new_messages.php?keyid=${keyId}&timestamp=${timestamp}&_=${cacheBuster}`, {
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate'
                 }
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    throw new Error(`Network response not ok: ${response.status}`);
                 }
                 return response.json();
             })
@@ -366,12 +406,11 @@ function getStatusColor($status) {
                 }
             })
             .catch(error => {
-                console.error('Error checking for new messages:', error);
-                // Don't stop polling on errors, just log them
+                console.error('Error checking for messages:', error);
             });
         }
         
-        // Function to process new messages (used by both WebSocket and polling)
+        // Function to process new messages
         function processNewMessages(messages) {
             // Add new messages to the chat
             const chatBody = document.getElementById('chatBody');
@@ -408,13 +447,10 @@ function getStatusColor($status) {
                 chatBody.appendChild(messageDiv);
             });
             
-            // Scroll to bottom of chat
-            chatBody.scrollTop = chatBody.scrollHeight;
-            
-            // Play notification sound if the message is not from current user
-            const lastMessage = messages[messages.length - 1];
-            if (lastMessage.user !== '<?php echo $_SESSION['usuario_email']; ?>') {
-                playNotificationSound();
+            // Scroll to bottom of chat if user is already at bottom
+            const isAtBottom = chatBody.scrollHeight - chatBody.clientHeight <= chatBody.scrollTop + 100;
+            if (isAtBottom) {
+                chatBody.scrollTop = chatBody.scrollHeight;
             }
         }
         
@@ -495,6 +531,21 @@ function getStatusColor($status) {
                     messageInput.style.height = (messageInput.scrollHeight) + 'px';
                     document.getElementById('sendButton').disabled = false;
                 });
+            }
+        });
+        
+        // Also handle button click explicitly (for mobile devices and certain browsers)
+        document.getElementById('sendButton')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Trigger the form submission
+            const form = document.getElementById('chatForm');
+            if (form) {
+                // Create and dispatch a submit event
+                const submitEvent = new Event('submit', {
+                    bubbles: true,
+                    cancelable: true,
+                });
+                form.dispatchEvent(submitEvent);
             }
         });
         

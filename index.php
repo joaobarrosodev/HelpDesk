@@ -60,10 +60,10 @@ include('conflogin.php');
         ?>
 
         <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">            <div>
-                <h1 class="mb-3 display-5">Bem Vindo, S. PINTOS - Engenharia e Construção, S.A.</h1>
+                <h1 class="mb-3 display-5">Bem Vindo, <span class="text-primary"><?php echo isset($_SESSION['Nome']) ? htmlspecialchars($_SESSION['Nome']) : 'Utilizador'; ?></span> </h1>
                 <p class="text-muted mb-3 w-100">Aqui pode acompanhar os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real.</p>
             </div>
-            <a href="ticket.php" class="btn btn-primary btn-primary"><i class="bi bi-plus-circle me-2"></i>Abrir Novo Ticket</a>
+            <a href="ticket.php" class="btn btn-primary btn-primary">Abrir Novo Ticket</a>
         </div>
 
         <!-- Dashboard Cards -->
@@ -163,7 +163,7 @@ include('conflogin.php');
                         data: <?php echo json_encode($categoria_counts); ?>,
                         backgroundColor: [
                             '#28a745', // E-mail (Green)
-                            '#007bff', // XD (Blue)
+                            '#529ebe', // XD (Blue)
                             '#ffc107', // Impressoras (Yellow)
                             '#dc3545'  // Office (Red)
                         ],

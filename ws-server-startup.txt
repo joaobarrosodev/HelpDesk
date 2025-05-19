@@ -1,0 +1,3 @@
+2025-05-19 18:30:12 - Attempted to start WebSocket server
+2025-05-19 18:30:22 - Attempted to start WebSocket server
+2025-05-19 18:30:34 - Attempted to start WebSocket server

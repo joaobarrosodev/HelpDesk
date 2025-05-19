@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     label: 'Tickets por Categoria',
                     data: categoriaCounts,
                     backgroundColor: [
-                        '#007bff', // E-mail (example color)
+                        '#529ebe', // E-mail (example color)
                         '#28a745', // XD (example color)
                         '#ffc107', // Impressoras (example color)
                         '#dc3545', // Office (example color)

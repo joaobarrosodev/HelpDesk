@@ -87,7 +87,7 @@
         .card-body h3.text-primary {
             font-size: 1.75rem;
             font-weight: 600;
-            color: #4285F4 !important;
+            color: #529ebe !important;
         }
         
         .table-borderless tbody tr {

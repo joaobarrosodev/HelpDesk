@@ -201,7 +201,7 @@ body {
     display: inline-block;
     width: 40px; /* Tamanho do círculo */
     height: 40px; /* Tamanho do círculo */
-    background-color: #007bff; /* Cor de fundo do círculo (pode alterar) */
+    background-color: #529ebe; /* Cor de fundo do círculo (pode alterar) */
     color: white; /* Cor da letra */
     text-align: center; /* Centraliza a letra */
     line-height: 40px; /* Alinha a letra verticalmente */
@@ -247,11 +247,11 @@ a {
 
 /* Efeito ao passar o mouse (hover) */
 a:hover {
-    color: #007bff; /* Cor azul para o efeito de hover */
+    color: #529ebe; /* Cor azul para o efeito de hover */
 }
 
 a:hover .bi {
-    color: #007bff; /* Altera a cor do ícone quando o mouse passar sobre o link */
+    color: #529ebe; /* Altera a cor do ícone quando o mouse passar sobre o link */
 }
 
 
@@ -466,7 +466,7 @@ canvas#prioridadeTicketsChart {
 .tempo-medio-valor {
     font-size: 2.5rem; /* Larger font for time */
     font-weight: 700; /* Bolder */
-    color: #007bff; /* Primary color for emphasis */
+    color: #529ebe; /* Primary color for emphasis */
 }
 
 .tempo-medio-unidade {
@@ -494,8 +494,8 @@ canvas#prioridadeTicketsChart {
 /* Button style for Abrir Novo Ticket */
 .btn-primary {
     background-color: #e7f3ff; /* Light blue background */
-    color: #007bff; /* Primary blue text */
-    border: 1px solid #007bff; /* Primary blue border */
+    color: #529ebe; /* Primary blue text */
+    border: 1px solid #529ebe; /* Primary blue border */
     border-radius: .25rem;
     padding: .5rem 1rem;
     font-size: 0.9rem;
@@ -505,9 +505,9 @@ canvas#prioridadeTicketsChart {
 }
 
 .btn-primary:hover {
-    background-color: #007bff;
+    background-color: #529ebe;
     color: #fff;
-    border-color: #007bff;
+    border-color: #529ebe;
 }
 
 .btn-primary i {
@@ -628,7 +628,7 @@ canvas#prioridadeTicketsChart {
 .tempo-medio-valor {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #007bff;
+    color: #529ebe;
     line-height: 1;
 }
 
@@ -672,7 +672,7 @@ canvas#prioridadeTicketsChart {
 }
 
 .bg-primary {
-    background-color: #007bff !important;
+    background-color: #529ebe !important;
 }
 
 .bg-warning {
