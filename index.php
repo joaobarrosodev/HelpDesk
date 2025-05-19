@@ -24,7 +24,6 @@ include('conflogin.php');
             exit;
         }
 
-
         $valor = $cc['Balance'];
         $valor_formatado = number_format(abs($valor), 2, ',', '.');
         // Corrigindo a lógica das cores:
@@ -34,32 +33,91 @@ include('conflogin.php');
             $cor = 'bg-success'; // Se houver crédito, fica verde
         }
 
+        // Contar tickets em aberto para o usuário atual
         $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields WHERE (status = 'Em Análise' OR status = 'Em Resolução' OR status = 'Aguarda Resposta Cliente') AND Entity = :usuario_id";
         $stmt_tickets = $pdo->prepare($sql_tickets);
         $stmt_tickets->bindParam(':usuario_id', $_SESSION['usuario_id']);
         $stmt_tickets->execute();
         $ticket_count = $stmt_tickets->fetchColumn();
 
+        // Obter dados para o gráfico de categorias (baseado nos assuntos dos tickets)
+        $sql_categorias = "SELECT User as categoria, COUNT(*) as total FROM info_xdfree01_extrafields 
+                          WHERE Entity = :usuario_id 
+                          GROUP BY User 
+                          ORDER BY total DESC 
+                          LIMIT 6";
+        $stmt_categorias = $pdo->prepare($sql_categorias);
+        $stmt_categorias->bindParam(':usuario_id', $_SESSION['usuario_id']);
+        $stmt_categorias->execute();
+        $categorias = $stmt_categorias->fetchAll(PDO::FETCH_ASSOC);
+        
+        $categoria_labels = [];
+        $categoria_counts = [];
+        
+        foreach ($categorias as $categoria) {
+            $categoria_labels[] = $categoria['categoria'];
+            $categoria_counts[] = $categoria['total'];
+        }
+        
+        // Se não houver dados, criar alguns valores padrão para evitar erros no gráfico
+        if (empty($categoria_labels)) {
+            $categoria_labels = ['E-mail', 'XD', 'Impressoras', 'Office'];
+            $categoria_counts = [0, 0, 0, 0];
+        }
 
-        $categoria_labels = ['E-mail', 'XD', 'Impressoras', 'Office'];
-        $categoria_counts = [12, 19, 3, 5];
-
-
-      
-        $prioridade_labels = ['Baixo', 'Médio', 'Alto'];
-        $prioridade_counts = [71, 22, 7];
+        // Obter dados para o gráfico de prioridade
+        $sql_prioridade = "SELECT Priority as prioridade, COUNT(*) as total FROM info_xdfree01_extrafields 
+                          WHERE Entity = :usuario_id 
+                          GROUP BY Priority 
+                          ORDER BY FIELD(Priority, 'Alta', 'Normal', 'Baixa')";
+        $stmt_prioridade = $pdo->prepare($sql_prioridade);
+        $stmt_prioridade->bindParam(':usuario_id', $_SESSION['usuario_id']);
+        $stmt_prioridade->execute();
+        $prioridades = $stmt_prioridade->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Arrays para armazenar os dados de prioridade
+        $prioridade_labels = [];
+        $prioridade_counts = [];
+        $prioridade_total = 0;
+        
+        foreach ($prioridades as $prioridade) {
+            $prioridade_labels[] = $prioridade['prioridade'];
+            $prioridade_counts[] = $prioridade['total'];
+            $prioridade_total += $prioridade['total'];
+        }
+        
+        // Converter contagens para percentagens
+        if ($prioridade_total > 0) {
+            foreach ($prioridade_counts as &$count) {
+                $count = round(($count / $prioridade_total) * 100);
+            }
+        }
+        
+        // Se não houver dados, criar alguns valores padrão
+        if (empty($prioridade_labels)) {
+            $prioridade_labels = ['Alta', 'Normal', 'Baixa'];
+            $prioridade_counts = [0, 0, 0];
+        }
         
         // Data for Avaliação dos Clientes
+        // Normalmente, isso viria de uma tabela de avaliações de clientes
+        // Como não temos essa tabela nos arquivos fornecidos, usaremos valores padrão
         $respostas_recebidas = 156;
         $positive_percentage = 72;
         $negative_percentage = 4;
         $neutral_percentage = 24;
 
-        // Data for Tempo Médio de Resposta
+        // Calcular o tempo médio de resposta (exemplo)
+        // Em uma implementação real, você consultaria a diferença entre a data de criação 
+        // e a data da primeira resposta nos tickets
+        
+        // Tempo médio de resposta - placeholder
+        // Em uma implementação real, você calcularia isso com base nas datas de resposta
         $tempo_medio_resposta = "4:34";
         ?>
 
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">            <div>
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
+            <div>
                 <h1 class="mb-3 display-5">Bem Vindo, <span class="text-primary"><?php echo isset($_SESSION['Nome']) ? htmlspecialchars($_SESSION['Nome']) : 'Utilizador'; ?></span> </h1>
                 <p class="text-muted mb-3 w-100">Aqui pode acompanhar os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real.</p>
             </div>
@@ -89,18 +147,18 @@ include('conflogin.php');
                         </div>
                     </div>
                 </div>
-
-                <div class="col-12">
+               
+                <div class="col-12 mt-3">
                     <div class="card dashboard-card">
                         <div class="flex-row d-flex card-body" style="gap: 10px;">
                             <p class="m-0">Tempo Médio de Resposta</p>
                             <p class="m-0 fw-bold text-primary"><?php echo $tempo_medio_resposta; ?>min</p>
                         </div>
                     </div>
-            
                 </div>
             </div>
             
+            <!-- Avaliação dos Clientes -->
             <div class="col-xl-4 col-md-6 mb-4 flex-1">
                 <div class="card dashboard-card h-100 ">
                     <div class="card-body">
@@ -147,6 +205,8 @@ include('conflogin.php');
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
         </div>
     </div> 
 
@@ -162,10 +222,12 @@ include('conflogin.php');
                         label: 'Categoria dos Tickets',
                         data: <?php echo json_encode($categoria_counts); ?>,
                         backgroundColor: [
-                            '#28a745', // E-mail (Green)
-                            '#529ebe', // XD (Blue)
-                            '#ffc107', // Impressoras (Yellow)
-                            '#dc3545'  // Office (Red)
+                            '#28a745', // Green
+                            '#529ebe', // Blue
+                            '#ffc107', // Yellow
+                            '#dc3545', // Red
+                            '#6f42c1', // Purple
+                            '#fd7e14'  // Orange
                         ],
                         borderColor: '#fff',
                         borderWidth: 5
@@ -182,6 +244,18 @@ include('conflogin.php');
                                 usePointStyle: true,
                                 pointStyle: 'circle'
                             }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    let value = context.parsed || 0;
+                                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    let percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
                         }
                     }
                 }
@@ -189,12 +263,14 @@ include('conflogin.php');
 
             // Prioridade dos Tickets Chart (Horizontal Bar)
             const prioridadeCtx = document.getElementById('prioridadeTicketsChart').getContext('2d');
-            new Chart(prioridadeCtx, {                type: 'bar',
+            new Chart(prioridadeCtx, {
+                type: 'bar',
                 data: {
                     labels: <?php echo json_encode($prioridade_labels); ?>,
                     datasets: [{
                         label: 'Prioridade',
-                        data: <?php echo json_encode($prioridade_counts); ?>,                        backgroundColor: [
+                        data: <?php echo json_encode($prioridade_counts); ?>,
+                        backgroundColor: [
                             '#000000', // All bars in black
                             '#000000',
                             '#000000'
@@ -203,7 +279,8 @@ include('conflogin.php');
                         categoryPercentage: 1.0, // Use full category width
                         barPercentage: 0.4 // Make bars take 40% of category height, leaving 60% as spacing
                     }]
-                },                options: {
+                },
+                options: {
                     indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
@@ -258,7 +335,8 @@ include('conflogin.php');
                             }
                         }
                     }
-                },                plugins: [{
+                },
+                plugins: [{
                     id: 'compactBars',
                     beforeLayout: function(chart) {
                         // Force chart to be compact

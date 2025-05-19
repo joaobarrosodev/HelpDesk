@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                cutout: '65%', // Added cutout percentage for a nicer doughnut
                 plugins: {
                     legend: {
                         position: 'bottom',
@@ -32,13 +33,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         callbacks: {
                             label: function(context) {
                                 let label = context.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed !== null) {
-                                    label += context.parsed;
-                                }
-                                return label;
+                                let value = context.parsed || 0;
+                                let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                let percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                
+                                return `${label}: ${value} (${percentage}%)`;
                             }
                         }
                     }
