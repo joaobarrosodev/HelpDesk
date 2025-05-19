@@ -72,4 +72,64 @@ if (is_array($syncFiles)) {
 if ($oldFiles > 0 && defined('DEBUG') && DEBUG) {
     error_log("Cleaned up $oldFiles old files from temp directory");
 }
+
+/**
+ * Auto-start WebSocket server if not running
+ * This script checks if the WebSocket server is running and attempts to start it if needed
+ */
+
+// Only attempt auto-start if enabled
+$enableAutoStart = true;  // Set to false to disable auto-start
+
+// Don't run this in CLI mode (to prevent recursion when the server itself runs)
+if (php_sapi_name() == 'cli') {
+    return;
+}
+
+// Check if server is running
+function isWsServerRunning() {
+    $socket = @fsockopen('localhost', 8080, $errno, $errstr, 1);
+    if ($socket) {
+        fclose($socket);
+        return true;
+    }
+    return false;
+}
+
+// Don't continue if auto-start is disabled or server is already running
+if (!$enableAutoStart || isWsServerRunning()) {
+    return;
+}
+
+// Create temp directory if it doesn't exist
+$tempDir = dirname(__FILE__) . '/temp';
+if (!file_exists($tempDir)) {
+    @mkdir($tempDir, 0777, true);
+}
+
+// Don't attempt to start more than once every 60 seconds
+$lockFile = $tempDir . '/ws_autostart.lock';
+if (file_exists($lockFile) && (time() - @filemtime($lockFile) < 60)) {
+    return;
+}
+
+// Create/update lock file
+@touch($lockFile);
+
+// Try to start the WebSocket server in the background
+$path = dirname(__FILE__);
+
+// Different commands for Windows vs Unix
+if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+    pclose(popen('start /B "HelpDesk WS" cmd /c "cd /D ' . $path . ' && php ws-server.php > ws-server.log 2>&1"', 'r'));
+} else {
+    exec('cd ' . $path . ' && nohup php ws-server.php > ws-server.log 2>&1 &');
+}
+
+// Log the auto-start attempt
+$logFile = $path . '/ws-autostart.log';
+$message = date('[Y-m-d H:i:s]') . ' Auto-start attempt from ' . 
+    ($_SERVER['SCRIPT_NAME'] ?? 'unknown') . ' by user ' . 
+    ($_SESSION['usuario_email'] ?? 'unknown') . "\n";
+@file_put_contents($logFile, $message, FILE_APPEND);
 ?>

@@ -236,6 +236,13 @@ function getStatusColor($status) {
             });
         }
         
+        // WebSocket connection
+        let ws = null;
+        const serverUrl = 'ws://' + window.location.hostname + ':8080';
+        let wsConnected = false;
+        let wsReconnectAttempts = 0;
+        let wsLastErrorTime = 0;
+
         // Simplified approach - only keep track of the last message timestamp
         // and use sync files for communication
         let lastMessageTimestamp = '<?php echo !empty($messages) ? date('Y-m-d H:i:s', strtotime($messages[count($messages)-1]['CommentTime'])) : date('Y-m-d H:i:s'); ?>';
@@ -256,6 +263,138 @@ function getStatusColor($status) {
             return id;
         }
         
+        // Initialize WebSocket connection
+        function initWebSocket() {
+            // Don't try to reconnect too frequently
+            const now = new Date().getTime();
+            if (wsLastErrorTime > 0 && now - wsLastErrorTime < 5000) {
+                console.log("Waiting before reconnect attempt...");
+                setTimeout(initWebSocket, 5000);
+                return;
+            }
+            
+            try {
+                // Close existing connection if any
+                if (ws) {
+                    ws.onclose = null; // Remove onclose handler to prevent reconnect loop
+                    ws.close();
+                }
+                
+                console.log("Connecting to WebSocket server at " + serverUrl);
+                ws = new WebSocket(serverUrl);
+                
+                ws.onopen = function() {
+                    console.log("WebSocket connection established");
+                    wsConnected = true;
+                    wsReconnectAttempts = 0;
+                    
+                    // Subscribe to this ticket
+                    const ticketId = '<?php echo $ticket_id; ?>';
+                    subscribeToTicket(ticketId);
+                    
+                    // Send a ping every 30 seconds to keep connection alive
+                    setInterval(function() {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({
+                                action: 'ping',
+                                deviceId: deviceId,
+                                timestamp: new Date().getTime()
+                            }));
+                        }
+                    }, 30000);
+                };
+                
+                ws.onclose = function() {
+                    console.log("WebSocket connection closed");
+                    wsConnected = false;
+                    
+                    // Attempt to reconnect if not closing intentionally
+                    wsReconnectAttempts++;
+                    const delay = Math.min(30000, wsReconnectAttempts * 2000); // Exponential backoff
+                    
+                    console.log(`Attempting to reconnect in ${delay/1000} seconds...`);
+                    setTimeout(initWebSocket, delay);
+                };
+                
+                ws.onerror = function(error) {
+                    console.error("WebSocket error:", error);
+                    wsLastErrorTime = new Date().getTime();
+                    wsConnected = false;
+                    
+                    // Fallback to sync file approach
+                    if (!syncCheckInterval) {
+                        console.log("Starting sync file polling as fallback");
+                        syncCheckInterval = setInterval(checkSyncFiles, 1000);
+                    }
+                };
+                
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log("WebSocket message received:", data);
+                        
+                        // Handle different message types
+                        if (data.action === 'newMessage' && data.ticketId === '<?php echo $ticket_id; ?>') {
+                            // Process new message
+                            processNewMessages([data.message]);
+                        } else if (data.action === 'pong') {
+                            // Server ping response, connection is alive
+                            console.log("Server pong received");
+                        }
+                    } catch (e) {
+                        console.error("Error processing WebSocket message:", e);
+                    }
+                };
+            } catch (e) {
+                console.error("Error initializing WebSocket:", e);
+                wsLastErrorTime = new Date().getTime();
+                
+                // Fallback to sync file approach
+                if (!syncCheckInterval) {
+                    console.log("Starting sync file polling as fallback");
+                    syncCheckInterval = setInterval(checkSyncFiles, 1000);
+                }
+            }
+        }
+        
+        // Subscribe to ticket updates
+        function subscribeToTicket(ticketId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                console.log("Cannot subscribe: WebSocket not connected");
+                return;
+            }
+            
+            console.log("Subscribing to ticket:", ticketId);
+            ws.send(JSON.stringify({
+                action: 'subscribe',
+                ticketId: ticketId,
+                deviceId: deviceId
+            }));
+        }
+        
+        // Send message via WebSocket
+        function sendWebSocketMessage(message, ticketId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                console.log("Cannot send message: WebSocket not connected");
+                return false;
+            }
+            
+            try {
+                const messageObj = {
+                    action: 'newMessage',
+                    ticketId: ticketId,
+                    message: message,
+                    deviceId: deviceId
+                };
+                
+                ws.send(JSON.stringify(messageObj));
+                return true;
+            } catch (e) {
+                console.error("Error sending WebSocket message:", e);
+                return false;
+            }
+        }
+        
         // Initialize chat when page loads
         window.addEventListener('DOMContentLoaded', function() {
             // Create temp directory if it doesn't exist
@@ -274,7 +413,10 @@ function getStatusColor($status) {
                 chatBody.scrollTop = chatBody.scrollHeight;
             }
             
-            // Check for sync files every 1 second
+            // Try to connect to WebSocket
+            initWebSocket();
+            
+            // Start sync file checking as a fallback
             syncCheckInterval = setInterval(checkSyncFiles, 1000);
             
             // Add existing message IDs to the set
@@ -454,57 +596,76 @@ function getStatusColor($status) {
                 messageInput.style.height = 'auto';
                 document.getElementById('sendButton').disabled = true;
                 
-                // Usar AJAX para enviar a mensagem em vez de submit normal
-                const formData = new FormData(this);
+                // Create message object
+                const messageObj = {
+                    Message: messageToSend,
+                    user: '<?php echo $_SESSION['usuario_email'] ?? "Usuário"; ?>',
+                    type: <?php echo (isset($_SESSION['usuario_admin']) && $_SESSION['usuario_admin']) ? '2' : '1'; ?>,
+                    CommentTime: new Date().toISOString(),
+                    deviceId: deviceId,
+                    messageId: 'msg_' + new Date().getTime()
+                };
                 
-                // Ensure we're sending the right message (in case the form was cleared too early)
-                if (!formData.get('message')) {
-                    formData.set('message', messageToSend);
+                // Try to send via WebSocket first
+                let wsSuccess = false;
+                if (wsConnected) {
+                    wsSuccess = sendWebSocketMessage(messageObj, '<?php echo $ticket_id; ?>');
                 }
                 
-                // Add device ID to the form data
-                formData.append('deviceId', deviceId);
-                
-                fetch('inserir_mensagem.php', {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Erro ao enviar mensagem: ${response.status}`);
-                    }
-                    // Try to parse JSON, but handle if it's not JSON
-                    return response.text().then(text => {
-                        try {
-                            return JSON.parse(text);
-                        } catch (e) {
-                            console.log("Response wasn't JSON:", text);
-                            return { status: 'success', message: text };
-                        }
-                    });
-                })
-                .then(data => {
-                    console.log('Mensagem enviada com sucesso:', data);
+                // If WebSocket fails or not connected, use AJAX as fallback
+                if (!wsSuccess) {
+                    // Usar AJAX para enviar a mensagem em vez de submit normal
+                    const formData = new FormData(this);
                     
-                    // Force check for sync files to update any other clients
-                    setTimeout(checkSyncFiles, 200);
-                })
-                .catch(error => {
-                    console.error('Erro:', error);
-                    // Remove the preview message since it failed
-                    if (messageDiv.parentNode) {
-                        messageDiv.parentNode.removeChild(messageDiv);
+                    // Ensure we're sending the right message (in case the form was cleared too early)
+                    if (!formData.get('message')) {
+                        formData.set('message', messageToSend);
                     }
-                    alert('Ocorreu um erro ao enviar a mensagem. Por favor, tente novamente.');
-                    // Restore the message so the user doesn't have to retype it
-                    messageInput.value = messageToSend;
-                    messageInput.style.height = 'auto';
-                    messageInput.style.height = (messageInput.scrollHeight) + 'px';
-                    document.getElementById('sendButton').disabled = false;
-                });
+                    
+                    // Add device ID to the form data
+                    formData.append('deviceId', deviceId);
+                    
+                    fetch('inserir_mensagem.php', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Erro ao enviar mensagem: ${response.status}`);
+                        }
+                        // Try to parse JSON, but handle if it's not JSON
+                        return response.text().then(text => {
+                            try {
+                                return JSON.parse(text);
+                            } catch (e) {
+                                console.log("Response wasn't JSON:", text);
+                                return { status: 'success', message: text };
+                            }
+                        });
+                    })
+                    .then(data => {
+                        console.log('Mensagem enviada com sucesso:', data);
+                        
+                        // Force check for sync files to update any other clients
+                        setTimeout(checkSyncFiles, 200);
+                    })
+                    .catch(error => {
+                        console.error('Erro:', error);
+                        // Remove the preview message since it failed
+                        if (messageDiv.parentNode) {
+                            messageDiv.parentNode.removeChild(messageDiv);
+                        }
+                        alert('Ocorreu um erro ao enviar a mensagem. Por favor, tente novamente.');
+                        // Restore the message so the user doesn't have to retype it
+                        messageInput.value = messageToSend;
+                        messageInput.style.height = 'auto';
+                        messageInput.style.height = (messageInput.scrollHeight) + 'px';
+                        document.getElementById('sendButton').disabled = false;
+                    });
+                }
             }
         });
         
@@ -529,9 +690,18 @@ function getStatusColor($status) {
             }
         }
         
+        function showImage(imageSrc) {
+            document.getElementById('modalImage').src = imageSrc;
+            new bootstrap.Modal(document.getElementById('imageModal')).show();
+        }
+        
         // Cleanup when leaving the page
         window.addEventListener('beforeunload', function() {
             if (syncCheckInterval) clearInterval(syncCheckInterval);
+            if (ws && wsConnected) {
+                ws.onclose = null; // Prevent reconnection attempts
+                ws.close();
+            }
         });
     </script>
 </body>
