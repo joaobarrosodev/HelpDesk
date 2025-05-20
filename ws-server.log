@@ -1949,3 +1949,29 @@ Message from 701: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","t
 Message from 701: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747761037818}
 Message from 701: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747761067826}
 Connection 701 disconnected
+New connection: 704
+Message from 704: {"action":"subscribe","ticketId":"#024","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 704 subscribed to ticket #024
+Message from 704: {"action":"newMessage","ticketId":"#024","message":{"Message":"rwrw","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T17:48:21.408Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747763301408"},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #024, clients: 39
+Connection 704 disconnected
+New connection: 707
+Message from 707: {"action":"subscribe","ticketId":"#024","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 707 subscribed to ticket #024
+Message from 707: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747763334854}
+Message from 707: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747763364868}
+Message from 707: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747763395648}
+Message from 707: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747763425980}
+Connection 707 disconnected
+New connection: 710
+Message from 710: {"action":"subscribe","ticketId":"#024","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 710 subscribed to ticket #024

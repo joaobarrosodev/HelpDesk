@@ -74,7 +74,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <h1 class="mb-3 display-5">Os Meus Tickets</h1>
                     <p class="">Lista de todos os seus tickets, incluindo tickets em aberto e resolvidos. Utilize os filtros abaixo para refinar a visualização.</p>
                 </div>
-                <a href="ticket.php" class="btn btn-primary d-flex align-items-center">
+                <a href="abrir_ticket.php" class="btn btn-primary d-flex align-items-center">
                     Abrir Novo Ticket
                 </a>
             </div>
