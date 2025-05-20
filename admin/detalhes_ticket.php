@@ -33,7 +33,7 @@ if (isset($_GET['keyid'])) {
         exit;
     }
     
-    TODO:
+    // TODO:
 
     $ticket_id = $ticket['KeyId'];
 
@@ -136,6 +136,25 @@ function getStatusColor($status) {
     .admin-controls .form-group {
         margin-bottom: 15px;
     }
+    
+    .admin-controls-header {
+        transition: all 0.3s ease;
+        padding: 8px 0;
+        border-radius: 4px;
+    }
+    
+    .admin-controls-header:hover {
+        background-color: #f0f0f0;
+        padding-left: 8px;
+    }
+    
+    .toggle-icon {
+        transition: transform 0.3s ease;
+    }
+    
+    .collapsed .toggle-icon {
+        transform: rotate(-90deg);
+    }
 </style>
 <!-- Modal para Exibir Imagem -->
 <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
@@ -163,45 +182,60 @@ function getStatusColor($status) {
             <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-<?php echo getStatusColor($ticket['Status']); ?>">
                     <?php echo $ticket['Status']; ?>
-                </span>    
+                </span>
                 <span class="badge bg-<?php echo getPriorityColor($ticket['Priority']); ?>"><?php echo $ticket['Priority']; ?></span>
             </div>
         </div>
-        
-        <!-- Admin controls section -->
-        <div class="admin-controls">
-            <h5>Informações Administrativas</h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label class="form-label">Atribuído a:</label>
-                        <div class="form-control bg-light"><?php echo !empty($ticket['atribuido_a']) ? $ticket['atribuido_a'] : 'Não atribuído'; ?></div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Tempo despendido:</label>
-                        <div class="form-control bg-light"><?php echo !empty($ticket['Time']) ? $ticket['Time'] : 'Não registrado'; ?></div>
-                    </div>
+      <!-- Admin controls section -->
+<div class="admin-controls">
+    <a href="javascript:void(0);" class="d-flex align-items-center justify-content-between admin-controls-header" 
+       data-bs-toggle="collapse" 
+       data-bs-target="#adminInfo" 
+       aria-expanded="true" 
+       aria-controls="adminInfo" 
+       style="cursor: pointer; text-decoration: none; color: inherit;">
+        <h5 class="m-0">Informações Administrativas</h5>
+        <i class="bi bi-chevron-down toggle-icon"></i>
+    </a>
+    <div class="collapse show" id="adminInfo">
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">Atribuído a:</label>
+                    <div class="form-control bg-light"><?php echo !empty($ticket['atribuido_a']) ? $ticket['atribuido_a'] : 'Não atribuído'; ?></div>
                 </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label class="form-label">Detalhes Internos:</label>
-                        <div class="form-control bg-light" style="height: auto; min-height: 60px;"><?php echo !empty($ticket['Descr']) ? $ticket['Descr'] : 'Sem detalhes'; ?></div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Informações Extra:</label>
-                        <div class="form-control bg-light" style="height: auto; min-height: 60px;"><?php echo !empty($ticket['info']) ? $ticket['info'] : 'Sem informações extras'; ?></div>
-                    </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Tempo despendido:</label>
+                    <div class="form-control bg-light"><?php echo !empty($ticket['Time']) ? $ticket['Time'] : 'Não registrado'; ?></div>
                 </div>
             </div>
-            <div class="d-flex justify-content-end mt-2">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">Detalhes Internos:</label>
+                    <div class="form-control bg-light" style="height: auto; min-height: 60px;"><?php echo !empty($ticket['Descr']) ? $ticket['Descr'] : 'Sem detalhes'; ?></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Informações Extra:</label>
+                    <div class="form-control bg-light" style="height: auto; min-height: 60px;"><?php echo !empty($ticket['info']) ? $ticket['info'] : 'Sem informações extras'; ?></div>
+                </div>
+            </div>
+        </div>
+        <div class="flex-row d-flex">
+            <div class="d-flex justify-content-end">
                 <a href="alterar_tickets.php?keyid=<?php echo $ticket['id']; ?>" class="btn btn-primary">
                     <i class="bi bi-pencil-square me-1"></i> Editar Ticket
                 </a>
             </div>
+            <?php if ($ticket['Status'] !== 'Concluído') { ?>
+                <button class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
+                    <i class="bi bi-x-circle"></i> Fechar Ticket
+                </button>
+            <?php } ?>
         </div>
-        
+    </div>
+</div>
         <div class="chat-body" id="chatBody">
             <!-- Ticket information message at the top -->
             <div class="ticket-info">
@@ -261,12 +295,6 @@ function getStatusColor($status) {
                 <a href="consultar_tickets.php" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i> Voltar aos tickets
                 </a>
-                
-                <?php if ($ticket['Status'] !== 'Concluído') { ?>
-                    <button class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
-                        <i class="bi bi-x-circle"></i> Fechar Ticket
-                    </button>
-                <?php } ?>
             </div>
         </div>
     </div>
@@ -295,8 +323,61 @@ function getStatusColor($status) {
             }
             
             // Start sync file checking
-            setInterval(checkForUpdates, 1000);
+            setInterval(checkForUpdates, 1000);const adminHeader = document.querySelector('.admin-controls-header');
+    const adminInfoCollapse = document.getElementById('adminInfo');
+    const toggleIcon = document.querySelector('.toggle-icon');
+    
+    // Verificar se o Bootstrap está carregado
+    if (typeof bootstrap !== 'undefined') {
+        // Usar collapse do Bootstrap
+        const bsCollapse = new bootstrap.Collapse(adminInfoCollapse, {
+            toggle: false
         });
+        
+        // Adicionar listener para o evento show.bs.collapse
+        adminInfoCollapse.addEventListener('show.bs.collapse', function() {
+            toggleIcon.style.transform = 'rotate(0deg)';
+            adminHeader.setAttribute('aria-expanded', 'true');
+            adminHeader.classList.remove('collapsed');
+        });
+        
+        // Adicionar listener para o evento hide.bs.collapse
+        adminInfoCollapse.addEventListener('hide.bs.collapse', function() {
+            toggleIcon.style.transform = 'rotate(-90deg)';
+            adminHeader.setAttribute('aria-expanded', 'false');
+            adminHeader.classList.add('collapsed');
+        });
+    } else {
+        console.warn('Bootstrap não foi carregado, usando fallback manual');
+        
+        // Implementação manual do comportamento de collapse
+        adminHeader.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Toggle a classe show
+            const isExpanded = adminInfoCollapse.classList.toggle('show');
+            
+            // Atualizar o atributo aria-expanded
+            this.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+            
+            // Alternar a classe collapsed
+            this.classList.toggle('collapsed', !isExpanded);
+            
+            // Girar o ícone
+            if (toggleIcon) {
+                toggleIcon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+            }
+        });
+    }
+    
+    // Inicializar o estado do ícone baseado no estado inicial do collapse
+    if (toggleIcon && adminInfoCollapse) {
+        if (!adminInfoCollapse.classList.contains('show')) {
+            toggleIcon.style.transform = 'rotate(-90deg)';
+            adminHeader.classList.add('collapsed');
+        }
+    }
+});
         
         // Function to check for updates
         function checkForUpdates() {
@@ -384,6 +465,38 @@ function getStatusColor($status) {
             document.getElementById('modalImage').src = imageSrc;
             new bootstrap.Modal(document.getElementById('imageModal')).show();
         }
+        
+        // Toggle para as Informações Administrativas
+        document.addEventListener('DOMContentLoaded', function() {
+            const adminHeader = document.querySelector('.admin-controls-header');
+            
+            // Certifique-se de que o Bootstrap está carregado
+            if (typeof bootstrap === 'undefined') {
+                console.error('Bootstrap não foi carregado, usando fallback manual');
+                
+                // Implementação manual do comportamento de collapse
+                adminHeader.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const adminInfoCollapse = document.getElementById('adminInfo');
+                    
+                    // Toggle a classe show
+                    adminInfoCollapse.classList.toggle('show');
+                    
+                    // Atualizar o atributo aria-expanded
+                    const isExpanded = adminInfoCollapse.classList.contains('show');
+                    this.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+                    
+                    // Alternar a classe collapsed
+                    this.classList.toggle('collapsed', !isExpanded);
+                    
+                    // Girar o ícone
+                    const chevronIcon = this.querySelector('.toggle-icon');
+                    if (chevronIcon) {
+                        chevronIcon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>
