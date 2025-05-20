@@ -1,19 +1,30 @@
- /* Garantir que a página não faça scroll */
+/* Configurações gerais */
+:root {
+    --primary-color: #3498db;
+    --secondary-color: #2ecc71;
+    --danger-color: #e74c3c;
+    --warning-color: #f39c12;
+    --info-color: #3498db;
+    --light-bg: #f8f9fa;
+    --dark-bg: #343a40;
+    --sidebar-width: 280px;
+}
+
+/* Garantir que a página não faça scroll desnecessário */
 html, body {
     height: 100%;
     margin: 0;
-    overflow: hidden;
     font-family: 'DM Sans', sans-serif;
     font-weight: 400; /* Peso regular */
     line-height: 1.6;
+    background-color: var(--light-bg);
 }
 
 /* Layout base para corpo da página */
 body {
     display: flex;
     width: 100%;
-    height: 100%;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
 /* Configuração da Sidebar */
@@ -22,177 +33,250 @@ body {
     top: 0;
     left: 0;
     height: 100%;
-    width: 300px !important;
-    min-width: 300px !important;
-    max-width: 300px !important;
+    width: var(--sidebar-width) !important;
+    min-width: var(--sidebar-width) !important;
+    max-width: var(--sidebar-width) !important;
     z-index: 1030;
     overflow-y: auto;
     box-sizing: border-box;
-    flex: 0 0 300px !important;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    transition: transform 0.3s ease;
+}
+
+/* Ocultar sidebar em telas pequenas */
+@media (max-width: 991.98px) {
+    .sidebar-helpdesk {
+        transform: translateX(-100%);
+    }
+    
+    .sidebar-helpdesk.show-sidebar {
+        transform: translateX(0);
+    }
+    
+    .content {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
 }
 
 /* Área de conteúdo principal */
-.content-area {
-    margin-left: 300px;
-    width: calc(100% - 300px);
+.content {
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
     padding: 20px;
     overflow-y: auto;
-    height: 100vh;
+    background-color: var(--light-bg);
+    min-height: 100vh;
+    transition: margin-left 0.3s ease;
 }
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 250px;
-            background-color: #343a40;
-            padding-top: 20px;
-            z-index: 2; /* Garantir que a sidebar fique por cima da barra superior */
-        }
 
-        .sidebar .logo {
-            text-align: center;
-            margin-bottom: 30px;
-        }
+/* Estilos da barra lateral antiga - mantidos para compatibilidade */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 250px;
+    background-color: #343a40;
+    padding-top: 20px;
+    z-index: 1030;
+}
 
-        .sidebar img {
-            width: 150px; /* Tamanho do logo */
-        }
+.sidebar .logo {
+    text-align: center;
+    margin-bottom: 30px;
+}
 
-        .sidebar a {
-            color: #fff;
-            padding: 10px 15px;
-            text-decoration: none;
-            font-size: 18px;
-            display: block;
-        }
+.sidebar img {
+    max-width: 80%;
+    height: auto;
+}
 
-        .sidebar a:hover {
-            background-color: #575757;
-        }
+.sidebar a {
+    color: #fff;
+    padding: 10px 15px;
+    text-decoration: none;
+    font-size: 16px;
+    display: block;
+    transition: all 0.3s ease;
+}
 
-        /* Configuração da Barra Superior */
-        .topbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 60px;
-            background-color: #343a40;
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            z-index: 1; /* A barra superior fica abaixo da sidebar */
-        }
+.sidebar a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
 
-        .topbar .brand-name {
-            font-weight: bold;
-            font-size: 20px;
-        }
+/* Estilos para links de menu */
+.menu-link {
+    border-radius: 5px;
+    transition: all 0.2s ease;
+}
 
-        .topbar .contact-info {
-            font-size: 16px;
-        }
+.menu-link:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
 
-        /* Estilo do Conteúdo Central */
-        .content {
-            margin-left: 250px;
-            margin-top: 60px;
-            padding: 20px;
-            height: calc(100% - 60px);
-            overflow-y: auto;
-            background-color: #f8f9fa;
-        }
+.menu-link.active {
+    background-color: var(--primary-color);
+    color: white !important;
+}
 
-         .login-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: calc(100% - 60px);
-            background-color: #f8f9fa;
-        }
-        .login-form {
-            width: 100%;
-            max-width: 600px;
-            padding: 30px;
-            border-radius: 8px;
-            background-color: white;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .login-form h2 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+.menu-link.active i {
+    color: white;
+}
 
+/* Estilos para a página de login */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: var(--light-bg);
+    padding: 20px;
+}
+
+.login-form {
+    width: 100%;
+    max-width: 500px;
+    padding: 30px;
+    border-radius: 10px;
+    background-color: white;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.login-form h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* Avatar de usuário */
 .user-avatar {
-    display: inline-block;
-    width: 40px; /* Tamanho do círculo */
-    height: 40px; /* Tamanho do círculo */
-    background-color: #529ebe; /* Cor de fundo do círculo (pode alterar) */
-    color: white; /* Cor da letra */
-    text-align: center; /* Centraliza a letra */
-    line-height: 40px; /* Alinha a letra verticalmente */
-    border-radius: 50%; /* Faz o círculo */
-    font-weight: bold; /* Deixa a letra mais visível */
-    font-size: 18px; /* Tamanho da letra */
-}
-
-/* Estilo customizado para tooltip */
-.tooltip-inner {
-    background-color: #333; /* Cor de fundo */
-    color: white; /* Cor do texto */
-    border-radius: 5px; /* Bordas arredondadas */
-    font-size: 14px; /* Tamanho da fonte */
-}
-.tooltip-arrow {
-    border-top-color: #333; /* Cor da seta */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 18px;
 }
 
 .user-logout {
-    display: inline-block;
-    width: 40px; /* Tamanho do círculo */
-    height: 40px; /* Tamanho do círculo */
-    background-color: orange; /* Cor de fundo do círculo (pode alterar) */
-    color: white; /* Cor da letra */
-    text-align: center; /* Centraliza a letra */
-    line-height: 40px; /* Alinha a letra verticalmente */
-    border-radius: 50%; /* Faz o círculo */
-    font-weight: bold; /* Deixa a letra mais visível */
-    font-size: 18px; /* Tamanho da letra */
-}
-
-#entity_keyid {
-    pointer-events: none;
-}
-
-
-/* Tornar o link clicável com o cursor pointer */
-a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: var(--danger-color);
+    color: white;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 14px;
     cursor: pointer;
-    transition: color 0.3s ease;
+    transition: all 0.3s ease;
 }
 
-/* Efeito ao passar o mouse (hover) */
-a:hover {
-    color: #529ebe; /* Cor azul para o efeito de hover */
+.user-logout:hover {
+    transform: scale(1.05);
 }
 
-a:hover .bi {
-    color: #529ebe; /* Altera a cor do ícone quando o mouse passar sobre o link */
+/* Estilos para cards e tabelas */
+.card {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.card:hover {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
 
+.table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+.table td, .table th {
+    vertical-align: middle;
+}
+
+/* Classes adicionais */
+.border-left-primary {
+    border-left: 4px solid var(--primary-color);
+}
+
+.border-left-success {
+    border-left: 4px solid var(--secondary-color);
+}
+
+.border-left-info {
+    border-left: 4px solid var(--info-color);
+}
+
+.border-left-warning {
+    border-left: 4px solid var(--warning-color);
+}
+
+/* Estilos para ordenação */
 th.sortable {
-            cursor: pointer;
-            position: relative;
-        }
+    cursor: pointer;
+    position: relative;
+}
 
-        th.sortable.asc::after {
-            content: ' ↑'; /* Seta para cima */
-        }
+th.sortable.asc::after {
+    content: ' ↑';
+}
 
-        th.sortable.desc::after {
-            content: ' ↓'; /* Seta para baixo */
-        }
+th.sortable.desc::after {
+    content: ' ↓';
+}
+
+/* Overlay para fundo escurecido quando menu mobile está aberto */
+.sidebar-overlay {
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+}
+
+/* Estilos para apresentação de mensagens de ticket */
+.message-container {
+    margin-bottom: 1rem;
+}
+
+.message-admin {
+    border-left: 4px solid var(--primary-color);
+}
+
+.message-user {
+    border-left: 4px solid var(--warning-color);
+}
+
+/* Botão para voltar ao topo */
+.back-to-top {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: none;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    text-align: center;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.back-to-top:hover {
+    background-color: #2980b9;
+}

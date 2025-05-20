@@ -37,7 +37,7 @@ try {
         $stmt1->bindParam(':time', $time_formatted);
         $stmt1->bindParam(':keyid', $keyid, PDO::PARAM_INT);
         $stmt1->execute();
-        echo $sql1;
+        
         // Atualizar a tabela `info_xdfree01_extrafields`
         $sql2 = "UPDATE info_xdfree01_extrafields 
                  SET Status = :status, dateu = NOW() 
@@ -50,19 +50,13 @@ try {
         // Confirmar as alterações no banco de dados
         $pdo->commit();
 
-        echo "<script>alert('Ticket atualizado com sucesso!'); window.location.href='meus_tickets.php';</script>";
+        echo "<script>alert('Ticket atualizado com sucesso!'); window.location.href='tickets_atribuidos.php';</script>";
     } catch (Exception $e) {
         // Reverter transação em caso de erro
         $pdo->rollBack();
-        $sql1_final = str_replace(
-    [':user', ':description', ':extra_info', ':time', ':keyid'],
-    [$user, $description, $extra_info, $time_formatted, $keyid],
-    $sql1
-);
-echo "SQL1 Final: " . $sql1_final . "<br>";
         echo "<script>alert('Erro ao atualizar o ticket: " . $e->getMessage() . "'); window.history.back();</script>";
     }
 } else {
-    echo "<script>alert('Acesso inválido!'); window.location.href='meus_tickets.php';</script>";
+    echo "<script>alert('Acesso inválido!'); window.location.href='tickets_atribuidos.php';</script>";
 }
 ?>

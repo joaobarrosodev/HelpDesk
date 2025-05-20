@@ -916,3 +916,15 @@ Message from 353: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","t
 Message from 353: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747690898614}
 Message from 353: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747690928698}
 Connection 353 disconnected
+New connection: 356
+Message from 356: {"action":"subscribe","ticketId":"#022","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 356 subscribed to ticket #022
+Message from 356: {"action":"newMessage","ticketId":"#022","message":{"Message":"bihbuuu","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-19T21:51:03.443Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747691463443"},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #022, clients: 1
+Message from 356: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747691489398}
+Message from 356: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747691519585}
+Message from 356: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747691549600}
+Connection 356 disconnected
