@@ -251,13 +251,6 @@ th.sortable.desc::after {
     margin-bottom: 1rem;
 }
 
-.message-admin {
-    border-left: 4px solid var(--primary-color);
-}
-
-.message-user {
-    border-left: 4px solid var(--warning-color);
-}
 
 /* Botão para voltar ao topo */
 .back-to-top {

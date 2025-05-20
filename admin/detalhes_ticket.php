@@ -1,9 +1,13 @@
 <?php
-// Try to auto-start the WebSocket server if needed
-include('../auto-start.php');
-
+session_start();
 include('conflogin.php');
 include('db.php');
+
+// Admin access check
+if (!isset($_SESSION['usuario_admin']) || !$_SESSION['usuario_admin']) {
+    header('Location: login.php');
+    exit;
+}
 
 // Verificar se o 'KeyId' do ticket foi passado pela URL
 if (isset($_GET['keyid'])) {
@@ -33,12 +37,10 @@ if (isset($_GET['keyid'])) {
         exit;
     }
     
-    TODO:
-
     $ticket_id = $ticket['KeyId'];
 
     // Consultar todas as mensagens associadas ao ticket
-    $sql_messages = "SELECT comments.Message, comments.type, comments.Date as CommentTime, comments.user
+    $sql_messages = "SELECT comments.id, comments.Message, comments.type, comments.Date as CommentTime, comments.user
                      FROM comments_xdfree01_extrafields comments
                      WHERE comments.XDFree01_KeyID = :keyid
                      ORDER BY comments.Date ASC";  // Ordenar pela data
@@ -195,10 +197,17 @@ function getStatusColor($status) {
                     </div>
                 </div>
             </div>
-            <div class="d-flex justify-content-end mt-2">
-                <a href="alterar_tickets.php?keyid=<?php echo $ticket['id']; ?>" class="btn btn-primary">
-                    <i class="bi bi-pencil-square me-1"></i> Editar Ticket
-                </a>
+            <div class="flex-row d-flex" style="gap: 20px;">
+                <div class="d-flex justify-content-end">
+                    <a href="alterar_tickets.php?keyid=<?php echo $ticket['id']; ?>" class="btn btn-primary">
+                        <i class="bi bi-pencil-square me-1"></i> Editar Ticket
+                    </a>
+                </div>
+                <?php if ($ticket['Status'] !== 'Concluído') { ?>
+                    <button class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
+                        <i class="bi bi-x-circle"></i> Fechar Ticket
+                    </button>
+                <?php } ?>
             </div>
         </div>
         
@@ -208,27 +217,34 @@ function getStatusColor($status) {
                 <h5><?php echo $ticket['Name']; ?></h5>
                 <p><strong>Descrição:</strong> <?php echo $ticket['Description']; ?></p>
                 <p><strong>Criado por:</strong> <?php echo $ticket['CreationUser']; ?></p>
-                <p><strong>Criado em:</strong> <?php echo $ticket['CreationDate']; ?></p>
-                <?php if (!empty($ticket['image'])) { ?>
+                <p><strong>Criado em:</strong> <?php echo $ticket['CreationDate']; ?></p>                <?php if (!empty($ticket['image'])) { ?>
                 <p><strong>Imagem:</strong>
-                    <img src="<?php echo $ticket['image']; ?>" alt="Imagem do Ticket" class="message-image" onclick="showImage('<?php echo $ticket['image']; ?>')">
+                    <img src="<?php echo fixImagePath($ticket['image']); ?>" alt="Imagem do Ticket" class="message-image" onclick="showImage('<?php echo fixImagePath($ticket['image']); ?>')">
                 </p>
                 <?php } ?>
             </div>
             
             <!-- Messages -->
             <?php
+            // Function to ensure image paths are correct
+            function fixImagePath($path) {
+                // If path is relative (doesn't start with http or /)
+                if (!preg_match('/^(https?:\/\/|\/)/', $path)) {
+                    return '../' . $path;
+                }
+                return $path;
+            }
+            
             if ($messages) {
                 foreach ($messages as $message) {
-                    $isUser = ($message['type'] == 1);
+                    $isUser = ($message['type'] == 1); // Type 1 = client, Type 0 = admin
                     $messageClass = $isUser ? 'message-user' : 'message-admin';
-                    $userInitial = substr($message['user'], 0, 1);
                     $timestamp = date('H:i', strtotime($message['CommentTime']));
                     
-                    echo "<div class='message $messageClass'>";
-                    echo "<p class='message-content'>" . nl2br($message['Message']) . "</p>";
+                    echo "<div class='message $messageClass' data-message-id='{$message['id']}'>";
+                    echo "<p class='message-content'>" . nl2br(htmlspecialchars($message['Message'])) . "</p>";
                     echo "<div class='message-meta'>";
-                    echo "<span class='message-user-info'>" . $message['user'] . "</span>";
+                    echo "<span class='message-user-info'>" . htmlspecialchars($message['user']) . "</span>";
                     echo "<span class='message-time'>" . $timestamp . "</span>";
                     echo "</div>";
                     echo "</div>";
@@ -239,8 +255,8 @@ function getStatusColor($status) {
         
         <div class="chat-footer">
             <?php if ($ticket['Status'] !== 'Concluído') { ?>
-                <!-- Formulário para Enviar Nova Mensagem -->
-                <form method="POST" action="inserir_mensagem.php" id="chatForm">
+                <!-- Admin message form -->
+                <form id="chatForm">
                     <input type="hidden" name="keyid" value="<?php echo $ticket['KeyId']; ?>">
                     <input type="hidden" name="id" value="<?php echo $ticket['id']; ?>">
                     <div class="chat-input-container">
@@ -251,28 +267,29 @@ function getStatusColor($status) {
                     </div>
                 </form>
             <?php } else { ?>
-                <!-- Caso o estado seja "Fechado", exibe uma mensagem informando -->
+                <!-- Message for closed tickets -->
                 <div class="d-flex justify-content-center align-items-center py-3">
                     <p class="text-muted m-0">Ticket fechado. Não é possível enviar novas mensagens.</p>
                 </div>
             <?php } ?>
             
+            <!-- Footer navigation -->
             <div class="d-flex justify-content-between mt-3">
                 <a href="consultar_tickets.php" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i> Voltar aos tickets
                 </a>
-                
                 <?php if ($ticket['Status'] !== 'Concluído') { ?>
-                    <button class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
-                        <i class="bi bi-x-circle"></i> Fechar Ticket
-                    </button>
+                <button class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
+                    <i class="bi bi-x-circle"></i> Fechar Ticket
+                </button>
                 <?php } ?>
             </div>
         </div>
     </div>
 
-    <!-- Inclusão do JS do Bootstrap -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/message-utils.js"></script>
     <script>
         // Auto-resize textarea
         const messageInput = document.getElementById('messageInput');
@@ -280,110 +297,288 @@ function getStatusColor($status) {
             messageInput.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = (this.scrollHeight) + 'px';
-                
-                // Enable/disable send button based on content
                 document.getElementById('sendButton').disabled = this.value.trim().length === 0;
             });
         }
         
-        // Initialize chat when page loads
+        // Admin device ID
+        let deviceId = localStorage.getItem('helpdesk_admin_device_id');
+        if (!deviceId) {
+            deviceId = 'admin_' + Math.random().toString(36).substring(2, 15);
+            localStorage.setItem('helpdesk_admin_device_id', deviceId);
+        }
+        
+        // Track last check time
+        let lastCheckTime = '<?php echo !empty($messages) ? 
+            date('Y-m-d H:i:s', strtotime($messages[count($messages) - 1]['CommentTime'])) : 
+            date('Y-m-d H:i:s'); ?>';
+        
+        // Track processed message IDs
+        const processedMessageIds = new Set();
+        
+        // Initialize chat
+        let checkInterval;
+        
         window.addEventListener('DOMContentLoaded', function() {
-            // Scroll chat to bottom
+            console.log('Admin chat initialized, device ID: ' + deviceId);
+            
+            // Scroll to bottom initially
+            scrollToBottom();
+            
+            // Track existing message IDs
+            document.querySelectorAll('.message').forEach(msg => {
+                const id = msg.getAttribute('data-message-id');
+                if (id) {
+                    processedMessageIds.add(id);
+                    console.log('Added existing message ID to tracking: ' + id);
+                }
+            });
+            
+            // Set up message form
+            setupMessageForm();
+            
+            // Start checking for new messages
+            startMessageChecking();
+        });
+        
+        // Scroll chat to bottom
+        function scrollToBottom() {
             const chatBody = document.getElementById('chatBody');
             if (chatBody) {
                 chatBody.scrollTop = chatBody.scrollHeight;
             }
-            
-            // Start sync file checking
-            setInterval(checkForUpdates, 1000);
-        });
+        }
         
-        // Function to check for updates
-        function checkForUpdates() {
-            // Get the ticket ID directly from the keyid parameter in the URL
-            var ticketId = <?php echo json_encode(isset($_GET['keyid']) ? trim($_GET['keyid']) : ''); ?>;
-                        
-            // Only proceed if we have a valid ticket ID
-            if (!ticketId) {
-                return;
+        // Start checking for messages
+        function startMessageChecking() {
+            if (checkInterval) {
+                clearInterval(checkInterval);
             }
+            checkInterval = setInterval(checkForNewMessages, 3000);
+            console.log('Message checking started');
+        }
+        
+        // Check for new messages
+        function checkForNewMessages() {
+            const ticketId = '<?php echo $ticket_id; ?>';
+            const timestamp = new Date().getTime();
+              console.log('Admin checking for new messages since: ' + lastCheckTime);
             
-            // Use the actual ticket ID from PHP (more reliable)
-            ticketId = '<?php echo $ticket_id; ?>';
-            
-            fetch('check_updates.php?ticketId=' + encodeURIComponent(ticketId) + '&_=' + new Date().getTime())
-                .then(response => response.json())
+            fetch('../silent_check.php?ticketId=' + encodeURIComponent(ticketId) + 
+                 '&lastCheck=' + encodeURIComponent(lastCheckTime) + 
+                 '&deviceId=' + encodeURIComponent(deviceId) +
+                 '&_=' + timestamp)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error checking messages: ' + response.status);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.hasUpdates) {
-                        // Reload the page to show new messages
+                    if (data.error) {
+                        console.error('Error checking messages:', data.error);
+                        return;
+                    }
+                    
+                    console.log('Admin message check response:', data);
+                    
+                    if (data.hasNewMessages && data.messages && data.messages.length > 0) {
+                        // Filter and add new messages
+                        const newMessages = data.messages.filter(message => {
+                            return !processedMessageIds.has(message.id.toString());
+                        });
+                        
+                        if (newMessages.length > 0) {
+                            console.log('New messages found:', newMessages.length);
+                            addMessagesToChat(newMessages);
+                            
+                            // Update last check time to the latest message time
+                            const latestMessage = newMessages.reduce((latest, msg) => {
+                                return new Date(msg.CommentTime) > new Date(latest.CommentTime) ? msg : latest;
+                            }, newMessages[0]);
+                            
+                            lastCheckTime = latestMessage.CommentTime;
+                            console.log('Updated last check time to:', lastCheckTime);
+                        }
+                    }
+                    
+                    // Check if status has changed and potentially reload
+                    if (data.currentStatus !== '<?php echo $ticket['Status']; ?>') {
+                        console.log('Status changed, reloading page');
                         location.reload();
                     }
                 })
                 .catch(error => {
-                    // Silent error handling
-                    console.error('Error checking for updates:', error);
+                    console.error('Error in message check:', error);
                 });
         }
         
-        // Submit form with animation
-        document.getElementById('chatForm')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const message = messageInput.value.trim();
-            if (message) {
-                // Add message with animation (preview)
-                const chatBody = document.getElementById('chatBody');
+        // Add new messages to the chat
+        function addMessagesToChat(messages) {
+            const chatBody = document.getElementById('chatBody');
+            let newMessagesAdded = false;
+            
+            messages.forEach(message => {
+                // Mark as processed
+                processedMessageIds.add(message.id.toString());
+                
+                // Determine message type and class (1=client, 0=admin)
+                const type = parseInt(message.type);
+                const isUser = (type === 1);
+                const messageClass = isUser ? 'message-user' : 'message-admin';
+                
+                // Format time
+                const timeDisplay = formatMessageTime(message.CommentTime);
+                
+                // Create message element
                 const messageDiv = document.createElement('div');
-                messageDiv.className = 'message message-admin new-message';
+                messageDiv.className = `message ${messageClass} new-message`;
+                messageDiv.setAttribute('data-message-id', message.id);
+                
                 messageDiv.innerHTML = `
-                    <p class="message-content">${message.replace(/\n/g, '<br>')}</p>
+                    <p class="message-content">${message.Message.replace(/\n/g, '<br>')}</p>
                     <div class="message-meta">
-                        <span class="message-user-info"><?php echo $_SESSION['usuario_email'] ?? 'Admin'; ?></span>
-                        <span class="message-time">${new Date().toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}</span>
+                        <span class="message-user-info">${message.user}</span>
+                        <span class="message-time">${timeDisplay}</span>
                     </div>
                 `;
-                chatBody.appendChild(messageDiv);
-                chatBody.scrollTop = chatBody.scrollHeight;
                 
-                // Reset textarea
+                chatBody.appendChild(messageDiv);
+                newMessagesAdded = true;
+            });
+            
+            // Scroll to bottom if new messages were added
+            if (newMessagesAdded) {
+                scrollToBottom();
+            }
+        }
+        
+        // Format message time for display
+        function formatMessageTime(time) {
+            try {
+                const date = new Date(time);
+                return date.toLocaleTimeString('pt-PT', {hour: '2-digit', minute: '2-digit'});
+            } catch (e) {
+                return time;
+            }
+        }
+        
+        // Set up message form
+        function setupMessageForm() {
+            const form = document.getElementById('chatForm');
+            if (!form) return;
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const message = messageInput.value.trim();
+                if (!message) return;
+                
+                // Show message preview
+                const chatBody = document.getElementById('chatBody');
+                const previewDiv = document.createElement('div');
+                
+                // Use 'message-admin' class for admin messages
+                previewDiv.className = 'message message-admin new-message';
+                previewDiv.innerHTML = `
+                    <p class="message-content">${message.replace(/\n/g, '<br>')}</p>
+                    <div class="message-meta">
+                        <span class="message-user-info"><?php echo htmlspecialchars($_SESSION['usuario_email']); ?></span>
+                        <span class="message-time">${formatMessageTime(new Date())}</span>
+                    </div>
+                `;
+                
+                chatBody.appendChild(previewDiv);
+                scrollToBottom();
+                
+                // Save message and reset input
+                const messageToSend = message;
                 messageInput.value = '';
                 messageInput.style.height = 'auto';
                 document.getElementById('sendButton').disabled = true;
-                
-                // Send via AJAX
+                  // Send message to server
                 const formData = new FormData(this);
+                formData.append('deviceId', deviceId); // Add device ID for tracking
                 
                 fetch('inserir_mensagem.php', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
                 })
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error(`Erro ao enviar mensagem: ${response.status}`);
+                        throw new Error('Error sending message: ' + response.status);
                     }
-                    return response.text();
+                    return response.text().then(text => {
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.error('Failed to parse response as JSON:', text);
+                            return { status: 'error', message: 'Invalid server response' };
+                        }
+                    });
                 })
                 .then(data => {
-                    // Force check for sync files to update any other clients
-                    setTimeout(checkForUpdates, 200);
+                    console.log('Admin message response:', data);
+                    
+                    if (data.status === 'success') {
+                        // Mark this message as processed
+                        if (data.messageId) {
+                            previewDiv.setAttribute('data-message-id', data.messageId);
+                            processedMessageIds.add(data.messageId.toString());
+                        }
+                        
+                        // Update last check time if needed
+                        if (data.messageTime && new Date(data.messageTime) > new Date(lastCheckTime)) {
+                            lastCheckTime = data.messageTime;
+                        }
+                    } else {
+                        throw new Error(data.message || 'Failed to send message');
+                    }
                 })
                 .catch(error => {
-                    // Remove the preview message since it failed
-                    messageDiv.remove();
-                    alert('Ocorreu um erro ao enviar a mensagem. Por favor, tente novamente.');
+                    console.error('Error sending admin message:', error);
+                    
+                    // Remove preview on error
+                    previewDiv.remove();
+                    
+                    // Show error and restore input
+                    alert('Erro ao enviar mensagem: ' + error.message);
+                    messageInput.value = messageToSend;
+                    messageInput.dispatchEvent(new Event('input'));
                 });
-            }
-        });
+            });
+        }
         
+        // Helper functions
         function fecharTicket(id) {
             if (confirm('Tem certeza de que deseja fechar este ticket?')) {
                 window.location.href = 'fechar_ticket.php?id=' + id;
             }
         }
-        
-        function showImage(imageSrc) {
+          function showImage(imageSrc) {
             document.getElementById('modalImage').src = imageSrc;
             new bootstrap.Modal(document.getElementById('imageModal')).show();
         }
+        
+        // Fix for relative image paths
+        function fixImagePath(path) {
+            if (!path) return '';
+            // If path is relative (doesn't start with http or /)
+            if (!path.match(/^(https?:\/\/|\/)/)) {
+                return '../' + path;
+            }
+            return path;
+        }
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (checkInterval) {
+                clearInterval(checkInterval);
+            }
+        });
     </script>
 </body>
 </html>

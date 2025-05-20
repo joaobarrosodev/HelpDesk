@@ -1,18 +1,11 @@
 <?php
-// Try to auto-start the WebSocket server if needed
-include('auto-start.php');
-
-// The session_start() call was removed from here to prevent "session already started" errors
-
+session_start();
 include('conflogin.php');
 include('db.php');
 
 // Verificar se o 'KeyId' do ticket foi passado pela URL
 if (isset($_GET['keyid'])) {
     $keyid = $_GET['keyid'];
-
-    // Remover o símbolo '#' caso ele exista (se o banco não usa o '#')
-    $keyid_sem_hash = str_replace('#', '', $keyid);
 
     // Consultar os detalhes do ticket
     $sql = "SELECT free.KeyId, free.id, free.Name, info.Description, info.Priority, info.Status, 
@@ -22,7 +15,7 @@ if (isset($_GET['keyid'])) {
             LEFT JOIN info_xdfree01_extrafields info ON free.KeyId = info.XDFree01_KeyID
             LEFT JOIN internal_xdfree01_extrafields internal on free.KeyId = internal.XDFree01_KeyID
             LEFT JOIN users u ON internal.User = u.id
-            WHERE free.id = :keyid";  // Comparar sem o #
+            WHERE free.id = :keyid";
 
     // Preparar a consulta
     $stmt = $pdo->prepare($sql);
@@ -38,10 +31,10 @@ if (isset($_GET['keyid'])) {
     $ticket_id = $ticket['KeyId'];
 
     // Consultar todas as mensagens associadas ao ticket
-    $sql_messages = "SELECT comments.Message, comments.type, comments.Date as CommentTime, comments.user
+    $sql_messages = "SELECT comments.id, comments.Message, comments.type, comments.Date as CommentTime, comments.user
                      FROM comments_xdfree01_extrafields comments
                      WHERE comments.XDFree01_KeyID = :keyid
-                     ORDER BY comments.Date ASC";  // Ordenar pela data
+                     ORDER BY comments.Date ASC";
 
     $stmt_messages = $pdo->prepare($sql_messages);
     $stmt_messages->bindParam(':keyid', $ticket_id);
@@ -171,27 +164,26 @@ function getStatusColor($status) {
             <?php
             if ($messages) {
                 foreach ($messages as $message) {
-                    $isUser = ($message['type'] == 1);
+                    $isUser = ($message['type'] == 1); // Type 1 = client, Type 0 = admin
                     $messageClass = $isUser ? 'message-user' : 'message-admin';
-                    $userInitial = substr($message['user'], 0, 1);
                     $timestamp = date('H:i', strtotime($message['CommentTime']));
                     
-                    echo "<div class='message $messageClass'>";
-                    echo "<p class='message-content'>" . nl2br($message['Message']) . "</p>";
+                    echo "<div class='message $messageClass' data-message-id='{$message['id']}'>";
+                    echo "<p class='message-content'>" . nl2br(htmlspecialchars($message['Message'])) . "</p>";
                     echo "<div class='message-meta'>";
-                    echo "<span class='message-user-info'>" . $message['user'] . "</span>";
+                    echo "<span class='message-user-info'>" . htmlspecialchars($message['user']) . "</span>";
                     echo "<span class='message-time'>" . $timestamp . "</span>";
                     echo "</div>";
                     echo "</div>";
                 }
             }
-?>
+            ?>
         </div>
         
         <div class="chat-footer">
             <?php if ($ticket['Status'] !== 'Concluído') { ?>
-                <!-- Formulário para Enviar Nova Mensagem -->
-                <form method="POST" action="inserir_mensagem.php" id="chatForm">
+                <!-- Form for sending messages -->
+                <form id="chatForm">
                     <input type="hidden" name="keyid" value="<?php echo $ticket['KeyId']; ?>">
                     <input type="hidden" name="id" value="<?php echo $ticket['id']; ?>">
                     <div class="chat-input-container">
@@ -202,7 +194,7 @@ function getStatusColor($status) {
                     </div>
                 </form>
             <?php } else { ?>
-                <!-- Caso o estado seja "Fechado", exibe uma mensagem informando -->
+                <!-- Message for closed tickets -->
                 <div class="d-flex justify-content-center align-items-center py-3">
                     <p class="text-muted m-0">Ticket fechado. Não é possível enviar novas mensagens.</p>
                 </div>
@@ -212,11 +204,6 @@ function getStatusColor($status) {
                 <a href="meus_tickets.php" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i> Voltar aos meus tickets
                 </a>
-                <?php if ($ticket['Status'] !== 'Concluído' && isset($_SESSION['usuario_admin']) && $_SESSION['usuario_admin']) { ?>
-                    <button class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
-                        <i class="bi bi-x-circle"></i> Fechar Ticket
-                    </button>
-                <?php } ?>
             </div>
         </div>
     </div>
@@ -230,443 +217,262 @@ function getStatusColor($status) {
             messageInput.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = (this.scrollHeight) + 'px';
-                
-                // Enable/disable send button based on content
                 document.getElementById('sendButton').disabled = this.value.trim().length === 0;
             });
         }
         
-        // WebSocket connection
-        let ws = null;
-        const serverUrl = 'ws://' + window.location.hostname + ':8080';
-        let wsConnected = false;
-        let wsReconnectAttempts = 0;
-        let wsLastErrorTime = 0;
-
-        // Simplified approach - only keep track of the last message timestamp
-        // and use sync files for communication
-        let lastMessageTimestamp = '<?php echo !empty($messages) ? date('Y-m-d H:i:s', strtotime($messages[count($messages)-1]['CommentTime'])) : date('Y-m-d H:i:s'); ?>';
-        let deviceId = generateDeviceId(); // Generate unique device ID
-        let syncCheckInterval = null;
+        // Client deviceId - used to prevent duplicate messages
+        let deviceId = localStorage.getItem('helpdesk_device_id');
+        if (!deviceId) {
+            deviceId = 'client_' + Math.random().toString(36).substring(2, 15);
+            localStorage.setItem('helpdesk_device_id', deviceId);
+        }
+        
+        // Track last check time for polling
+        let lastCheckTime = '<?php echo !empty($messages) ? 
+            date('Y-m-d H:i:s', strtotime($messages[count($messages) - 1]['CommentTime'])) : 
+            date('Y-m-d H:i:s'); ?>';
         
         // Keep track of processed message IDs to avoid duplicates
         const processedMessageIds = new Set();
         
-        // Generate a unique device ID for this browser/device
-        function generateDeviceId() {
-            let id = localStorage.getItem('helpdesk_device_id');
-            if (!id) {
-                id = 'device_' + Math.random().toString(36).substring(2, 15) + 
-                    Math.random().toString(36).substring(2, 15);
-                localStorage.setItem('helpdesk_device_id', id);
-            }
-            return id;
-        }
-        
-        // Initialize WebSocket connection
-        function initWebSocket() {
-            // Don't try to reconnect too frequently
-            const now = new Date().getTime();
-            if (wsLastErrorTime > 0 && now - wsLastErrorTime < 5000) {
-                setTimeout(initWebSocket, 5000);
-                return;
-            }
-            
-            try {
-                // Close existing connection if any
-                if (ws) {
-                    ws.onclose = null; // Remove onclose handler to prevent reconnect loop
-                    ws.close();
-                }
-                
-                ws = new WebSocket(serverUrl);
-                
-                ws.onopen = function() {
-                    wsConnected = true;
-                    wsReconnectAttempts = 0;
-                    
-                    // Subscribe to this ticket
-                    const ticketId = '<?php echo $ticket_id; ?>';
-                    subscribeToTicket(ticketId);
-                    
-                    // Send a ping every 30 seconds to keep connection alive
-                    setInterval(function() {
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({
-                                action: 'ping',
-                                deviceId: deviceId,
-                                timestamp: new Date().getTime()
-                            }));
-                        }
-                    }, 30000);
-                };
-                
-                ws.onclose = function() {
-                    wsConnected = false;
-                    
-                    // Attempt to reconnect if not closing intentionally
-                    wsReconnectAttempts++;
-                    const delay = Math.min(30000, wsReconnectAttempts * 2000); // Exponential backoff
-                    
-                    setTimeout(initWebSocket, delay);
-                };
-                
-                ws.onerror = function(error) {
-                    wsLastErrorTime = new Date().getTime();
-                    wsConnected = false;
-                    
-                    // Fallback to sync file approach
-                    if (!syncCheckInterval) {
-                        syncCheckInterval = setInterval(checkSyncFiles, 1000);
-                    }
-                };
-                
-                ws.onmessage = function(event) {
-                    try {
-                        const data = JSON.parse(event.data);
-                        
-                        // Handle different message types
-                        if (data.action === 'newMessage' && data.ticketId === '<?php echo $ticket_id; ?>') {
-                            // Process new message
-                            processNewMessages([data.message]);
-                        }
-                    } catch (e) {
-                        // Silent error handling
-                    }
-                };
-            } catch (e) {
-                wsLastErrorTime = new Date().getTime();
-                
-                // Fallback to sync file approach
-                if (!syncCheckInterval) {
-                    syncCheckInterval = setInterval(checkSyncFiles, 1000);
-                }
-            }
-        }
-        
-        // Subscribe to ticket updates
-        function subscribeToTicket(ticketId) {
-            if (!ws || ws.readyState !== WebSocket.OPEN) {
-                return;
-            }
-            
-            ws.send(JSON.stringify({
-                action: 'subscribe',
-                ticketId: ticketId,
-                deviceId: deviceId
-            }));
-        }
-        
-        // Send message via WebSocket
-        function sendWebSocketMessage(message, ticketId) {
-            if (!ws || ws.readyState !== WebSocket.OPEN) {
-                return false;
-            }
-            
-            try {
-                const messageObj = {
-                    action: 'newMessage',
-                    ticketId: ticketId,
-                    message: message,
-                    deviceId: deviceId
-                };
-                ws.send(JSON.stringify(messageObj));
-                return true;
-            } catch (e) {
-                return false;
-            }
-        }
-        
         // Initialize chat when page loads
+        let checkInterval;
+        
         window.addEventListener('DOMContentLoaded', function() {
-            // Create temp directory if it doesn't exist
-            fetch('create_temp_dir.php')
-                .then(response => response.json())
-                .catch(() => {});
+            console.log('Chat initialized, device ID: ' + deviceId);
             
-            // Scroll chat to bottom
+            // Scroll to bottom initially
+            scrollToBottom();
+            
+            // Track existing message IDs
+            document.querySelectorAll('.message').forEach(msg => {
+                const id = msg.getAttribute('data-message-id');
+                if (id) {
+                    processedMessageIds.add(id);
+                    console.log('Added existing message ID to tracking: ' + id);
+                }
+            });
+            
+            // Set up message form
+            setupMessageForm();
+            
+            // Start checking for new messages
+            startMessageChecking();
+        });
+        
+        // Scroll chat to bottom
+        function scrollToBottom() {
             const chatBody = document.getElementById('chatBody');
             if (chatBody) {
                 chatBody.scrollTop = chatBody.scrollHeight;
             }
-            
-            // Try to connect to WebSocket
-            initWebSocket();
-            
-            // Start sync file checking as a fallback
-            syncCheckInterval = setInterval(checkSyncFiles, 1000);
-            
-            // Add existing message IDs to the set
-            document.querySelectorAll('.message').forEach(msg => {
-                const user = msg.querySelector('.message-user-info')?.textContent || 'unknown';
-                const time = msg.querySelector('.message-time')?.textContent || '';
-                const text = msg.querySelector('.message-content')?.textContent.substring(0, 20) || '';
-                const compositeId = `${user}-${time}-${text}`;
-                processedMessageIds.add(compositeId);
-            });
-        });
+        }
         
-        // Function to check for sync files
-        function checkSyncFiles() {
-            const timestamp = new Date().getTime();
-            // Get the ticket ID directly from the original variable
+        // Start regular checking for new messages
+        function startMessageChecking() {
+            if (checkInterval) {
+                clearInterval(checkInterval);
+            }
+            checkInterval = setInterval(checkForNewMessages, 3000);
+            console.log('Message checking started');
+        }
+        
+        // Check for new messages
+        function checkForNewMessages() {
             const ticketId = '<?php echo $ticket_id; ?>';
+            const timestamp = new Date().getTime();
+              console.log('Checking for new messages since: ' + lastCheckTime);
             
-            // Encode the ticket ID properly for URL
-            const encodedTicketId = encodeURIComponent(ticketId);
-            
-            // Use silent_sync.php instead of check_sync.php to avoid logging
-            fetch('silent_sync.php?ticketId=' + encodedTicketId + 
-                  '&deviceId=' + encodeURIComponent(deviceId) + 
-                  '&lastCheck=' + encodeURIComponent(lastMessageTimestamp) + 
-                  '&_=' + timestamp)
+            fetch('silent_check.php?ticketId=' + encodeURIComponent(ticketId) + 
+                 '&lastCheck=' + encodeURIComponent(lastCheckTime) + 
+                 '&deviceId=' + encodeURIComponent(deviceId) +
+                 '&_=' + timestamp)
                 .then(response => {
                     if (!response.ok) {
-                        return null;
+                        throw new Error('Error checking messages: ' + response.status);
                     }
                     return response.json();
                 })
                 .then(data => {
-                    // Skip if null response or error
-                    if (!data || data.error) {
+                    if (data.error) {
+                        console.error('Error checking messages:', data.error);
                         return;
                     }
                     
+                    console.log('Message check response:', data);
+                    
                     if (data.hasNewMessages && data.messages && data.messages.length > 0) {
-                        // Process new messages without logging
-                        const messagesToProcess = [];
-                            
-                        // Filter out duplicate messages
-                        data.messages.forEach(message => {
-                            const messageId = message.messageId || 
-                                `${message.user}-${message.CommentTime}-${message.Message?.substring(0, 20)}`;
-                            
-                            if (!processedMessageIds.has(messageId)) {
-                                processedMessageIds.add(messageId);
-                                messagesToProcess.push(message);
-                            }
+                        // Filter and add new messages
+                        const newMessages = data.messages.filter(message => {
+                            return !processedMessageIds.has(message.id.toString());
                         });
                         
-                        if (messagesToProcess.length > 0) {
-                            // Process the unique messages
-                            processNewMessages(messagesToProcess);
-                                
-                            // Update the last message timestamp if newer messages were found
-                            messagesToProcess.forEach(message => {
-                                if (message.CommentTime && message.CommentTime > lastMessageTimestamp) {
-                                    lastMessageTimestamp = message.CommentTime;
-                                }
-                            });
+                        if (newMessages.length > 0) {
+                            console.log('New messages found:', newMessages.length);
+                            addMessagesToChat(newMessages);
+                            
+                            // Update last check time to the latest message time
+                            const latestMessage = newMessages.reduce((latest, msg) => {
+                                return new Date(msg.CommentTime) > new Date(latest.CommentTime) ? msg : latest;
+                            }, newMessages[0]);
+                            
+                            lastCheckTime = latestMessage.CommentTime;
+                            console.log('Updated last check time to:', lastCheckTime);
                         }
                     }
+                    
+                    // Check if status has changed and potentially reload
+                    if (data.currentStatus !== '<?php echo $ticket['Status']; ?>') {
+                        console.log('Status changed, reloading page');
+                        location.reload();
+                    }
                 })
-                .catch(() => {
-                    // Silent error handling - no logging
+                .catch(error => {
+                    console.error('Error in message check:', error);
                 });
         }
         
-        // Function to process new messages - modified for silent operation
-        function processNewMessages(messages) {
-            if (!messages || messages.length === 0) {
-                return;
-            }
-            
-            // Add new messages to the chat
+        // Add new messages to the chat
+        function addMessagesToChat(messages) {
             const chatBody = document.getElementById('chatBody');
             let newMessagesAdded = false;
             
             messages.forEach(message => {
-                // Skip if message is invalid
-                if (!message || typeof message !== 'object') {
-                    return;
-                }
+                // Mark as processed
+                processedMessageIds.add(message.id.toString());
                 
-                // Determine message type and class
+                // Determine message type and class (1=client, 0=admin)
                 const type = parseInt(message.type);
                 const isUser = (type === 1);
                 const messageClass = isUser ? 'message-user' : 'message-admin';
                 
-                // Get message text with fallback
-                const messageText = message.Message || '';
-                
-                // Create a unique key to identify this message
-                const user = message.user || 'unknown';
-                const time = message.CommentTime || new Date().toISOString();
-                
-                // Use messageId if available, otherwise create a composite key
-                const messageKey = message.messageId || `${user}-${time}-${messageText.substring(0, 20)}`;
-                
-                // Skip if we already have this message in the DOM
-                if (document.querySelector(`[data-message-key="${messageKey}"]`)) {
-                    return;
-                }
-                
-                newMessagesAdded = true;
+                // Format time
+                const timeDisplay = formatMessageTime(message.CommentTime);
                 
                 // Create message element
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${messageClass} new-message`;
-                messageDiv.setAttribute('data-message-key', messageKey);
+                messageDiv.setAttribute('data-message-id', message.id);
                 
-                // Format time display
-                let timeDisplay = formatMessageTime(time);
-                
-                // Set content with safe fallbacks
                 messageDiv.innerHTML = `
-                    <p class="message-content">${messageText}</p>
+                    <p class="message-content">${message.Message.replace(/\n/g, '<br>')}</p>
                     <div class="message-meta">
-                        <span class="message-user-info">${user}</span>
+                        <span class="message-user-info">${message.user}</span>
                         <span class="message-time">${timeDisplay}</span>
                     </div>
                 `;
                 
-                // Add message to chat
                 chatBody.appendChild(messageDiv);
+                newMessagesAdded = true;
             });
             
-            // Scroll to bottom if we added new messages
+            // Scroll to bottom if new messages were added
             if (newMessagesAdded) {
-                const isAtBottom = chatBody.scrollHeight - chatBody.clientHeight <= chatBody.scrollTop + 100;
-                if (isAtBottom) {
-                    chatBody.scrollTop = chatBody.scrollHeight;
-                }
+                scrollToBottom();
             }
         }
         
-        // Helper function to format message time
+        // Format time for display
         function formatMessageTime(time) {
             try {
-                const timeObj = new Date(time);
-                if (isNaN(timeObj)) {
-                    // If not a valid date string, try to parse it as a MySQL datetime
-                    const parts = time.split(/[- :]/);
-                    if (parts.length >= 6) {
-                        const timeObj = new Date(parts[0], parts[1]-1, parts[2], parts[3], parts[4], parts[5]);
-                        return timeObj.toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
-                    } else {
-                        return time;
-                    }
-                } else {
-                    return timeObj.toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
-                }
+                const date = new Date(time);
+                return date.toLocaleTimeString('pt-PT', {hour: '2-digit', minute: '2-digit'});
             } catch (e) {
                 return time;
             }
         }
         
-        // Submit form with animation
-        document.getElementById('chatForm')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const message = messageInput.value.trim();
-            if (message) {
-                // Determine message class based on user type
-                const isAdmin = <?php echo (isset($_SESSION['usuario_admin']) && $_SESSION['usuario_admin']) ? 'true' : 'false'; ?>;
-                const messageClass = isAdmin ? 'message-admin' : 'message-user';
+        // Set up the message form
+        function setupMessageForm() {
+            const form = document.getElementById('chatForm');
+            if (!form) return;
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
                 
-                // Add message with animation (preview)
+                const message = messageInput.value.trim();
+                if (!message) return;
+                
+                // Show message preview
                 const chatBody = document.getElementById('chatBody');
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${messageClass} new-message`;
-                messageDiv.innerHTML = `
+                const previewDiv = document.createElement('div');
+                
+                // Using 'message-user' class for client messages
+                previewDiv.className = 'message message-user new-message';
+                previewDiv.innerHTML = `
                     <p class="message-content">${message.replace(/\n/g, '<br>')}</p>
                     <div class="message-meta">
-                        <span class="message-user-info"><?php echo $_SESSION['usuario_email'] ?? 'Você'; ?></span>
-                        <span class="message-time">${new Date().toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}</span>
+                        <span class="message-user-info"><?php echo htmlspecialchars($_SESSION['usuario_email']); ?></span>
+                        <span class="message-time">${formatMessageTime(new Date())}</span>
                     </div>
                 `;
-                chatBody.appendChild(messageDiv);
-                chatBody.scrollTop = chatBody.scrollHeight;
                 
-                // Reset textarea
-                const messageToSend = message; // Store message before resetting input
+                chatBody.appendChild(previewDiv);
+                scrollToBottom();
+                
+                // Save message and reset input
+                const messageToSend = message;
                 messageInput.value = '';
                 messageInput.style.height = 'auto';
                 document.getElementById('sendButton').disabled = true;
+                  // Send message to server
+                const formData = new FormData(this);
+                formData.append('deviceId', deviceId); // Add device ID for tracking
                 
-                // Create message object
-                const messageObj = {
-                    Message: messageToSend,
-                    user: '<?php echo $_SESSION['usuario_email'] ?? "Usuário"; ?>',
-                    type: <?php echo (isset($_SESSION['usuario_admin']) && $_SESSION['usuario_admin']) ? '2' : '1'; ?>,
-                    CommentTime: new Date().toISOString(),
-                    deviceId: deviceId,
-                    messageId: 'msg_' + new Date().getTime()
-                };
-                
-                // Try to send via WebSocket first
-                let wsSuccess = false;
-                if (wsConnected) {
-                    wsSuccess = sendWebSocketMessage(messageObj, '<?php echo $ticket_id; ?>');
-                }
-                
-                // If WebSocket fails or not connected, use AJAX as fallback
-                if (!wsSuccess) {
-                    // Usar AJAX para enviar a mensagem em vez de submit normal
-                    const formData = new FormData(this);
-                    
-                    // Ensure we're sending the right message (in case the form was cleared too early)
-                    if (!formData.get('message')) {
-                        formData.set('message', messageToSend);
+                fetch('inserir_mensagem.php', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
-                    
-                    // Add device ID to the form data
-                    formData.append('deviceId', deviceId);
-                    
-                    fetch('inserir_mensagem.php', {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error sending message: ' + response.status);
+                    }
+                    return response.text().then(text => {
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.error('Failed to parse response as JSON:', text);
+                            return { status: 'error', message: 'Invalid server response' };
                         }
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`Erro ao enviar mensagem: ${response.status}`);
-                        }
-                        // Try to parse JSON, but handle if it's not JSON
-                        return response.text().then(text => {
-                            try {
-                                return JSON.parse(text);
-                            } catch (e) {
-                                return { status: 'success', message: text };
-                            }
-                        });
-                    })
-                    .then(data => {
-                        // Force check for sync files to update any other clients
-                        setTimeout(checkSyncFiles, 200);
-                    })
-                    .catch(error => {
-                        // Remove the preview message since it failed
-                        if (messageDiv.parentNode) {
-                            messageDiv.parentNode.removeChild(messageDiv);
-                        }
-                        alert('Ocorreu um erro ao enviar a mensagem. Por favor, tente novamente.');
-                        // Restore the message so the user doesn't have to retype it
-                        messageInput.value = messageToSend;
-                        messageInput.style.height = 'auto';
-                        messageInput.style.height = (messageInput.scrollHeight) + 'px';
-                        document.getElementById('sendButton').disabled = false;
                     });
-                }
-            }
-        });
-        
-        // Also handle button click explicitly (for mobile devices and certain browsers)
-        document.getElementById('sendButton')?.addEventListener('click', function(e) {
-            e.preventDefault();
-            // Trigger the form submission
-            const form = document.getElementById('chatForm');
-            if (form) {
-                // Create and dispatch a submit event
-                const submitEvent = new Event('submit', {
-                    bubbles: true,
-                    cancelable: true,
+                })
+                .then(data => {
+                    console.log('Message sent successfully:', data);
+                    
+                    if (data.status === 'success') {
+                        // Mark this message as processed
+                        if (data.messageId) {
+                            previewDiv.setAttribute('data-message-id', data.messageId);
+                            processedMessageIds.add(data.messageId.toString());
+                        }
+                        
+                        // Update last check time if needed
+                        if (data.messageTime && new Date(data.messageTime) > new Date(lastCheckTime)) {
+                            lastCheckTime = data.messageTime;
+                        }
+                    } else {
+                        throw new Error(data.message || 'Failed to send message');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error sending message:', error);
+                    
+                    // Remove preview on error
+                    previewDiv.remove();
+                    
+                    // Show error and restore input
+                    alert('Erro ao enviar mensagem: ' + error.message);
+                    messageInput.value = messageToSend;
+                    messageInput.dispatchEvent(new Event('input'));
                 });
-                form.dispatchEvent(submitEvent);
-            }
-        });
+            });
+        }
         
+        // Functions for ticket actions
         function fecharTicket(id) {
             if (confirm('Tem certeza de que deseja fechar este ticket?')) {
                 window.location.href = 'fechar_ticket.php?id=' + id;
@@ -678,104 +484,12 @@ function getStatusColor($status) {
             new bootstrap.Modal(document.getElementById('imageModal')).show();
         }
         
-        // Cleanup when leaving the page
+        // Clean up when leaving the page
         window.addEventListener('beforeunload', function() {
-            if (syncCheckInterval) clearInterval(syncCheckInterval);
-            if (ws && wsConnected) {
-                ws.onclose = null; // Prevent reconnection attempts
-                ws.close();
+            if (checkInterval) {
+                clearInterval(checkInterval);
             }
         });
-
-        function checkForUpdates() {
-            // Get the ticket ID directly from the keyid parameter in the URL
-            var ticketId = <?php echo json_encode(isset($_GET['keyid']) ? trim($_GET['keyid']) : ''); ?>;
-                        
-            // Only proceed if we have a valid ticket ID
-            if (!ticketId) {
-                return;
-            }
-            
-            // Use the actual ticket ID from PHP (more reliable)
-            ticketId = '<?php echo $ticket_id; ?>';
-            
-            var deviceId = getDeviceId();
-            var lastCheck = localStorage.getItem('lastSyncCheck_' + ticketId) || getCurrentDateTime();
-            
-            // Create the URL manually with proper encoding
-            var url = 'silent_sync.php' +
-                '?ticketId=' + encodeURIComponent(ticketId) +
-                '&deviceId=' + encodeURIComponent(deviceId) +
-                '&lastCheck=' + encodeURIComponent(lastCheck) +
-                '&_=' + new Date().getTime();
-            
-            $.ajax({
-                url: url,
-                type: 'GET',
-                success: function(data) {
-                    if (data.error) {
-                        return;
-                    }
-                    
-                    if (data.hasNewMessages && data.messages && data.messages.length > 0) {
-                        // Process new messages
-                        const messagesToProcess = [];
-                        
-                        // Filter out duplicate messages
-                        data.messages.forEach(message => {
-                            const messageId = message.messageId || 
-                                `${message.user}-${message.CommentTime}-${message.Message?.substring(0, 20)}`;
-                                
-                            if (!processedMessageIds.has(messageId)) {
-                                processedMessageIds.add(messageId);
-                                messagesToProcess.push(message);
-                            }
-                        });
-                        
-                        if (messagesToProcess.length > 0) {
-                            // Process the unique messages
-                            processNewMessages(messagesToProcess);
-                            
-                            // Update the last message timestamp if newer messages were found
-                            messagesToProcess.forEach(message => {
-                                if (message.CommentTime && message.CommentTime > lastCheck) {
-                                    lastCheck = message.CommentTime;
-                                    localStorage.setItem('lastSyncCheck_' + ticketId, lastCheck);
-                                }
-                            });
-                        }
-                    }
-                    
-                    // Check if ticket status has changed
-                    if (data.statusChanged) {
-                        location.reload();
-                    }
-                    
-                    // Schedule the next check
-                    setTimeout(checkForUpdates, 1000);
-                },
-                error: function() {
-                    // Silent error handling
-                    setTimeout(checkForUpdates, 5000);
-                }
-            });
-        }
-        
-        // Helper function to get current date time in MySQL format
-        function getCurrentDateTime() {
-            const now = new Date();
-            return now.getFullYear() + '-' + 
-                  String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                  String(now.getDate()).padStart(2, '0') + ' ' + 
-                  String(now.getHours()).padStart(2, '0') + ':' + 
-                  String(now.getMinutes()).padStart(2, '0') + ':' + 
-                  String(now.getSeconds()).padStart(2, '0');
-        }
-        
-        // Helper for device ID - reuse the existing function
-        function getDeviceId() {
-            return deviceId || generateDeviceId(); 
-        }
     </script>
 </body>
 </html>
