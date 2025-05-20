@@ -1,5 +1,6 @@
 <?php
-session_start();  // Inicia a sessão
+// Try to auto-start the WebSocket server if needed
+include('../auto-start.php');
 
 include('conflogin.php');
 include('db.php');
@@ -12,10 +13,13 @@ if (isset($_GET['keyid'])) {
     $keyid_sem_hash = str_replace('#', '', $keyid);
 
     // Consultar os detalhes do ticket
-    $sql = "SELECT free.KeyId, free.id, free.Name, info.Description, info.Priority, info.Status, info.CreationUser, info.CreationDate, info.dateu, info.image, internal.User, internal.Time, internal.Description as Descr, internal.info
+    $sql = "SELECT free.KeyId, free.id, free.Name, info.Description, info.Priority, info.Status, 
+            info.CreationUser, info.CreationDate, info.dateu, info.image, internal.User, 
+            u.Name as atribuido_a, internal.Time, internal.Description as Descr, internal.info
             FROM xdfree01 free
             LEFT JOIN info_xdfree01_extrafields info ON free.KeyId = info.XDFree01_KeyID
             LEFT JOIN internal_xdfree01_extrafields internal on free.KeyId = internal.XDFree01_KeyID
+            LEFT JOIN users u ON internal.User = u.id
             WHERE free.id = :keyid";  // Comparar sem o #
 
     // Preparar a consulta
@@ -28,9 +32,10 @@ if (isset($_GET['keyid'])) {
         echo "Ticket não encontrado.";
         exit;
     }
+    
+    TODO:
 
     $ticket_id = $ticket['KeyId'];
-
 
     // Consultar todas as mensagens associadas ao ticket
     $sql_messages = "SELECT comments.Message, comments.type, comments.Date as CommentTime, comments.user
@@ -47,11 +52,91 @@ if (isset($_GET['keyid'])) {
     echo "Ticket não especificado.";
     exit;
 }
+
+// Função para determinar a cor da prioridade
+function getPriorityColor($priority) {
+    switch(strtolower($priority)) {
+        case 'alta':
+            return 'danger';
+        case 'normal':
+            return 'warning';
+        case 'baixa':
+            return 'success';
+        case 'média':
+        case 'media':
+            return 'warning';
+        default:
+            return 'info';
+    }
+}
+
+// Função para determinar a cor do status
+function getStatusColor($status) {
+    switch(strtolower(trim($status))) {
+        case 'concluído':
+            return 'success';
+        case 'em análise':
+            return 'info';
+        case 'pendente':
+            return 'warning';
+        case 'em resolução':
+            return 'warning';
+        case 'aguarda resposta':
+            return 'secondary';
+        default:
+            return 'primary';
+    }
+}
 ?>
 
 <!DOCTYPE html>
 <html lang="pt-pt">
 <?php include('head.php'); ?>
+<link href="../css/chat.css" rel="stylesheet">
+<style>
+    .message.new-message {
+        animation: fadeIn 0.5s;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .close-ticket-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background-color 0.3s;
+    }
+    
+    .close-ticket-btn:hover {
+        background-color: #c82333;
+    }
+    
+    .admin-controls {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .admin-controls h5 {
+        margin-top: 0;
+        color: #495057;
+        margin-bottom: 15px;
+    }
+    
+    .admin-controls .form-group {
+        margin-bottom: 15px;
+    }
+</style>
 <!-- Modal para Exibir Imagem -->
 <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -68,120 +153,237 @@ if (isset($_GET['keyid'])) {
 </div>
 <body>
     <?php include('menu.php'); ?>
-    <div class="content">
-        <table class="table">
-            <tr>
-                <td class="bg-secondary text-white"><h5><?php echo "Detalhes do " . $ticket['Name']; ?></h5></td>
-                <td class="bg-secondary text-white"><h5><?php echo "Estado atual: " . $ticket['Status']; ?></h5></td>
-            </tr>
-            <tr>
-                <th>Descrição</th>
-                <td><?php echo $ticket['Description']; ?></td>
-            </tr>
-            <tr>
-                <th>Prioridade</th>
-                <td><?php echo $ticket['Priority']; ?></td>
-            </tr>
-            <tr>
-                <th>Criador Ticket</th>
-                <td><?php echo $ticket['CreationUser']; ?></td>
-            </tr>
-            <tr>
-                <th>Data de Criação</th>
-                <td><?php echo $ticket['CreationDate']; ?></td>
-            </tr>
-            <tr>
-                <th>Última Atualização</th>
-                <td><?php echo $ticket['dateu']; ?></td>
-            </tr>
-                        <tr>
-                <th>Imagem do Problema</th>
-                <td>
-                <?php if (!empty($ticket['image'])) { ?>
-    <div>
-        <img src="<?php echo $ticket['image']; ?>" alt="Imagem do Ticket" class="img-thumbnail" style="max-width: 150px; cursor: pointer;" onclick="showImage('<?php echo $ticket['image']; ?>')">
-    </div>
-<?php } ?> 
-                </td>
-            </tr>
-            <tr class="bg-secondary text-white">
-                <td class="bg-secondary text-white"><h5>Detalhes da Resolução</h5></td>
-                <td class="bg-secondary text-white"></td>
-            </tr>    
-            <tr>
-                <th>Colaborador</th>
-                <td><?php echo $ticket['User']; ?></td>
-            </tr>
-            <tr>
-                <th>Tempo dispendido</th>
-                <td><?php echo $ticket['Time']; ?></td>
-            </tr>
-            <tr>
-                <th>Detalhes</th>
-                <td><?php echo $ticket['Descr']; ?></td>
-            </tr>
-            <tr>
-                <th>Informações Extra</th>
-                <td><?php echo $ticket['info']; ?></td>
-            </tr>
-        </table>
-
-
-        <!-- Exibir todas as mensagens do ticket -->
-        <h5>Comentários acerca do Ticket:</h5>
-<?php
-if ($messages) {
-    // Iterar sobre as mensagens e exibi-las
-    foreach ($messages as $message) {
-        // Definir a cor da borda com base no valor de $message['tipo']
-        $borderColor = ($message['type'] == 1) ? 'orange' : 'blue';
-        $aligntext = ($message['type'] == 1) ? 'right' : 'left';
-        // Exibir a mensagem com a borda colorida
-        echo "<div class='card mb-3 bg-light' style='border-left: 5px solid $borderColor;'>";
-        echo "<div class='card-body'>";
-        echo "<p class='card-text text-muted' style='text-align: $aligntext;'>" . nl2br($message['Message']) . "</p>";
-        echo "<small class='text-muted float-end bg-secondary text-white px-2 py-1 rounded'>" . date('d/m/Y H:i', strtotime($message['CommentTime'])) . "</small>";
-        echo "<small class='text-muted bg-info text-white px-2 py-1 rounded'>" . $message['user'] . "</small>";
-        echo "</div>";
-        echo "</div>";
-    }
-} else {
-    echo "<p>Não há mensagens para este ticket.</p>";
-}
-?>
-
-        <!-- Verificar se o estado do ticket é "Fechado" antes de exibir o formulário -->
-<?php if ($ticket['Status'] !== 'Concluído') { ?>
-    <!-- Formulário para Enviar Nova Mensagem -->
-    <form method="POST" action="inserir_mensagem.php">
-        <input type="hidden" name="keyid" value="<?php echo $ticket['KeyId']; ?>">
-        <input type="hidden" name="id" value="<?php echo $ticket['id']; ?>"> 
-        <div class="form-group">
-            <label for="message"><h5>Enviar nova mensagem:</h5></label>
-            <textarea name="message" class="form-control" placeholder="Escreva aqui a sua mensagem..." required></textarea><br>
+    
+    <div class="content chat-container">
+        <div class="chat-header">
+            <div>
+                <h1 class="chat-title">Ticket de <?php echo $ticket['CreationUser']; ?></h1>
+                <p class="text-muted mb-0"><?php echo $ticket['Name']; ?></p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-<?php echo getStatusColor($ticket['Status']); ?>">
+                    <?php echo $ticket['Status']; ?>
+                </span>    
+                <span class="badge bg-<?php echo getPriorityColor($ticket['Priority']); ?>"><?php echo $ticket['Priority']; ?></span>
+            </div>
         </div>
-        <button type="submit" class="btn btn-primary btn-block">Enviar Mensagem</button>
-    </form>
-<?php } else { ?>
-    <!-- Caso o estado seja "Fechado", exibe uma mensagem informando -->
-    <p class="text-muted">Este ticket está fechado. Não é possível enviar novas mensagens.</p>
-<?php } ?>
-        <td>
-    <a href="alterar_tickets.php?keyid=<?php echo $ticket['id']; ?>" class="btn btn-warning mt-3">
-        Finalizar/Alterar Ticket
-    </a>
-</td>
-        <a href="consultar_tickets.php" class="btn btn-secondary mt-3">Voltar para os meus tickets</a>
+        
+        <!-- Admin controls section -->
+        <div class="admin-controls">
+            <h5>Informações Administrativas</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Atribuído a:</label>
+                        <div class="form-control bg-light"><?php echo !empty($ticket['atribuido_a']) ? $ticket['atribuido_a'] : 'Não atribuído'; ?></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Tempo despendido:</label>
+                        <div class="form-control bg-light"><?php echo !empty($ticket['Time']) ? $ticket['Time'] : 'Não registrado'; ?></div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Detalhes Internos:</label>
+                        <div class="form-control bg-light" style="height: auto; min-height: 60px;"><?php echo !empty($ticket['Descr']) ? $ticket['Descr'] : 'Sem detalhes'; ?></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Informações Extra:</label>
+                        <div class="form-control bg-light" style="height: auto; min-height: 60px;"><?php echo !empty($ticket['info']) ? $ticket['info'] : 'Sem informações extras'; ?></div>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end mt-2">
+                <a href="alterar_tickets.php?keyid=<?php echo $ticket['id']; ?>" class="btn btn-primary">
+                    <i class="bi bi-pencil-square me-1"></i> Editar Ticket
+                </a>
+            </div>
+        </div>
+        
+        <div class="chat-body" id="chatBody">
+            <!-- Ticket information message at the top -->
+            <div class="ticket-info">
+                <h5><?php echo $ticket['Name']; ?></h5>
+                <p><strong>Descrição:</strong> <?php echo $ticket['Description']; ?></p>
+                <p><strong>Criado por:</strong> <?php echo $ticket['CreationUser']; ?></p>
+                <p><strong>Criado em:</strong> <?php echo $ticket['CreationDate']; ?></p>
+                <?php if (!empty($ticket['image'])) { ?>
+                <p><strong>Imagem:</strong>
+                    <img src="<?php echo $ticket['image']; ?>" alt="Imagem do Ticket" class="message-image" onclick="showImage('<?php echo $ticket['image']; ?>')">
+                </p>
+                <?php } ?>
+            </div>
+            
+            <!-- Messages -->
+            <?php
+            if ($messages) {
+                foreach ($messages as $message) {
+                    $isUser = ($message['type'] == 1);
+                    $messageClass = $isUser ? 'message-user' : 'message-admin';
+                    $userInitial = substr($message['user'], 0, 1);
+                    $timestamp = date('H:i', strtotime($message['CommentTime']));
+                    
+                    echo "<div class='message $messageClass'>";
+                    echo "<p class='message-content'>" . nl2br($message['Message']) . "</p>";
+                    echo "<div class='message-meta'>";
+                    echo "<span class='message-user-info'>" . $message['user'] . "</span>";
+                    echo "<span class='message-time'>" . $timestamp . "</span>";
+                    echo "</div>";
+                    echo "</div>";
+                }
+            }
+            ?>
+        </div>
+        
+        <div class="chat-footer">
+            <?php if ($ticket['Status'] !== 'Concluído') { ?>
+                <!-- Formulário para Enviar Nova Mensagem -->
+                <form method="POST" action="inserir_mensagem.php" id="chatForm">
+                    <input type="hidden" name="keyid" value="<?php echo $ticket['KeyId']; ?>">
+                    <input type="hidden" name="id" value="<?php echo $ticket['id']; ?>">
+                    <div class="chat-input-container">
+                        <textarea name="message" class="chat-input" id="messageInput" placeholder="Escreva aqui a sua mensagem..." required></textarea>
+                        <button type="submit" class="send-button" id="sendButton" disabled>
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </div>
+                </form>
+            <?php } else { ?>
+                <!-- Caso o estado seja "Fechado", exibe uma mensagem informando -->
+                <div class="d-flex justify-content-center align-items-center py-3">
+                    <p class="text-muted m-0">Ticket fechado. Não é possível enviar novas mensagens.</p>
+                </div>
+            <?php } ?>
+            
+            <div class="d-flex justify-content-between mt-3">
+                <a href="consultar_tickets.php" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Voltar aos tickets
+                </a>
+                
+                <?php if ($ticket['Status'] !== 'Concluído') { ?>
+                    <button class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
+                        <i class="bi bi-x-circle"></i> Fechar Ticket
+                    </button>
+                <?php } ?>
+            </div>
+        </div>
     </div>
 
     <!-- Inclusão do JS do Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-function showImage(src) {
-    document.getElementById('modalImage').src = src;
-    var myModal = new bootstrap.Modal(document.getElementById('imageModal'));
-    myModal.show();
-}
-</script>
+        // Auto-resize textarea
+        const messageInput = document.getElementById('messageInput');
+        if (messageInput) {
+            messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                
+                // Enable/disable send button based on content
+                document.getElementById('sendButton').disabled = this.value.trim().length === 0;
+            });
+        }
+        
+        // Initialize chat when page loads
+        window.addEventListener('DOMContentLoaded', function() {
+            // Scroll chat to bottom
+            const chatBody = document.getElementById('chatBody');
+            if (chatBody) {
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
+            
+            // Start sync file checking
+            setInterval(checkForUpdates, 1000);
+        });
+        
+        // Function to check for updates
+        function checkForUpdates() {
+            // Get the ticket ID directly from the keyid parameter in the URL
+            var ticketId = <?php echo json_encode(isset($_GET['keyid']) ? trim($_GET['keyid']) : ''); ?>;
+                        
+            // Only proceed if we have a valid ticket ID
+            if (!ticketId) {
+                return;
+            }
+            
+            // Use the actual ticket ID from PHP (more reliable)
+            ticketId = '<?php echo $ticket_id; ?>';
+            
+            fetch('check_updates.php?ticketId=' + encodeURIComponent(ticketId) + '&_=' + new Date().getTime())
+                .then(response => response.json())
+                .then(data => {
+                    if (data.hasUpdates) {
+                        // Reload the page to show new messages
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    // Silent error handling
+                    console.error('Error checking for updates:', error);
+                });
+        }
+        
+        // Submit form with animation
+        document.getElementById('chatForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            if (message) {
+                // Add message with animation (preview)
+                const chatBody = document.getElementById('chatBody');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message message-admin new-message';
+                messageDiv.innerHTML = `
+                    <p class="message-content">${message.replace(/\n/g, '<br>')}</p>
+                    <div class="message-meta">
+                        <span class="message-user-info"><?php echo $_SESSION['usuario_email'] ?? 'Admin'; ?></span>
+                        <span class="message-time">${new Date().toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                `;
+                chatBody.appendChild(messageDiv);
+                chatBody.scrollTop = chatBody.scrollHeight;
+                
+                // Reset textarea
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
+                document.getElementById('sendButton').disabled = true;
+                
+                // Send via AJAX
+                const formData = new FormData(this);
+                
+                fetch('inserir_mensagem.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erro ao enviar mensagem: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    // Force check for sync files to update any other clients
+                    setTimeout(checkForUpdates, 200);
+                })
+                .catch(error => {
+                    // Remove the preview message since it failed
+                    messageDiv.remove();
+                    alert('Ocorreu um erro ao enviar a mensagem. Por favor, tente novamente.');
+                });
+            }
+        });
+        
+        function fecharTicket(id) {
+            if (confirm('Tem certeza de que deseja fechar este ticket?')) {
+                window.location.href = 'fechar_ticket.php?id=' + id;
+            }
+        }
+        
+        function showImage(imageSrc) {
+            document.getElementById('modalImage').src = imageSrc;
+            new bootstrap.Modal(document.getElementById('imageModal')).show();
+        }
+    </script>
 </body>
 </html>

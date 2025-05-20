@@ -120,7 +120,7 @@ include('conflogin.php');
                 <h1 class="mb-3 display-5">Bem Vindo, <span class="text-primary"><?php echo isset($_SESSION['Nome']) ? htmlspecialchars($_SESSION['Nome']) : 'Utilizador'; ?></span> </h1>
                 <p class="text-muted mb-3 w-100">Aqui pode acompanhar os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real.</p>
             </div>
-            <a href="ticket.php" class="btn btn-primary btn-primary">Abrir Novo Ticket</a>
+            <a href="abrir_ticket.php" class="btn btn-primary btn-primary">Abrir Novo Ticket</a>
         </div>
 
         <!-- Dashboard Cards -->
