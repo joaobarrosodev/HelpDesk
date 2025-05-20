@@ -44,6 +44,7 @@ class ChatServer implements MessageComponentInterface {
             // Store device ID if provided
             if (isset($data->deviceId)) {
                 $from->deviceId = $data->deviceId;
+                $this->deviceIds[$from->resourceId] = $data->deviceId;
                 $this->logMessage("Client {$from->resourceId} identified as device: {$data->deviceId}");
             }
 
@@ -81,10 +82,17 @@ class ChatServer implements MessageComponentInterface {
                     'ticketId' => $ticketId,
                     'success' => true
                 ]));
-            }
-            elseif ($data->action === 'newMessage' && isset($data->ticketId) && isset($data->message)) {
+            }            elseif ($data->action === 'newMessage' && isset($data->ticketId) && isset($data->message)) {
                 // Broadcast message to all clients subscribed to this ticket
                 $this->logMessage("Broadcasting message to ticket {$data->ticketId}");
+                
+                // Make sure message is saved to database
+                if (isset($data->message->Message) && !isset($data->message->alreadySaved)) {
+                    $this->saveMessageToDatabase($data->ticketId, $data->message);
+                    // Mark message as already saved to prevent duplicates
+                    $data->message->alreadySaved = true;
+                }
+                
                 $this->broadcastToTicket($data->ticketId, $data, $from->deviceId ?? null);
             }
             elseif ($data->action === 'ping') {
@@ -149,8 +157,7 @@ class ChatServer implements MessageComponentInterface {
             }
         }
     }
-    
-    protected function logMessage($message) {
+      protected function logMessage($message) {
         $timestamp = date('Y-m-d H:i:s');
         echo "[$timestamp] $message\n";
         
@@ -160,6 +167,88 @@ class ChatServer implements MessageComponentInterface {
             "$message\n", 
             FILE_APPEND
         );
+    }
+    
+    /**
+     * Save a message to the database
+     * 
+     * @param string $ticketId The ticket ID
+     * @param object $messageData The message data object
+     * @return bool Success status
+     */    protected function saveMessageToDatabase($ticketId, $messageData) {
+        try {
+            // Include database configuration
+            require_once __DIR__ . '/db.php';
+            
+            // Check if database connection is valid
+            if (!isset($pdo) || !($pdo instanceof PDO)) {
+                $this->logMessage("Database connection not available");
+                return false;
+            }
+            
+            // Check if we can query the database
+            try {
+                $testStmt = $pdo->query("SELECT 1");
+                if ($testStmt === false) {
+                    $this->logMessage("Database connection test failed");
+                    return false;
+                }
+            } catch (\Exception $e) {
+                $this->logMessage("Database test query failed: " . $e->getMessage());
+                return false;
+            }// Extract message data
+            $message = isset($messageData->Message) ? $messageData->Message : '';
+            $user = isset($messageData->user) ? $messageData->user : '';
+            $type = isset($messageData->type) ? $messageData->type : 1;
+            $date = isset($messageData->CommentTime) ? $messageData->CommentTime : date('Y-m-d H:i:s');
+            
+            // Skip if any required field is missing
+            if (empty($message) || empty($user) || empty($ticketId)) {
+                $this->logMessage("Error saving message: Missing required data");
+                return false;
+            }
+            
+            // Check if this message already exists (to prevent duplicates)
+            $check_stmt = $pdo->prepare("SELECT id FROM comments_xdfree01_extrafields 
+                                        WHERE XDFree01_KeyID = :keyid 
+                                        AND Message = :message 
+                                        AND user = :user 
+                                        AND ABS(TIMESTAMPDIFF(SECOND, Date, :date)) < 5");
+            
+            $check_stmt->bindParam(':keyid', $ticketId);
+            $check_stmt->bindParam(':message', $message);
+            $check_stmt->bindParam(':user', $user);
+            $check_stmt->bindParam(':date', $date);
+            $check_stmt->execute();
+            
+            if ($check_stmt->rowCount() > 0) {
+                $this->logMessage("Message already exists in database, skipping duplicate");
+                return true; // Consider this successful
+            }
+            
+            // Insert the message into the database
+            $stmt = $pdo->prepare("INSERT INTO comments_xdfree01_extrafields (XDFree01_KeyID, Message, Date, user, type) 
+                                  VALUES (:keyid, :message, :date, :user, :type)");
+            
+            $stmt->bindParam(':keyid', $ticketId);
+            $stmt->bindParam(':message', $message);
+            $stmt->bindParam(':date', $date);
+            $stmt->bindParam(':user', $user);
+            $stmt->bindParam(':type', $type);
+            
+            $result = $stmt->execute();
+            
+            if ($result) {
+                $this->logMessage("Message saved to database for ticket {$ticketId}");
+                return true;
+            } else {
+                $this->logMessage("Failed to save message to database");
+                return false;
+            }
+        } catch (\Exception $e) {
+            $this->logMessage("Database error: " . $e->getMessage());
+            return false;
+        }
     }
 }
 

@@ -314,96 +314,438 @@ function getStatusColor($status) {
             });
         }
         
+        // WebSocket connection
+        let ws = null;
+        const serverUrl = 'ws://' + window.location.hostname + ':8080';
+        let wsConnected = false;
+        let wsReconnectAttempts = 0;
+        let wsLastErrorTime = 0;
+
+        // Simplified approach - only keep track of the last message timestamp
+        let lastMessageTimestamp = '<?php echo !empty($messages) ? date('Y-m-d H:i:s', strtotime($messages[count($messages)-1]['CommentTime'])) : date('Y-m-d H:i:s'); ?>';
+        let deviceId = generateDeviceId(); // Generate unique device ID
+        let syncCheckInterval = null;
+
+        // Keep track of processed message IDs to avoid duplicates
+        const processedMessageIds = new Set();
+
+        // Generate a unique device ID for this browser/device
+        function generateDeviceId() {
+            let id = localStorage.getItem('helpdesk_device_id');
+            if (!id) {
+                id = 'device_' + Math.random().toString(36).substring(2, 15) +
+                    Math.random().toString(36).substring(2, 15);
+                localStorage.setItem('helpdesk_device_id', id);
+            }
+            return id;
+        }
+
+        // Initialize WebSocket connection
+        function initWebSocket() {
+            // Don't try to reconnect too frequently
+            const now = new Date().getTime();
+            if (wsLastErrorTime > 0 && now - wsLastErrorTime < 5000) {
+                setTimeout(initWebSocket, 5000);
+                return;
+            }
+
+            try {
+                // Close existing connection if any
+                if (ws) {
+                    ws.onclose = null; // Remove onclose handler to prevent reconnect loop
+                    ws.close();
+                }
+
+                ws = new WebSocket(serverUrl);
+
+                ws.onopen = function() {
+                    wsConnected = true;
+                    wsReconnectAttempts = 0;
+
+                    // Subscribe to this ticket
+                    const ticketId = '<?php echo $ticket_id; ?>';
+                    subscribeToTicket(ticketId);
+
+                    // Send a ping every 30 seconds to keep connection alive
+                    setInterval(function() {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({
+                                action: 'ping',
+                                deviceId: deviceId,
+                                timestamp: new Date().getTime()
+                            }));
+                        }
+                    }, 30000);
+
+                    console.log("WebSocket connection status: connected");
+                };
+
+                ws.onclose = function() {
+                    wsConnected = false;
+
+                    // Attempt to reconnect if not closing intentionally
+                    wsReconnectAttempts++;
+                    const delay = Math.min(30000, wsReconnectAttempts * 2000); // Exponential backoff
+
+                    setTimeout(initWebSocket, delay);
+                    console.log("WebSocket connection status: disconnected");
+                };
+
+                ws.onerror = function(error) {
+                    wsLastErrorTime = new Date().getTime();
+                    wsConnected = false;
+
+                    // Fallback to sync file approach
+                    if (!syncCheckInterval) {
+                        syncCheckInterval = setInterval(checkSyncFiles, 1000);
+                    }
+                    console.log("WebSocket connection error");
+                };
+
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+
+                        // Handle different message types
+                        if (data.action === 'newMessage' && data.ticketId === '<?php echo $ticket_id; ?>') {
+                            // Process new message
+                            if (data.message && !data.message.alreadySaved) {
+                                // If message doesn't have alreadySaved flag, save it to database via AJAX
+                                saveMessageToDatabase(data.message, data.ticketId);
+                            }
+                            processNewMessages([data.message]);
+                        }
+                    } catch (e) {
+                        console.error("Error processing WebSocket message:", e);
+                    }
+                };
+            } catch (e) {
+                wsLastErrorTime = new Date().getTime();
+
+                // Fallback to sync file approach
+                if (!syncCheckInterval) {
+                    syncCheckInterval = setInterval(checkSyncFiles, 1000);
+                }
+                console.log("WebSocket connection failed");
+            }
+        }
+
+        // Subscribe to ticket updates
+        function subscribeToTicket(ticketId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                console.log('Connection not ready, will retry subscription in 1 second');
+                // Connection not ready yet, retry after a short delay
+                setTimeout(() => subscribeToTicket(ticketId), 1000);
+                return;
+            }
+
+            console.log('Subscribing to ticket: ' + ticketId);
+            try {
+                ws.send(JSON.stringify({
+                    action: 'subscribe',
+                    ticketId: ticketId,
+                    deviceId: deviceId
+                }));
+            } catch (e) {
+                console.error('Error subscribing to ticket:', e);
+            }
+        }
+
+        // Send message via WebSocket
+        function sendWebSocketMessage(message, ticketId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                return false;
+            }
+
+            try {
+                const messageObj = {
+                    action: 'newMessage',
+                    ticketId: ticketId,
+                    message: message,
+                    deviceId: deviceId
+                };
+                ws.send(JSON.stringify(messageObj));
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // Check if the WebSocket server is healthy
+        function checkWebSocketHealth() {
+            fetch('../ws-healthcheck.php?silent=1')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Health check failed');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status !== 'ok' && !wsConnected) {
+                        // If the health check shows issues and we're not connected,
+                        // try to reconnect to the WebSocket server
+                        setTimeout(initWebSocket, 1000);
+                    }
+                })
+                .catch(() => {
+                    // Silent error handling
+                });
+        }
+
+        // Run health check every 30 seconds
+        const healthCheckInterval = setInterval(checkWebSocketHealth, 30000);
+
         // Initialize chat when page loads
         window.addEventListener('DOMContentLoaded', function() {
+            // Create temp directory if it doesn't exist
+            fetch('../create_temp_dir.php')
+                .then(response => response.json())
+                .catch(() => {});
+
             // Scroll chat to bottom
             const chatBody = document.getElementById('chatBody');
             if (chatBody) {
                 chatBody.scrollTop = chatBody.scrollHeight;
             }
             
-            // Start sync file checking
-            setInterval(checkForUpdates, 1000);const adminHeader = document.querySelector('.admin-controls-header');
-    const adminInfoCollapse = document.getElementById('adminInfo');
-    const toggleIcon = document.querySelector('.toggle-icon');
-    
-    // Verificar se o Bootstrap está carregado
-    if (typeof bootstrap !== 'undefined') {
-        // Usar collapse do Bootstrap
-        const bsCollapse = new bootstrap.Collapse(adminInfoCollapse, {
-            toggle: false
+            // Try to connect to WebSocket
+            initWebSocket();
+
+            // Start sync file checking as a fallback
+            syncCheckInterval = setInterval(checkSyncFiles, 1000);
+
+            // Add existing message IDs to the set
+            document.querySelectorAll('.message').forEach(msg => {
+                const user = msg.querySelector('.message-user-info')?.textContent || 'unknown';
+                const time = msg.querySelector('.message-time')?.textContent || '';
+                const text = msg.querySelector('.message-content')?.textContent.substring(0, 20) || '';
+                const compositeId = `${user}-${time}-${text}`;
+                processedMessageIds.add(compositeId);
+            });
+
+            // Toggle admin info section
+            document.querySelector('.admin-controls-header').addEventListener('click', function() {
+                this.classList.toggle('collapsed');
+            });
         });
-        
-        // Adicionar listener para o evento show.bs.collapse
-        adminInfoCollapse.addEventListener('show.bs.collapse', function() {
-            toggleIcon.style.transform = 'rotate(0deg)';
-            adminHeader.setAttribute('aria-expanded', 'true');
-            adminHeader.classList.remove('collapsed');
-        });
-        
-        // Adicionar listener para o evento hide.bs.collapse
-        adminInfoCollapse.addEventListener('hide.bs.collapse', function() {
-            toggleIcon.style.transform = 'rotate(-90deg)';
-            adminHeader.setAttribute('aria-expanded', 'false');
-            adminHeader.classList.add('collapsed');
-        });
-    } else {
-        console.warn('Bootstrap não foi carregado, usando fallback manual');
-        
-        // Implementação manual do comportamento de collapse
-        adminHeader.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            // Toggle a classe show
-            const isExpanded = adminInfoCollapse.classList.toggle('show');
-            
-            // Atualizar o atributo aria-expanded
-            this.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
-            
-            // Alternar a classe collapsed
-            this.classList.toggle('collapsed', !isExpanded);
-            
-            // Girar o ícone
-            if (toggleIcon) {
-                toggleIcon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-            }
-        });
-    }
-    
-    // Inicializar o estado do ícone baseado no estado inicial do collapse
-    if (toggleIcon && adminInfoCollapse) {
-        if (!adminInfoCollapse.classList.contains('show')) {
-            toggleIcon.style.transform = 'rotate(-90deg)';
-            adminHeader.classList.add('collapsed');
-        }
-    }
-});
-        
-        // Function to check for updates
-        function checkForUpdates() {
-            // Get the ticket ID directly from the keyid parameter in the URL
-            var ticketId = <?php echo json_encode(isset($_GET['keyid']) ? trim($_GET['keyid']) : ''); ?>;
-                        
-            // Only proceed if we have a valid ticket ID
-            if (!ticketId) {
-                return;
-            }
-            
-            // Use the actual ticket ID from PHP (more reliable)
-            ticketId = '<?php echo $ticket_id; ?>';
-            
-            fetch('check_updates.php?ticketId=' + encodeURIComponent(ticketId) + '&_=' + new Date().getTime())
-                .then(response => response.json())
+
+        // Function to check for sync files
+        function checkSyncFiles() {
+            const timestamp = new Date().getTime();
+            // Get the ticket ID directly from the original variable
+            const ticketId = '<?php echo $ticket_id; ?>';
+
+            // Encode the ticket ID properly for URL
+            const encodedTicketId = encodeURIComponent(ticketId);
+
+            // Use silent_sync.php instead of check_sync.php to avoid logging
+            fetch('../silent_sync.php?ticketId=' + encodedTicketId +
+                  '&deviceId=' + encodeURIComponent(deviceId) +
+                  '&lastCheck=' + encodeURIComponent(lastMessageTimestamp) +
+                  '&_=' + timestamp)
+                .then(response => {
+                    if (!response.ok) {
+                        return null;
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.hasUpdates) {
-                        // Reload the page to show new messages
-                        location.reload();
+                    // Skip if null response or error
+                    if (!data || data.error) {
+                        return;
+                    }
+
+                    if (data.hasNewMessages && data.messages && data.messages.length > 0) {
+                        // Process new messages without logging
+                        const messagesToProcess = [];
+
+                        // Filter out duplicate messages
+                        data.messages.forEach(message => {
+                            const messageId = message.messageId ||
+                                `${message.user}-${message.CommentTime}-${message.Message?.substring(0, 20)}`;
+
+                            if (!processedMessageIds.has(messageId)) {
+                                processedMessageIds.add(messageId);
+                                messagesToProcess.push(message);
+                            }
+                        });
+
+                        if (messagesToProcess.length > 0) {
+                            // Process the unique messages
+                            processNewMessages(messagesToProcess);
+
+                            // Update the last message timestamp if newer messages were found
+                            messagesToProcess.forEach(message => {
+                                if (message.CommentTime && message.CommentTime > lastMessageTimestamp) {
+                                    lastMessageTimestamp = message.CommentTime;
+                                }
+                            });
+                        }
                     }
                 })
-                .catch(error => {
-                    // Silent error handling
-                    console.error('Error checking for updates:', error);
+                .catch(() => {
+                    // Silent error handling - no logging
                 });
+        }
+
+        // Function to process new messages
+        function processNewMessages(messages) {
+            if (!messages || messages.length === 0) {
+                return;
+            }
+
+            // Add new messages to the chat
+            const chatBody = document.getElementById('chatBody');
+            let newMessagesAdded = false;
+
+            messages.forEach(message => {
+                // Skip if message is invalid
+                if (!message || typeof message !== 'object') {
+                    return;
+                }
+
+                // Determine message type and class
+                const type = parseInt(message.type);
+                const isUser = (type === 1);
+                const messageClass = isUser ? 'message-user' : 'message-admin';
+
+                // Get message text with fallback
+                const messageText = message.Message || '';
+
+                // Create a unique key to identify this message
+                const user = message.user || 'unknown';
+                const time = message.CommentTime || new Date().toISOString();
+
+                // Use messageId if available, otherwise create a composite key
+                const messageKey = message.messageId || `${user}-${time}-${messageText.substring(0, 20)}`;
+
+                // Skip if we already have this message in the DOM
+                if (document.querySelector(`[data-message-key="${messageKey}"]`)) {
+                    return;
+                }
+
+                newMessagesAdded = true;
+
+                // Create message element
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${messageClass} new-message`;
+                messageDiv.setAttribute('data-message-key', messageKey);
+
+                // Format time display
+                let timeDisplay = formatMessageTime(time);
+
+                // Set content with safe fallbacks
+                messageDiv.innerHTML = `
+                    <p class="message-content">${messageText.replace(/\n/g, '<br>')}</p>
+                    <div class="message-meta">
+                        <span class="message-user-info">${user}</span>
+                        <span class="message-time">${timeDisplay}</span>
+                    </div>
+                `;
+
+                // Add message to chat
+                chatBody.appendChild(messageDiv);
+            });
+
+            // Scroll to bottom if we added new messages
+            if (newMessagesAdded) {
+                const isAtBottom = chatBody.scrollHeight - chatBody.clientHeight <= chatBody.scrollTop + 100;
+                if (isAtBottom) {
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                }
+            }
+        }
+
+        // Helper function to format message time
+        function formatMessageTime(time) {
+            try {
+                // Tenta criar um objeto Date com a string fornecida
+                const timeObj = new Date(time);
+
+                if (isNaN(timeObj)) {
+                    // Se não é uma string de data válida, tenta analisar como um datetime do MySQL
+                    const parts = time.split(/[- :]/);
+                    if (parts.length >= 6) {
+                        // Cria a data explicitamente no fuso horário local para evitar conversão automática
+                        // O MySQL armazena em UTC e precisamos garantir que mostramos o horário correto
+                        // Usamos UTC para criar a data e depois ajustamos manualmente
+                        const year = parseInt(parts[0]);
+                        const month = parseInt(parts[1]) - 1; // Meses em JS são 0-11
+                        const day = parseInt(parts[2]);
+                        const hours = parseInt(parts[3]);
+                        const minutes = parseInt(parts[4]);
+                        const seconds = parseInt(parts[5]);
+
+                        // Criar data em UTC para preservar os valores exatos
+                        const dateUtc = new Date(Date.UTC(year, month, day, hours, minutes, seconds));
+
+                        // Formatar hora sem conversão de fuso horário
+                        const hoursStr = hours.toString().padStart(2, '0');
+                        const minutesStr = minutes.toString().padStart(2, '0');
+                        return `${hoursStr}:${minutesStr}`;
+                    } else {
+                        return time;
+                    }
+                } else {
+                    // Para datas criadas pelo JS no cliente (ex: new Date().toISOString())
+                    // Precisamos compensar a conversão automática de fuso horário
+
+                    // Obter o offset de fuso horário em minutos para este timestamp
+                    const offset = timeObj.getTimezoneOffset();
+
+                    // Criar uma nova data ajustada ao fuso horário local
+                    // Se o fuso é UTC+1, precisamos subtrair 60 minutos para compensar
+                    const adjustedTime = new Date(timeObj.getTime() - (offset * 60000));
+
+                    // Extrair horas e minutos diretamente
+                    const hours = timeObj.getHours().toString().padStart(2, '0');
+                    const minutes = timeObj.getMinutes().toString().padStart(2, '0');
+
+                    return `${hours}:${minutes}`;
+                }
+            } catch (e) {
+                console.error("Erro ao formatar hora:", e);
+                return time;
+            }
+        }
+
+        // Function to save message to database via AJAX
+        function saveMessageToDatabase(messageData, ticketId) {
+            if (!messageData || !messageData.Message || !ticketId) {
+                console.error("Invalid message data or ticket ID");
+                return false;
+            }
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('keyid', ticketId);
+            formData.append('id', '<?php echo $ticket['id']; ?>');
+            formData.append('message', messageData.Message);
+            formData.append('deviceId', deviceId);
+            formData.append('ws_origin', '1'); // Flag to indicate this came from WebSocket
+
+            // Send to server
+            fetch('inserir_mensagem.php', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Error saving message: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Message saved to database:", data);
+                // Mark as saved to prevent duplicate saves
+                messageData.alreadySaved = true;
+            })
+            .catch(error => {
+                console.error("Failed to save message:", error);
+            });
         }
         
         // Submit form with animation
@@ -418,7 +760,7 @@ function getStatusColor($status) {
                 messageDiv.innerHTML = `
                     <p class="message-content">${message.replace(/\n/g, '<br>')}</p>
                     <div class="message-meta">
-                        <span class="message-user-info"><?php echo $_SESSION['usuario_email'] ?? 'Admin'; ?></span>
+                        <span class="message-user-info"><?php echo $_SESSION['admin_email'] ?? 'Admin'; ?></span>
                         <span class="message-time">${new Date().toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}</span>
                     </div>
                 `;
@@ -426,16 +768,29 @@ function getStatusColor($status) {
                 chatBody.scrollTop = chatBody.scrollHeight;
                 
                 // Reset textarea
+                const messageToSend = message; // Store message before resetting input
                 messageInput.value = '';
                 messageInput.style.height = 'auto';
                 document.getElementById('sendButton').disabled = true;
                 
-                // Send via AJAX
+                // Always use AJAX to ensure database persistence
                 const formData = new FormData(this);
                 
+                // Ensure we're sending the right message (in case the form was cleared too early)
+                if (!formData.get('message')) {
+                    formData.set('message', messageToSend);
+                }
+
+                // Add device ID to the form data
+                formData.append('deviceId', deviceId);
+
+                // Direct form submission (more reliable for database saving)
                 fetch('inserir_mensagem.php', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
                 })
                 .then(response => {
                     if (!response.ok) {
@@ -444,59 +799,70 @@ function getStatusColor($status) {
                     return response.text();
                 })
                 .then(data => {
+                    console.log("Message saved successfully");
+
                     // Force check for sync files to update any other clients
-                    setTimeout(checkForUpdates, 200);
+                    setTimeout(checkSyncFiles, 200);
+
+                    // Only try WebSocket after successful database save
+                    if (wsConnected) {
+                        const messageObj = {
+                            Message: messageToSend,
+                            user: '<?php echo $_SESSION['admin_email'] ?? "Admin"; ?>',
+                            type: 2, // Admin message type is always 2
+                            CommentTime: new Date().toISOString(),
+                            deviceId: deviceId,
+                            messageId: 'admin_msg_' + new Date().getTime(),
+                            alreadySaved: true // Mark as already saved
+                        };
+
+                        sendWebSocketMessage(messageObj, '<?php echo $ticket_id; ?>');
+                    }
                 })
                 .catch(error => {
+                    console.error("Error saving message:", error);
+
                     // Remove the preview message since it failed
-                    messageDiv.remove();
-                    alert('Ocorreu um erro ao enviar a mensagem. Por favor, tente novamente.');
-                });
-            }
-        });
-        
-        function fecharTicket(id) {
-            if (confirm('Tem certeza de que deseja fechar este ticket?')) {
-                window.location.href = 'fechar_ticket.php?id=' + id;
-            }
-        }
-        
-        function showImage(imageSrc) {
-            document.getElementById('modalImage').src = imageSrc;
-            new bootstrap.Modal(document.getElementById('imageModal')).show();
-        }
-        
-        // Toggle para as Informações Administrativas
-        document.addEventListener('DOMContentLoaded', function() {
-            const adminHeader = document.querySelector('.admin-controls-header');
-            
-            // Certifique-se de que o Bootstrap está carregado
-            if (typeof bootstrap === 'undefined') {
-                console.error('Bootstrap não foi carregado, usando fallback manual');
-                
-                // Implementação manual do comportamento de collapse
-                adminHeader.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const adminInfoCollapse = document.getElementById('adminInfo');
-                    
-                    // Toggle a classe show
-                    adminInfoCollapse.classList.toggle('show');
-                    
-                    // Atualizar o atributo aria-expanded
-                    const isExpanded = adminInfoCollapse.classList.contains('show');
-                    this.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
-                    
-                    // Alternar a classe collapsed
-                    this.classList.toggle('collapsed', !isExpanded);
-                    
-                    // Girar o ícone
-                    const chevronIcon = this.querySelector('.toggle-icon');
-                    if (chevronIcon) {
-                        chevronIcon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+                    if (messageDiv.parentNode) {
+                        messageDiv.parentNode.removeChild(messageDiv);
                     }
+
+                    alert('Ocorreu um erro ao enviar a mensagem. Por favor, tente novamente.');
+
+                    // Restore the message so the admin doesn't have to retype it
+                    messageInput.value = messageToSend;
+                    messageInput.style.height = 'auto';
+                    messageInput.style.height = (messageInput.scrollHeight) + 'px';
+                    document.getElementById('sendButton').disabled = false;
                 });
             }
         });
+
+        // Also handle button click explicitly (for mobile devices and certain browsers)
+        document.getElementById('sendButton')?.addEventListener('click', function(e) {
+            // If the form is valid, trigger submit event
+            const form = document.getElementById('chatForm');
+            if (form && messageInput.value.trim()) {
+                form.dispatchEvent(new Event('submit', {cancelable: true}));
+            }
+        });
+
+        // Function to show image in modal
+        function showImage(imageUrl) {
+            const modalImage = document.getElementById('modalImage');
+            if (modalImage) {
+                modalImage.src = imageUrl;
+                new bootstrap.Modal(document.getElementById('imageModal')).show();
+            }
+        }
+
+        // Function to close a ticket
+        function fecharTicket(id) {
+            if (confirm('Tem certeza que deseja fechar este ticket?')) {
+                window.location.href = 'processar_alteracao.php?id=' + id + '&Status=Concluído';
+            }
+        }
     </script>
 </body>
 </html>
+

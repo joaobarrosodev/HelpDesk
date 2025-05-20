@@ -30,6 +30,9 @@ if (isset($_POST['action'])) {
         $path = dirname(__FILE__);
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
             pclose(popen('start /B "HelpDesk WS" cmd /c "cd /D ' . $path . ' && php ws-server.php > ws-server.log 2>&1"', 'r'));
+            
+            // Create a startup flag file
+            file_put_contents($path . '/temp/ws-server-starting.flag', date('Y-m-d H:i:s'));
         } else {
             exec('cd ' . $path . ' && nohup php ws-server.php > ws-server.log 2>&1 &');
         }
@@ -45,6 +48,31 @@ if (isset($_POST['action'])) {
             exec("pkill -f 'php ws-server.php'");
         }
         $status = 'Solicitação para parar o servidor enviada. Por favor, aguarde alguns segundos e atualize a página.';
+        sleep(2);
+        $serverRunning = isServerRunning();
+        
+        // Remove startup flag if it exists
+        if (file_exists(dirname(__FILE__) . '/temp/ws-server-starting.flag')) {
+            unlink(dirname(__FILE__) . '/temp/ws-server-starting.flag');
+        }
+    }
+    elseif ($_POST['action'] == 'restart' && $serverRunning) {
+        // Restart the server
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            exec('taskkill /F /FI "WINDOWTITLE eq HelpDesk WS*" > nul 2>&1');
+            sleep(1);
+            $path = dirname(__FILE__);
+            pclose(popen('start /B "HelpDesk WS" cmd /c "cd /D ' . $path . ' && php ws-server.php > ws-server.log 2>&1"', 'r'));
+            
+            // Create a startup flag file
+            file_put_contents($path . '/temp/ws-server-starting.flag', date('Y-m-d H:i:s'));
+        } else {
+            exec("pkill -f 'php ws-server.php'");
+            sleep(1);
+            $path = dirname(__FILE__);
+            exec('cd ' . $path . ' && nohup php ws-server.php > ws-server.log 2>&1 &');
+        }
+        $status = 'Servidor WebSocket reiniciado. Por favor, aguarde alguns segundos e atualize a página.';
         sleep(2);
         $serverRunning = isServerRunning();
     }
@@ -87,13 +115,16 @@ if (file_exists('ws-server.log')) {
                         <span class="badge bg-danger p-2">Inativo</span>
                         <?php endif; ?>
                     </div>
-                    
-                    <div>
+                      <div>
                         <form method="post" class="d-inline-block">
                             <?php if ($serverRunning): ?>
                             <input type="hidden" name="action" value="stop">
                             <button type="submit" class="btn btn-danger">
                                 <i class="bi bi-stop-circle me-1"></i> Parar Servidor
+                            </button>
+                            
+                            <button type="submit" name="action" value="restart" class="btn btn-warning ms-2">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Reiniciar Servidor
                             </button>
                             <?php else: ?>
                             <input type="hidden" name="action" value="start">
@@ -101,10 +132,16 @@ if (file_exists('ws-server.log')) {
                                 <i class="bi bi-play-circle me-1"></i> Iniciar Servidor
                             </button>
                             <?php endif; ?>
-                        </form>
-                        
-                        <a href="ws-server-manager.php" class="btn btn-secondary ms-2">
+                        </form>                        <a href="ws-server-manager.php" class="btn btn-secondary ms-2">
                             <i class="bi bi-arrow-clockwise me-1"></i> Atualizar
+                        </a>
+                        
+                        <a href="ws-diagnostic.php" class="btn btn-info ms-2">
+                            <i class="bi bi-search me-1"></i> Diagnóstico
+                        </a>
+                        
+                        <a href="ws-monitor.php" class="btn btn-primary ms-2">
+                            <i class="bi bi-display me-1"></i> Monitor
                         </a>
                     </div>
                 </div>

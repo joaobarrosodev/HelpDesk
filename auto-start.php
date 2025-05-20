@@ -101,6 +101,35 @@ if (!$enableAutoStart || isWsServerRunning()) {
     return;
 }
 
+// Don't attempt to start if we've tried recently (prevent multiple auto-start attempts)
+$startFlag = TEMP_DIR . DIRECTORY_SEPARATOR . 'ws-server-starting.flag';
+if (file_exists($startFlag)) {
+    $flagTime = @filemtime($startFlag);
+    if ($flagTime && (time() - $flagTime) < 60) { // Don't try again if within 60 seconds
+        return;
+    }
+}
+
+// Create the startup flag to prevent multiple starting attempts
+@file_put_contents($startFlag, date('Y-m-d H:i:s'));
+@chmod($startFlag, 0666);
+
+// Log auto-start attempt
+@file_put_contents(
+    __DIR__ . '/ws-autostart.log',
+    date('Y-m-d H:i:s') . ' - Attempting to auto-start WebSocket server' . PHP_EOL,
+    FILE_APPEND
+);
+
+// Start the server based on operating system
+if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+    $path = dirname(__FILE__);
+    $logOutput = @pclose(popen('start /B "HelpDesk WS" cmd /c "cd /D ' . $path . ' && php ws-server.php > ws-server-output.log 2>&1"', 'r'));
+} else {
+    $path = dirname(__FILE__);
+    $logOutput = @exec('cd ' . $path . ' && nohup php ws-server.php > ws-server-output.log 2>&1 &');
+}
+
 // Create temp directory if it doesn't exist
 $tempDir = dirname(__FILE__) . '/temp';
 if (!file_exists($tempDir)) {

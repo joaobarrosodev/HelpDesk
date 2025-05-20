@@ -2061,3 +2061,632 @@ Client 731 subscribed to ticket #024
 Message from 731: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747764626962}
 Message from 731: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747764656971}
 Message from 731: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747764687335}
+Message from 731: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747764717978}
+Message from 731: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747764748904}
+Connection 731 disconnected
+New connection: 734
+Message from 734: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 734 subscribed to ticket #014
+Message from 734: {"action":"newMessage","ticketId":"#014","message":{"Message":"teste","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T19:05:47.658Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747767947658"},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 14
+Connection 734 disconnected
+New connection: 737
+Message from 737: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 737 subscribed to ticket #014
+Message from 737: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747767981241}
+Message from 737: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768011946}
+Message from 737: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768042329}
+Message from 737: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768073161}
+Message from 737: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768103504}
+Connection 737 disconnected
+New connection: 740
+Message from 740: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 740 subscribed to ticket #014
+Connection 740 disconnected
+New connection: 743
+Message from 743: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 743 subscribed to ticket #014
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768205206}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768235559}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768265844}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768296355}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768326677}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768356943}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768387216}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768417520}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768447828}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768478087}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768508336}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768538588}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768568855}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768599114}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768629391}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768659693}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768689971}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768720240}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768750506}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768780794}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768811036}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768841350}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768871617}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768901838}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768932088}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768962355}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747768992611}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769022839}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769053064}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769083317}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769113577}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769143818}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769174074}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769204289}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769234532}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769264790}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769295102}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769325340}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769355618}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769385941}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769416197}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769446441}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769476719}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769506997}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769537279}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769567560}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769597845}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769628143}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769658445}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747769688719}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747770023134}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772338227}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772368459}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772398729}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772428953}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772459194}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772489446}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772519749}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772550024}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772580292}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772610527}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772640786}
+Message from 743: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772671060}
+Connection 743 disconnected
+New connection: 746
+Message from 746: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 746 subscribed to ticket #014
+Message from 746: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772731915}
+Message from 746: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772761928}
+Message from 746: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772791940}
+Message from 746: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772821942}
+Message from 746: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772851949}
+Message from 746: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772881964}
+Message from 746: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772911979}
+Connection 746 disconnected
+New connection: 749
+Message from 749: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 749 subscribed to ticket #014
+Connection 749 disconnected
+New connection: 752
+Message from 752: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 752 subscribed to ticket #014
+Message from 752: {"action":"newMessage","ticketId":"#014","message":{"Message":"teste","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T20:29:11.330Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747772951330","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 20
+Connection 752 disconnected
+New connection: 755
+Message from 755: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 755 subscribed to ticket #014
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747772984531}
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747773014839}
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747773045149}
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747773075457}
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747773105760}
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747773136051}
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747773166347}
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747773196663}
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747773226960}
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747773257249}
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747773287533}
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747773317849}
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747773348263}
+Message from 755: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747773378935}
+Connection 755 disconnected
+New connection: 758
+Message from 758: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 758 subscribed to ticket #014
+Message from 758: {"action":"newMessage","ticketId":"#014","message":{"Message":"teste","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:19:42.499Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747775982499","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 22
+Connection 758 disconnected
+New connection: 761
+Message from 761: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 761 subscribed to ticket #014
+Message from 761: {"action":"newMessage","ticketId":"#014","message":{"Message":"teste","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:19:49.670Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747775989670","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 23
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776015427}
+Message from 761: {"action":"newMessage","ticketId":"#014","message":{"Message":"teste","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:20:38.082Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747776038082","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 23
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776045427}
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776076075}
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776106573}
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776137349}
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776167663}
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776197997}
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776228295}
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776258655}
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776289047}
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776319415}
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776349704}
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776379993}
+Message from 761: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776410293}
+Connection 761 disconnected
+New connection: 764
+Message from 764: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 764 subscribed to ticket #014
+Message from 764: {"action":"newMessage","ticketId":"#014","message":{"Message":"teste","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:27:20.332Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747776440332","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 24
+Connection 764 disconnected
+New connection: 767
+Message from 767: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 767 subscribed to ticket #014
+Message from 767: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776480885}
+Message from 767: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776511573}
+Message from 767: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776541833}
+Message from 767: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776572256}
+Message from 767: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776602582}
+Connection 767 disconnected
+New connection: 770
+Message from 770: {"action":"newMessage","ticketId":"#014","message":{"Message":"teste","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:30:33.265Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747776633265","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 25
+Connection 770 disconnected
+New connection: 773
+Message from 773: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776667074}
+Message from 773: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776697469}
+Message from 773: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776727868}
+Connection 773 disconnected
+New connection: 776
+Message from 776: {"action":"newMessage","ticketId":"#014","message":{"Message":"teste","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:32:23.414Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747776743414","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 25
+Connection 776 disconnected
+New connection: 779
+Message from 779: {"action":"newMessage","ticketId":"#014","message":{"Message":"testando mais uma vez","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:32:44.826Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747776764826","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 25
+Message from 779: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776776133}
+Connection 779 disconnected
+New connection: 782
+Message from 782: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776818535}
+Message from 782: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776848805}
+Connection 782 disconnected
+New connection: 785
+Message from 785: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 785 subscribed to ticket #014
+Message from 785: {"action":"newMessage","ticketId":"#014","message":{"Message":"teste","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:34:35.019Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747776875019","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 26
+Connection 785 disconnected
+New connection: 788
+Message from 788: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 788 subscribed to ticket #014
+Message from 788: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776908300}
+Message from 788: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747776938521}
+Connection 788 disconnected
+New connection: 791
+Message from 791: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 791 subscribed to ticket #014
+Message from 791: {"action":"newMessage","ticketId":"#014","message":{"Message":"123","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:35:49.771Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747776949771","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 28
+Connection 791 disconnected
+New connection: 794
+Message from 794: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 794 subscribed to ticket #014
+Connection 794 disconnected
+New connection: 797
+Message from 797: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 797 subscribed to ticket #014
+Message from 797: {"action":"newMessage","ticketId":"#014","message":{"Message":"teste","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:36:10.157Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747776970157","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 30
+Connection 797 disconnected
+New connection: 800
+Message from 800: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 800 subscribed to ticket #014
+Message from 800: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777003638}
+Message from 800: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777033645}
+New connection: 803
+Message from 803: {"action":"subscribe","ticketId":"#014","deviceId":"device_312ti42lhzg824bquwc2dt"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 803 subscribed to ticket #014
+Message from 803: {"action":"newMessage","ticketId":"#014","message":{"Message":"ts","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:37:29.449Z","deviceId":"device_312ti42lhzg824bquwc2dt","messageId":"msg_1747777049449","alreadySaved":true},"deviceId":"device_312ti42lhzg824bquwc2dt"}
+Broadcasting to ticket #014, clients: 32
+Message from 800: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777064239}
+Message from 803: {"action":"ping","deviceId":"device_312ti42lhzg824bquwc2dt","timestamp":1747777073972}
+Message from 800: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777094611}
+Message from 803: {"action":"ping","deviceId":"device_312ti42lhzg824bquwc2dt","timestamp":1747777103970}
+Message from 800: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777124900}
+Message from 803: {"action":"ping","deviceId":"device_312ti42lhzg824bquwc2dt","timestamp":1747777133971}
+Message from 800: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777155281}
+Message from 803: {"action":"ping","deviceId":"device_312ti42lhzg824bquwc2dt","timestamp":1747777163972}
+Message from 800: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777185573}
+Message from 803: {"action":"ping","deviceId":"device_312ti42lhzg824bquwc2dt","timestamp":1747777193973}
+Message from 800: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777215869}
+Message from 803: {"action":"ping","deviceId":"device_312ti42lhzg824bquwc2dt","timestamp":1747777223974}
+Message from 800: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777246333}
+Message from 803: {"action":"ping","deviceId":"device_312ti42lhzg824bquwc2dt","timestamp":1747777253976}
+Message from 800: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777276630}
+Message from 803: {"action":"ping","deviceId":"device_312ti42lhzg824bquwc2dt","timestamp":1747777283977}
+Connection 800 disconnected
+New connection: 806
+Message from 806: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 806 subscribed to ticket #014
+Message from 806: {"action":"newMessage","ticketId":"#014","message":{"Message":"123","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:41:44.817Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747777304817","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 33
+Connection 806 disconnected
+New connection: 809
+Message from 809: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 809 subscribed to ticket #014
+Message from 809: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777337514}
+Connection 809 disconnected
+New connection: 812
+Message from 812: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 812 subscribed to ticket #014
+Message from 812: {"action":"newMessage","ticketId":"#014","message":{"Message":"123","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:42:45.523Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747777365523","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 35
+Connection 812 disconnected
+New connection: 815
+Message from 815: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 815 subscribed to ticket #014
+Connection 803 disconnected
+Message from 815: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777400397}
+Message from 815: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777430409}
+Message from 815: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777460764}
+Connection 815 disconnected
+New connection: 818
+Message from 818: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 818 subscribed to ticket #014
+Message from 818: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777519814}
+Message from 818: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777550321}
+Message from 818: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777580942}
+Message from 818: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777611652}
+Message from 818: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777642476}
+New connection: 821
+Message from 821: {"action":"subscribe","ticketId":"#014","deviceId":"device_312ti42lhzg824bquwc2dt"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 821 subscribed to ticket #014
+Message from 818: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777673293}
+Connection 821 disconnected
+Message from 818: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777703817}
+Message from 818: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777734518}
+Message from 818: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777765340}
+Message from 818: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777796145}
+Message from 818: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777826627}
+Message from 818: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777856969}
+Message from 818: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777887372}
+Connection 818 disconnected
+New connection: 825
+Message from 825: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 825 subscribed to ticket #014
+Message from 825: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777938780}
+Message from 825: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747777969269}
+Message from 825: {"action":"newMessage","ticketId":"#014","message":{"Message":"ta tudo?","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T21:53:14.730Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747777994730","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 39
+Connection 825 disconnected
+New connection: 828
+Message from 828: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 828 subscribed to ticket #014
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778027738}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778058165}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778088577}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778118846}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778149127}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778179402}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778209705}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778239997}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778270319}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778300659}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778330907}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778361158}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778391381}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778421613}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778451834}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778482144}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778512429}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778542794}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778573190}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778603493}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778633794}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778664097}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778694462}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778724738}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778755035}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778785315}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778815604}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778845899}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778876171}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778906451}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778936721}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778967006}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747778997257}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779027537}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779057741}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779087954}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779118229}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779148480}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779178759}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779209063}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779239317}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779269588}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779299814}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779330098}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779360338}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779390631}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779420926}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779451215}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779481522}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779511771}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779542050}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779572323}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779602603}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779632887}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779663168}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779693465}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779723746}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779754057}
+Message from 828: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779784356}
+Connection 828 disconnected
+New connection: 831
+Message from 831: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 831 subscribed to ticket #014
+Message from 831: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779838669}
+Message from 831: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779869643}
+Connection 831 disconnected
+New connection: 834
+Message from 834: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 834 subscribed to ticket #014
+Message from 834: {"action":"newMessage","ticketId":"#014","message":{"Message":"123","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T22:24:45.915Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747779885915","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 42
+New connection: 837
+Message from 837: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 837 subscribed to ticket #014
+Message from 837: {"action":"newMessage","ticketId":"#014","message":{"Message":"123","user":"info@info-exe.com","type":2,"CommentTime":"2025-05-20T22:25:00.313Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"admin_msg_1747779900313","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 43
+Connection 834 disconnected
+New connection: 840
+Message from 840: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 840 subscribed to ticket #014
+Message from 837: {"action":"newMessage","ticketId":"#014","message":{"Message":"nem por isso","user":"info@info-exe.com","type":2,"CommentTime":"2025-05-20T22:25:20.182Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"admin_msg_1747779920182","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 44
+Message from 837: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779925971}
+Message from 840: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779938755}
+Message from 837: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779956798}
+Message from 840: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779969217}
+Message from 837: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779987451}
+Message from 840: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747779999513}
+Message from 837: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780018231}
+Message from 840: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780029784}
+Message from 837: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780049028}
+Message from 840: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780060077}
+Message from 837: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780079830}
+Message from 840: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780090354}
+Message from 837: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780110339}
+Message from 840: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780120623}
+Message from 837: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780141158}
+Message from 840: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780150933}
+Message from 837: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780171924}
+Message from 840: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780181227}
+Message from 837: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780202739}
+Message from 840: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780211537}
+Connection 837 disconnected
+New connection: 844
+Message from 844: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 844 subscribed to ticket #014
+Message from 844: {"action":"newMessage","ticketId":"#014","message":{"Message":"asdd","user":"info@info-exe.com","type":2,"CommentTime":"2025-05-20T22:30:36.881Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"admin_msg_1747780236881","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 45
+Connection 840 disconnected
+New connection: 847
+Message from 847: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 847 subscribed to ticket #014
+Connection 844 disconnected
+New connection: 850
+Message from 850: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 850 subscribed to ticket #014
+Message from 847: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780272309}
+Message from 850: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780278637}
+Message from 847: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780302312}
+Message from 850: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780309234}
+Message from 847: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780332314}
+Message from 850: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780339716}
+Connection 847 disconnected
+New connection: 853
+Message from 853: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 853 subscribed to ticket #014
+Connection 850 disconnected
+New connection: 856
+Message from 856: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 856 subscribed to ticket #014
+Message from 856: {"action":"newMessage","ticketId":"#014","message":{"Message":"vamos ver entao se isto funciona","user":"info@info-exe.com","type":2,"CommentTime":"2025-05-20T22:32:45.474Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"admin_msg_1747780365474","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 49
+Message from 853: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780375948}
+Message from 856: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780385248}
+Message from 853: {"action":"newMessage","ticketId":"#014","message":{"Message":"o meu acesso do any desk \u00e9 12345678909876543","user":"fernando.barbosa@spintos.pt","type":1,"CommentTime":"2025-05-20T22:33:13.777Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"msg_1747780393777","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 49
+Message from 853: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780405952}
+Message from 856: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780415653}
+Connection 853 disconnected
+New connection: 859
+Message from 859: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 859 subscribed to ticket #014
+Message from 856: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780446561}
+Message from 859: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780465363}
+Message from 856: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780477323}
+Message from 859: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780495856}
+Message from 856: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780508062}
+Message from 859: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780526314}
+Message from 856: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780538975}
+Connection 859 disconnected
+New connection: 862
+Message from 862: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 862 subscribed to ticket #014
+Connection 856 disconnected
+New connection: 865
+Message from 865: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 865 subscribed to ticket #014
+Message from 865: {"action":"newMessage","ticketId":"#014","message":{"Message":"admin message tst","user":"info@info-exe.com","type":2,"CommentTime":"2025-05-20T22:35:59.113Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"admin_msg_1747780559113","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 52
+Connection 862 disconnected
+New connection: 868
+Message from 868: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 868 subscribed to ticket #014
+Message from 865: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780581463}
+Message from 868: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780596583}
+Message from 865: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780611807}
+Message from 868: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780626996}
+Message from 865: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780641814}
+Message from 868: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780657259}
+Message from 865: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780671824}
+Message from 868: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780687538}
+Message from 865: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780701828}
+Message from 868: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780717818}
+Message from 865: {"action":"newMessage","ticketId":"#014","message":{"Message":"olaaa","user":"info@info-exe.com","type":2,"CommentTime":"2025-05-20T22:38:48.274Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"admin_msg_1747780728274","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 53
+Message from 865: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780731834}
+Connection 868 disconnected
+New connection: 871
+Message from 871: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 871 subscribed to ticket #014
+Message from 865: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780762537}
+Message from 871: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780772284}
+Message from 865: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780792735}
+Connection 865 disconnected
+New connection: 874
+Message from 874: {"action":"subscribe","ticketId":"#014","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 874 subscribed to ticket #014
+Message from 871: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780802477}
+Message from 874: {"action":"newMessage","ticketId":"#014","message":{"Message":"testando denovooo","user":"info@info-exe.com","type":2,"CommentTime":"2025-05-20T22:40:08.522Z","deviceId":"device_phgejwjr71aubjzk539fwd","messageId":"admin_msg_1747780808522","alreadySaved":true},"deviceId":"device_phgejwjr71aubjzk539fwd"}
+Broadcasting to ticket #014, clients: 55
+Message from 874: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780829198}
+Message from 871: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780832492}
+Message from 874: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780859874}
+Message from 871: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780862499}
+Message from 874: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780890649}
+Message from 871: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780892514}
+Message from 874: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780921335}
+Message from 871: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747780922732}

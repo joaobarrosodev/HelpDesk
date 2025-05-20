@@ -118,6 +118,41 @@ function getStatusColor($status) {
     .close-ticket-btn:hover {
         background-color: #c82333;
     }
+
+    /* WebSocket status indicator */
+    .ws-status {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.8rem;
+        padding: 2px 6px;
+        border-radius: 12px;
+        margin-left: 10px;
+    }
+
+    .ws-status-connected {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .ws-status-disconnected {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .ws-status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+
+    .ws-status-connected .ws-status-indicator {
+        background-color: #28a745;
+    }
+
+    .ws-status-disconnected .ws-status-indicator {
+        background-color: #dc3545;
+    }
 </style>
 <!-- Modal para Exibir Imagem -->
 <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
@@ -142,11 +177,10 @@ function getStatusColor($status) {
                 <h1 class="chat-title">A falar com <?php echo !empty($ticket['atribuido_a']) ? $ticket['atribuido_a'] : 'Não atribuído'; ?></h1>
             </div>
             <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-<?php echo getStatusColor($ticket['Status']); ?>">
+                <span id="ticket-status" class="badge bg-<?php echo getStatusColor($ticket['Status']); ?>">
                     <?php echo $ticket['Status']; ?>
                 </span>    
-            <span class="badge bg-<?php echo getPriorityColor($ticket['Priority']); ?>"><?php echo $ticket['Priority']; ?></span>
-                
+                <span class="badge bg-<?php echo getPriorityColor($ticket['Priority']); ?>"><?php echo $ticket['Priority']; ?></span>
             </div>
         </div>
         
@@ -299,6 +333,9 @@ function getStatusColor($status) {
                             }));
                         }
                     }, 30000);
+
+                    // Update WebSocket status indicator
+                    updateWebSocketStatus(true);
                 };
                 
                 ws.onclose = function() {
@@ -309,6 +346,9 @@ function getStatusColor($status) {
                     const delay = Math.min(30000, wsReconnectAttempts * 2000); // Exponential backoff
                     
                     setTimeout(initWebSocket, delay);
+
+                    // Update WebSocket status indicator
+                    updateWebSocketStatus(false);
                 };
                 
                 ws.onerror = function(error) {
@@ -319,19 +359,24 @@ function getStatusColor($status) {
                     if (!syncCheckInterval) {
                         syncCheckInterval = setInterval(checkSyncFiles, 1000);
                     }
-                };
-                
-                ws.onmessage = function(event) {
+
+                    // Update WebSocket status indicator
+                    updateWebSocketStatus(false);
+                };                ws.onmessage = function(event) {
                     try {
                         const data = JSON.parse(event.data);
                         
                         // Handle different message types
                         if (data.action === 'newMessage' && data.ticketId === '<?php echo $ticket_id; ?>') {
                             // Process new message
+                            if (data.message && !data.message.alreadySaved) {
+                                // If message doesn't have alreadySaved flag, save it to database via AJAX
+                                saveMessageToDatabase(data.message, data.ticketId);
+                            }
                             processNewMessages([data.message]);
                         }
                     } catch (e) {
-                        // Silent error handling
+                        console.error("Error processing WebSocket message:", e);
                     }
                 };
             } catch (e) {
@@ -341,20 +386,31 @@ function getStatusColor($status) {
                 if (!syncCheckInterval) {
                     syncCheckInterval = setInterval(checkSyncFiles, 1000);
                 }
+
+                // Update WebSocket status indicator
+                updateWebSocketStatus(false);
             }
         }
         
         // Subscribe to ticket updates
         function subscribeToTicket(ticketId) {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
+                console.log('Connection not ready, will retry subscription in 1 second');
+                // Connection not ready yet, retry after a short delay
+                setTimeout(() => subscribeToTicket(ticketId), 1000);
                 return;
             }
             
-            ws.send(JSON.stringify({
-                action: 'subscribe',
-                ticketId: ticketId,
-                deviceId: deviceId
-            }));
+            console.log('Subscribing to ticket: ' + ticketId);
+            try {
+                ws.send(JSON.stringify({
+                    action: 'subscribe',
+                    ticketId: ticketId,
+                    deviceId: deviceId
+                }));
+            } catch (e) {
+                console.error('Error subscribing to ticket:', e);
+            }
         }
         
         // Send message via WebSocket
@@ -376,6 +432,29 @@ function getStatusColor($status) {
                 return false;
             }
         }
+          // Check if the WebSocket server is healthy
+        function checkWebSocketHealth() {
+            fetch('ws-healthcheck.php?silent=1')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Health check failed');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status !== 'ok' && !wsConnected) {
+                        // If the health check shows issues and we're not connected, 
+                        // try to reconnect to the WebSocket server
+                        setTimeout(initWebSocket, 1000);
+                    }
+                })
+                .catch(() => {
+                    // Silent error handling
+                });
+        }
+        
+        // Run health check every 30 seconds
+        const healthCheckInterval = setInterval(checkWebSocketHealth, 30000);
         
         // Initialize chat when page loads
         window.addEventListener('DOMContentLoaded', function() {
@@ -439,8 +518,8 @@ function getStatusColor($status) {
                         // Filter out duplicate messages
                         data.messages.forEach(message => {
                             const messageId = message.messageId || 
-                                `${message.user}-${message.CommentTime}-${message.Message?.substring(0, 20)}`;
-                            
+                                `${message.user}-${time}-${message.Message?.substring(0, 20)}`;
+
                             if (!processedMessageIds.has(messageId)) {
                                 processedMessageIds.add(messageId);
                                 messagesToProcess.push(message);
@@ -536,24 +615,81 @@ function getStatusColor($status) {
         // Helper function to format message time
         function formatMessageTime(time) {
             try {
+                // Tenta criar um objeto Date com a string fornecida
                 const timeObj = new Date(time);
+
                 if (isNaN(timeObj)) {
-                    // If not a valid date string, try to parse it as a MySQL datetime
+                    // Se não é uma string de data válida, tenta analisar como um datetime do MySQL
                     const parts = time.split(/[- :]/);
                     if (parts.length >= 6) {
-                        const timeObj = new Date(parts[0], parts[1]-1, parts[2], parts[3], parts[4], parts[5]);
-                        return timeObj.toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
+                        // Cria a data explicitamente no fuso horário local para evitar conversão automática
+                        // O MySQL armazena em UTC e precisamos garantir que mostramos o horário correto
+                        const year = parseInt(parts[0]);
+                        const month = parseInt(parts[1]) - 1; // Meses em JS são 0-11
+                        const day = parseInt(parts[2]);
+                        const hours = parseInt(parts[3]);
+                        const minutes = parseInt(parts[4]);
+                        const seconds = parseInt(parts[5]);
+
+                        // Formatar hora sem conversão de fuso horário
+                        const hoursStr = hours.toString().padStart(2, '0');
+                        const minutesStr = minutes.toString().padStart(2, '0');
+                        return `${hoursStr}:${minutesStr}`;
                     } else {
                         return time;
                     }
                 } else {
-                    return timeObj.toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
+                    // Para datas criadas pelo JS no cliente (ex: new Date().toISOString())
+                    // Extrair horas e minutos diretamente
+                    const hours = timeObj.getHours().toString().padStart(2, '0');
+                    const minutes = timeObj.getMinutes().toString().padStart(2, '0');
+
+                    return `${hours}:${minutes}`;
                 }
             } catch (e) {
+                console.error("Erro ao formatar hora:", e);
                 return time;
             }
         }
         
+        // Function to save message to database via AJAX
+        function saveMessageToDatabase(messageData, ticketId) {
+            if (!messageData || !messageData.Message || !ticketId) {
+                console.error("Invalid message data or ticket ID");
+                return false;
+            }
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('keyid', ticketId);
+            formData.append('id', '<?php echo $ticket['id']; ?>');
+            formData.append('message', messageData.Message);
+            formData.append('deviceId', deviceId);
+            formData.append('ws_origin', '1'); // Flag to indicate this came from WebSocket
+            
+            // Send to server
+            fetch('inserir_mensagem.php', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Error saving message: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Message saved to database:", data);
+                // Mark as saved to prevent duplicate saves
+                messageData.alreadySaved = true;
+            })
+            .catch(error => {
+                console.error("Failed to save message:", error);
+            });
+        }
         // Submit form with animation
         document.getElementById('chatForm')?.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -583,199 +719,103 @@ function getStatusColor($status) {
                 messageInput.style.height = 'auto';
                 document.getElementById('sendButton').disabled = true;
                 
-                // Create message object
-                const messageObj = {
-                    Message: messageToSend,
-                    user: '<?php echo $_SESSION['usuario_email'] ?? "Usuário"; ?>',
-                    type: <?php echo (isset($_SESSION['usuario_admin']) && $_SESSION['usuario_admin']) ? '2' : '1'; ?>,
-                    CommentTime: new Date().toISOString(),
-                    deviceId: deviceId,
-                    messageId: 'msg_' + new Date().getTime()
-                };
+                // Always use AJAX to ensure database persistence
+                const formData = new FormData(this);
                 
-                // Try to send via WebSocket first
-                let wsSuccess = false;
-                if (wsConnected) {
-                    wsSuccess = sendWebSocketMessage(messageObj, '<?php echo $ticket_id; ?>');
+                // Ensure we're sending the right message (in case the form was cleared too early)
+                if (!formData.get('message')) {
+                    formData.set('message', messageToSend);
                 }
                 
-                // If WebSocket fails or not connected, use AJAX as fallback
-                if (!wsSuccess) {
-                    // Usar AJAX para enviar a mensagem em vez de submit normal
-                    const formData = new FormData(this);
-                    
-                    // Ensure we're sending the right message (in case the form was cleared too early)
-                    if (!formData.get('message')) {
-                        formData.set('message', messageToSend);
+                // Add device ID to the form data
+                formData.append('deviceId', deviceId);
+                
+                // Direct form submission (more reliable for database saving)
+                fetch('inserir_mensagem.php', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
-                    
-                    // Add device ID to the form data
-                    formData.append('deviceId', deviceId);
-                    
-                    fetch('inserir_mensagem.php', {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`Erro ao enviar mensagem: ${response.status}`);
-                        }
-                        // Try to parse JSON, but handle if it's not JSON
-                        return response.text().then(text => {
-                            try {
-                                return JSON.parse(text);
-                            } catch (e) {
-                                return { status: 'success', message: text };
-                            }
-                        });
-                    })
-                    .then(data => {
-                        // Force check for sync files to update any other clients
-                        setTimeout(checkSyncFiles, 200);
-                    })
-                    .catch(error => {
-                        // Remove the preview message since it failed
-                        if (messageDiv.parentNode) {
-                            messageDiv.parentNode.removeChild(messageDiv);
-                        }
-                        alert('Ocorreu um erro ao enviar a mensagem. Por favor, tente novamente.');
-                        // Restore the message so the user doesn't have to retype it
-                        messageInput.value = messageToSend;
-                        messageInput.style.height = 'auto';
-                        messageInput.style.height = (messageInput.scrollHeight) + 'px';
-                        document.getElementById('sendButton').disabled = false;
-                    });
-                }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erro ao enviar mensagem: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    console.log("Message saved successfully");
+
+                    // Only try WebSocket after successful database save
+                    if (wsConnected) {
+                        const messageObj = {
+                            Message: messageToSend,
+                            user: '<?php echo $_SESSION['usuario_email'] ?? "Usuário"; ?>',
+                            type: <?php echo (isset($_SESSION['usuario_admin']) && $_SESSION['usuario_admin']) ? '2' : '1'; ?>,
+                            CommentTime: new Date().toISOString(),
+                            deviceId: deviceId,
+                            messageId: 'msg_' + new Date().getTime(),
+                            alreadySaved: true // Mark as already saved
+                        };
+
+                        sendWebSocketMessage(messageObj, '<?php echo $ticket_id; ?>');
+                    }
+                })
+                .catch(error => {
+                    console.error("Error saving message:", error);
+
+                    // Remove the preview message since it failed
+                    if (messageDiv.parentNode) {
+                        messageDiv.parentNode.removeChild(messageDiv);
+                    }
+
+                    alert('Ocorreu um erro ao enviar a mensagem. Por favor, tente novamente.');
+
+                    // Restore the message so the user doesn't have to retype it
+                    messageInput.value = messageToSend;
+                    messageInput.style.height = 'auto';
+                    messageInput.style.height = (messageInput.scrollHeight) + 'px';
+                    document.getElementById('sendButton').disabled = false;
+                });
             }
         });
         
         // Also handle button click explicitly (for mobile devices and certain browsers)
         document.getElementById('sendButton')?.addEventListener('click', function(e) {
-            e.preventDefault();
-            // Trigger the form submission
+            // If the form is valid, trigger submit event
             const form = document.getElementById('chatForm');
-            if (form) {
-                // Create and dispatch a submit event
-                const submitEvent = new Event('submit', {
-                    bubbles: true,
-                    cancelable: true,
-                });
-                form.dispatchEvent(submitEvent);
-            }
-        });
-        
-        function fecharTicket(id) {
-            if (confirm('Tem certeza de que deseja fechar este ticket?')) {
-                window.location.href = 'fechar_ticket.php?id=' + id;
-            }
-        }
-        
-        function showImage(imageSrc) {
-            document.getElementById('modalImage').src = imageSrc;
-            new bootstrap.Modal(document.getElementById('imageModal')).show();
-        }
-        
-        // Cleanup when leaving the page
-        window.addEventListener('beforeunload', function() {
-            if (syncCheckInterval) clearInterval(syncCheckInterval);
-            if (ws && wsConnected) {
-                ws.onclose = null; // Prevent reconnection attempts
-                ws.close();
+            if (form && messageInput.value.trim()) {
+                form.dispatchEvent(new Event('submit', {cancelable: true}));
             }
         });
 
-        function checkForUpdates() {
-            // Get the ticket ID directly from the keyid parameter in the URL
-            var ticketId = <?php echo json_encode(isset($_GET['keyid']) ? trim($_GET['keyid']) : ''); ?>;
-                        
-            // Only proceed if we have a valid ticket ID
-            if (!ticketId) {
-                return;
+        // Function to show image in modal
+        function showImage(imageUrl) {
+            const modalImage = document.getElementById('modalImage');
+            if (modalImage) {
+                modalImage.src = imageUrl;
+                new bootstrap.Modal(document.getElementById('imageModal')).show();
             }
-            
-            // Use the actual ticket ID from PHP (more reliable)
-            ticketId = '<?php echo $ticket_id; ?>';
-            
-            var deviceId = getDeviceId();
-            var lastCheck = localStorage.getItem('lastSyncCheck_' + ticketId) || getCurrentDateTime();
-            
-            // Create the URL manually with proper encoding
-            var url = 'silent_sync.php' +
-                '?ticketId=' + encodeURIComponent(ticketId) +
-                '&deviceId=' + encodeURIComponent(deviceId) +
-                '&lastCheck=' + encodeURIComponent(lastCheck) +
-                '&_=' + new Date().getTime();
-            
-            $.ajax({
-                url: url,
-                type: 'GET',
-                success: function(data) {
-                    if (data.error) {
-                        return;
-                    }
-                    
-                    if (data.hasNewMessages && data.messages && data.messages.length > 0) {
-                        // Process new messages
-                        const messagesToProcess = [];
-                        
-                        // Filter out duplicate messages
-                        data.messages.forEach(message => {
-                            const messageId = message.messageId || 
-                                `${message.user}-${message.CommentTime}-${message.Message?.substring(0, 20)}`;
-                                
-                            if (!processedMessageIds.has(messageId)) {
-                                processedMessageIds.add(messageId);
-                                messagesToProcess.push(message);
-                            }
-                        });
-                        
-                        if (messagesToProcess.length > 0) {
-                            // Process the unique messages
-                            processNewMessages(messagesToProcess);
-                            
-                            // Update the last message timestamp if newer messages were found
-                            messagesToProcess.forEach(message => {
-                                if (message.CommentTime && message.CommentTime > lastCheck) {
-                                    lastCheck = message.CommentTime;
-                                    localStorage.setItem('lastSyncCheck_' + ticketId, lastCheck);
-                                }
-                            });
-                        }
-                    }
-                    
-                    // Check if ticket status has changed
-                    if (data.statusChanged) {
-                        location.reload();
-                    }
-                    
-                    // Schedule the next check
-                    setTimeout(checkForUpdates, 1000);
-                },
-                error: function() {
-                    // Silent error handling
-                    setTimeout(checkForUpdates, 5000);
-                }
-            });
         }
-        
-        // Helper function to get current date time in MySQL format
-        function getCurrentDateTime() {
-            const now = new Date();
-            return now.getFullYear() + '-' + 
-                  String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                  String(now.getDate()).padStart(2, '0') + ' ' + 
-                  String(now.getHours()).padStart(2, '0') + ':' + 
-                  String(now.getMinutes()).padStart(2, '0') + ':' + 
-                  String(now.getSeconds()).padStart(2, '0');
+
+        // Function to update WebSocket connection status indicator
+        function updateWebSocketStatus(isConnected) {
+            // Simply update the connection status variable
+            wsConnected = isConnected;
+            console.log("WebSocket connection status: " + (isConnected ? "connected" : "disconnected"));
         }
-        
-        // Helper for device ID - reuse the existing function
-        function getDeviceId() {
-            return deviceId || generateDeviceId(); 
+
+        // Function to close a ticket
+        function fecharTicket(id) {
+            if (confirm('Tem certeza que deseja fechar este ticket?')) {
+                window.location.href = 'admin/processar_alteracao.php?id=' + id + '&Status=Concluído';
+            }
         }
     </script>
+
+    <!-- Include the WebSocket client script -->
+    <script src="js/websocket-client.js"></script>
 </body>
 </html>
+

@@ -16,6 +16,36 @@ Este é um sistema de HelpDesk desenvolvido exclusivamente para os clientes da I
 - **Frontend:** HTML, CSS (Bootstrap), JavaScript
 - **Backend:** PHP
 - **Base de Dados:** MySQL
+- **Comunicação em Tempo Real:** WebSockets
+
+## Sistema de Chat
+
+O sistema inclui um chat em tempo real baseado em WebSockets que permite a comunicação instantânea entre os clientes e a equipe de suporte. 
+
+### Características do Chat
+
+- **Mensagens em Tempo Real:** Comunicação instantânea sem necessidade de recarregar a página
+- **Persistência de Dados:** Todas as mensagens são salvas no banco de dados
+- **Sistema de Fallback:** Caso os WebSockets não estejam disponíveis, o sistema volta automaticamente para sincronização baseada em arquivos
+- **Auto-recuperação:** O servidor WebSocket se reinicia automaticamente em caso de falha
+
+### Gestão do Servidor WebSocket
+
+Para administradores, o sistema oferece ferramentas para monitorar e gerenciar o servidor WebSocket:
+
+- **Monitor de Sistema:** Visualize o status do sistema de chat em tempo real
+- **Diagnóstico:** Ferramentas para diagnosticar problemas no servidor
+- **Registro de Eventos:** Logs detalhados de atividade do servidor
+
+Para iniciar o servidor WebSocket manualmente, execute:
+```bash
+php ws-server.php
+```
+
+Ou use o script batch no Windows:
+```bash
+start-ws-server.bat
+```
 
 ## Estrutura do Projeto
 
