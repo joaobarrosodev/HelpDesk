@@ -13,8 +13,8 @@ if (isset($_GET['keyid'])) {
     $keyid_sem_hash = str_replace('#', '', $keyid);
 
     // Consultar os detalhes do ticket
-    $sql = "SELECT free.KeyId, free.id, free.Name, info.Description, info.Priority, info.Status, 
-            info.CreationUser, info.CreationDate, info.dateu, info.image, internal.User, 
+    $sql = "SELECT free.KeyId, free.id, free.Name, info.Description, info.Priority, info.Status,
+            info.CreationUser, info.CreationDate, info.dateu, info.image, internal.User,
             u.Name as atribuido_a, internal.Time, internal.Description as Descr, internal.info
             FROM xdfree01 free
             LEFT JOIN info_xdfree01_extrafields info ON free.KeyId = info.XDFree01_KeyID
@@ -32,7 +32,7 @@ if (isset($_GET['keyid'])) {
         echo "Ticket não encontrado.";
         exit;
     }
-    
+
     // TODO:
 
     $ticket_id = $ticket['KeyId'];
@@ -97,12 +97,12 @@ function getStatusColor($status) {
     .message.new-message {
         animation: fadeIn 0.5s;
     }
-    
+
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    
+
     .close-ticket-btn {
         background-color: #dc3545;
         color: white;
@@ -114,11 +114,11 @@ function getStatusColor($status) {
         gap: 8px;
         transition: background-color 0.3s;
     }
-    
+
     .close-ticket-btn:hover {
         background-color: #c82333;
     }
-    
+
     .admin-controls {
         background-color: #f8f9fa;
         border-radius: 8px;
@@ -126,32 +126,32 @@ function getStatusColor($status) {
         margin-bottom: 20px;
         border: 1px solid #e9ecef;
     }
-    
+
     .admin-controls h5 {
         margin-top: 0;
         color: #495057;
         margin-bottom: 15px;
     }
-    
+
     .admin-controls .form-group {
         margin-bottom: 15px;
     }
-    
+
     .admin-controls-header {
         transition: all 0.3s ease;
         padding: 8px 0;
         border-radius: 4px;
     }
-    
+
     .admin-controls-header:hover {
         background-color: #f0f0f0;
         padding-left: 8px;
     }
-    
+
     .toggle-icon {
         transition: transform 0.3s ease;
     }
-    
+
     .collapsed .toggle-icon {
         transform: rotate(-90deg);
     }
@@ -172,7 +172,7 @@ function getStatusColor($status) {
 </div>
 <body>
     <?php include('menu.php'); ?>
-    
+
     <div class="content chat-container">
         <div class="chat-header">
             <div>
@@ -188,23 +188,21 @@ function getStatusColor($status) {
         </div>
       <!-- Admin controls section -->
 <div class="admin-controls">
-    <a href="javascript:void(0);" class="d-flex align-items-center justify-content-between admin-controls-header" 
-       data-bs-toggle="collapse" 
-       data-bs-target="#adminInfo" 
-       aria-expanded="true" 
-       aria-controls="adminInfo" 
+    <a href="javascript:void(0);" class="d-flex align-items-center justify-content-between admin-controls-header collapsed"
+       aria-expanded="false"
+       aria-controls="adminInfo"
        style="cursor: pointer; text-decoration: none; color: inherit;">
         <h5 class="m-0">Informações Administrativas</h5>
         <i class="bi bi-chevron-down toggle-icon"></i>
     </a>
-    <div class="collapse show" id="adminInfo">
+    <div class="collapse" id="adminInfo">
         <div class="row mt-3">
             <div class="col-md-6">
                 <div class="form-group">
                     <label class="form-label">Atribuído a:</label>
                     <div class="form-control bg-light"><?php echo !empty($ticket['atribuido_a']) ? $ticket['atribuido_a'] : 'Não atribuído'; ?></div>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">Tempo despendido:</label>
                     <div class="form-control bg-light"><?php echo !empty($ticket['Time']) ? $ticket['Time'] : 'Não registrado'; ?></div>
@@ -215,24 +213,23 @@ function getStatusColor($status) {
                     <label class="form-label">Detalhes Internos:</label>
                     <div class="form-control bg-light" style="height: auto; min-height: 60px;"><?php echo !empty($ticket['Descr']) ? $ticket['Descr'] : 'Sem detalhes'; ?></div>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">Informações Extra:</label>
                     <div class="form-control bg-light" style="height: auto; min-height: 60px;"><?php echo !empty($ticket['info']) ? $ticket['info'] : 'Sem informações extras'; ?></div>
                 </div>
             </div>
         </div>
-        <div class="flex-row d-flex">
-            <div class="d-flex justify-content-end">
-                <a href="alterar_tickets.php?keyid=<?php echo $ticket['id']; ?>" class="btn btn-primary">
-                    <i class="bi bi-pencil-square me-1"></i> Editar Ticket
-                </a>
-            </div>
+        <div class="d-flex justify-content-end mt-3">
             <?php if ($ticket['Status'] !== 'Concluído') { ?>
-                <button class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
-                    <i class="bi bi-x-circle"></i> Fechar Ticket
-                </button>
-            <?php } ?>
+                           <button class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
+                               <i class="bi bi-x-circle"></i> Fechar Ticket
+                           </button>
+                       <?php } ?>
+                        <a href="alterar_tickets.php?keyid=<?php echo $ticket['id']; ?>" class="btn btn-primary">
+                <i class="bi bi-pencil-square me-1"></i> Editar Ticket
+            </a>
+
         </div>
     </div>
 </div>
@@ -249,7 +246,7 @@ function getStatusColor($status) {
                 </p>
                 <?php } ?>
             </div>
-            
+
             <!-- Messages -->
             <?php
             if ($messages) {
@@ -258,7 +255,7 @@ function getStatusColor($status) {
                     $messageClass = $isUser ? 'message-user' : 'message-admin';
                     $userInitial = substr($message['user'], 0, 1);
                     $timestamp = date('H:i', strtotime($message['CommentTime']));
-                    
+
                     echo "<div class='message $messageClass'>";
                     echo "<p class='message-content'>" . nl2br($message['Message']) . "</p>";
                     echo "<div class='message-meta'>";
@@ -270,7 +267,7 @@ function getStatusColor($status) {
             }
             ?>
         </div>
-        
+
         <div class="chat-footer">
             <?php if ($ticket['Status'] !== 'Concluído') { ?>
                 <!-- Formulário para Enviar Nova Mensagem -->
@@ -290,7 +287,7 @@ function getStatusColor($status) {
                     <p class="text-muted m-0">Ticket fechado. Não é possível enviar novas mensagens.</p>
                 </div>
             <?php } ?>
-            
+
             <div class="d-flex justify-content-between mt-3">
                 <a href="consultar_tickets.php" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i> Voltar aos tickets
@@ -308,12 +305,12 @@ function getStatusColor($status) {
             messageInput.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = (this.scrollHeight) + 'px';
-                
+
                 // Enable/disable send button based on content
                 document.getElementById('sendButton').disabled = this.value.trim().length === 0;
             });
         }
-        
+
         // WebSocket connection
         let ws = null;
         const serverUrl = 'ws://' + window.location.hostname + ':8080';
@@ -340,7 +337,6 @@ function getStatusColor($status) {
             return id;
         }
 
-        // Initialize WebSocket connection
         function initWebSocket() {
             // Don't try to reconnect too frequently
             const now = new Date().getTime();
@@ -507,7 +503,7 @@ function getStatusColor($status) {
             if (chatBody) {
                 chatBody.scrollTop = chatBody.scrollHeight;
             }
-            
+
             // Try to connect to WebSocket
             initWebSocket();
 
@@ -523,10 +519,35 @@ function getStatusColor($status) {
                 processedMessageIds.add(compositeId);
             });
 
-            // Toggle admin info section
-            document.querySelector('.admin-controls-header').addEventListener('click', function() {
-                this.classList.toggle('collapsed');
-            });
+            // Configuração adequada do acordeão
+            const accordionHeader = document.querySelector('.admin-controls-header');
+            const accordionContent = document.getElementById('adminInfo');
+
+            // Adicionamos a classe 'collapsed' por padrão e garantimos que começa fechado
+            if (accordionHeader && accordionContent) {
+                // Garantir que o ícone comece na posição correta
+                if (!accordionContent.classList.contains('show')) {
+                    accordionHeader.classList.add('collapsed');
+                }
+
+                // Manipulação manual do colapso para controlar a classe 'show'
+                accordionHeader.addEventListener('click', function(e) {
+                    e.preventDefault(); // Prevenir comportamento padrão do link
+
+                    // Alternar a classe 'show' manualmente
+                    if (accordionContent.classList.contains('show')) {
+                        accordionContent.classList.remove('show');
+                        accordionHeader.classList.add('collapsed');
+                        accordionHeader.setAttribute('aria-expanded', 'false');
+                    } else {
+                        accordionContent.classList.add('show');
+                        accordionHeader.classList.remove('collapsed');
+                        accordionHeader.setAttribute('aria-expanded', 'true');
+                    }
+
+                    return false; // Cancelar a ação padrão
+                });
+            }
         });
 
         // Function to check for sync files
@@ -747,7 +768,7 @@ function getStatusColor($status) {
                 console.error("Failed to save message:", error);
             });
         }
-        
+
         // Submit form with animation
         document.getElementById('chatForm')?.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -766,16 +787,16 @@ function getStatusColor($status) {
                 `;
                 chatBody.appendChild(messageDiv);
                 chatBody.scrollTop = chatBody.scrollHeight;
-                
+
                 // Reset textarea
                 const messageToSend = message; // Store message before resetting input
                 messageInput.value = '';
                 messageInput.style.height = 'auto';
                 document.getElementById('sendButton').disabled = true;
-                
+
                 // Always use AJAX to ensure database persistence
                 const formData = new FormData(this);
-                
+
                 // Ensure we're sending the right message (in case the form was cleared too early)
                 if (!formData.get('message')) {
                     formData.set('message', messageToSend);
@@ -865,4 +886,3 @@ function getStatusColor($status) {
     </script>
 </body>
 </html>
-
