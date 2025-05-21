@@ -78,7 +78,7 @@
             </div>
         </div>
         <a href="logout.php" class="btn btn-danger w-100 mt-3 d-flex align-items-center justify-content-center">
-            <i class="bi bi-power me-2"></i> Terminar Sessão
+            Terminar Sessão
         </a>
     </div>
     <?php endif; ?>

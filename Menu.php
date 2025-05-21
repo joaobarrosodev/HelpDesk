@@ -135,7 +135,7 @@
             </div>
         </a>
         <div class="px-2 mb-3">
-            <a href="logout.php" class="btn btn-danger text-white w-100 d-flex align-items-center justify-content-between py-2 px-3" role="button">
+            <a href="logout.php" class="btn btn-danger w-100 d-flex align-items-center justify-content-center" role="button">
                 <span>Terminar Sessão</span> 
             </a>
         </div>
