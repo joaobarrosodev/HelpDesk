@@ -3949,3 +3949,20 @@ PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsCo
 
 Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
 Client 1231 subscribed to ticket #023
+Connection 1228 disconnected
+Connection 1231 disconnected
+New connection: 1234
+Message from 1234: {"action":"subscribe","ticketId":"#023","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 1234 subscribed to ticket #023
+New connection: 1237
+Message from 1237: {"action":"subscribe","ticketId":"#023","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 1237 subscribed to ticket #023
+Connection 1237 disconnected
+Message from 1234: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747928565372}
+Message from 1234: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1747928595384}
