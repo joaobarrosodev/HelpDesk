@@ -201,12 +201,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     }
                 }
                 
-                if (response.caminho) {
+                // Check if upload was successful and update the hidden field
+                if (response.success && response.caminho) {
                     document.getElementById("imagem_path").value = response.caminho;
+                    console.log("Imagem carregada com sucesso:", response.caminho);
                 } else {
-                    console.error("Erro ao processar imagem:", response.erro);
+                    console.error("Erro ao processar imagem:", response.erro || "Erro desconhecido");
+                    // Show error notification
+                    alert("Erro ao carregar imagem: " + (response.erro || "Erro desconhecido"));
+                    // Remove the file preview
+                    this.removeFile(file);
                 }
+            },
+            error: function(file, errorMessage) {
+                console.error("Dropzone error:", errorMessage);
+                alert("Erro ao carregar imagem: " + errorMessage);
+                this.removeFile(file);
             }
+        });
+        
+        // Remove image from form when remove link is clicked
+        dropzone.on("removedfile", function() {
+            document.getElementById("imagem_path").value = "";
         });
 
         // Função para selecionar prioridade

@@ -95,7 +95,7 @@ $userCounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 echo "5. Ticket counts by assignee:\n";
 foreach($userCounts as $user) {
-    $userName = !empty($user['user_name']) ? $user['user_name'] : 'Não atribuído';
+    $userName = !empty($user['user_name']) ? $user['user_name'] : 'Ninguém';
     echo "- " . $userName . " (ID: " . $user['user_id'] . "): " . $user['count'] . " tickets\n";
 }
 

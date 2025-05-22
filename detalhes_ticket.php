@@ -171,7 +171,7 @@ function getStatusColor($status) {
     <div class="content chat-container">
         <div class="chat-header">
             <div>
-                <h1 class="chat-title">A falar com <?php echo !empty($ticket['atribuido_a']) ? $ticket['atribuido_a'] : 'Não atribuído'; ?></h1>
+                <h1 class="chat-title">A falar com <?php echo !empty($ticket['atribuido_a']) ? $ticket['atribuido_a'] : 'Ninguém'; ?></h1>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span id="ticket-status" class="badge bg-<?php echo getStatusColor($ticket['Status']); ?>">
@@ -190,7 +190,7 @@ function getStatusColor($status) {
                 <p><strong>Criado em:</strong> <?php echo $ticket['CreationDate']; ?></p>
                 <?php if (!empty($ticket['image'])) { ?>
                 <p><strong>Imagem:</strong>
-                    <img src="<?php echo $ticket['image']; ?>" alt="Imagem do Ticket" class="message-image" onclick="showImage('<?php echo $ticket['image']; ?>')">
+                    <img src="<?php echo $ticket['image']; ?>" alt="Imagem do Ticket" class="message-image" style="max-width: 200px; cursor: pointer;" onclick="showImage('<?php echo $ticket['image']; ?>')">
                 </p>
                 <?php } ?>
                 <?php if (!empty($ticket['Time'])) { ?>

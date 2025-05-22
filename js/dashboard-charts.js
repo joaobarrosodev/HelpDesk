@@ -10,13 +10,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     label: 'Tickets por Categoria',
                     data: categoriaCounts,
                     backgroundColor: [
-                        '#529ebe', // E-mail (example color)
-                        '#28a745', // XD (example color)
-                        '#ffc107', // Impressoras (example color)
-                        '#dc3545', // Office (example color)
-                        '#6f42c1', // Other categories if any
-                        '#fd7e14',
-                        '#20c997'
+                        '#87CEEB', // E-mail (light sky blue)
+'#90EE90', // XD (light green)
+'#FFE135', // Impressoras (light yellow)
+'#FFB6C1', // Office (light pink)
+'#DDA0DD', // Other categories (light plum)
+'#FFAB91', // Light orange
+'#B2DFDB', // Light teal
+'#F0E68C', // Light khaki
+'#E6E6FA'  // Light lavender
                     ],
                     hoverOffset: 4
                 }]

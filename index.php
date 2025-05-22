@@ -221,12 +221,14 @@ include('conflogin.php');
                         label: 'Categoria dos Tickets',
                         data: <?php echo json_encode($categoria_counts); ?>,
                         backgroundColor: [
-                            '#28a745', // Green
-                            '#529ebe', // Blue
-                            '#ffc107', // Yellow
-                            '#dc3545', // Red
-                            '#6f42c1', // Purple
-                            '#fd7e14'  // Orange
+                            '#4A90E2', // Medium blue
+                            '#7ED321', // Medium green
+                            '#F5A623', // Medium orange/yellow
+                            '#D0021B', // Medium red
+                            '#9013FE', // Medium purple
+                            '#FF6B35', // Medium orange
+                            '#50E3C2', // Medium teal
+                            '#BD10E0'  // Medium magenta
                         ],
                         borderColor: '#fff',
                         borderWidth: 5
