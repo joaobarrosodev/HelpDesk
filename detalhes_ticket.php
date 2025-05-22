@@ -194,7 +194,6 @@ function getStatusColor($status) {
                 </p>
                 <?php } ?>
                 <?php if (!empty($ticket['Time'])) { ?>
-                <p><strong>Tempo despendido:</strong> <?php echo $ticket['Time']; ?></p>
                 <?php } ?>
             </div>
             
@@ -311,7 +310,6 @@ function getStatusColor($status) {
                 }
                 
                 ws = new WebSocket(serverUrl);
-                
                 ws.onopen = function() {
                     wsConnected = true;
                     wsReconnectAttempts = 0;
@@ -491,7 +489,6 @@ function getStatusColor($status) {
             // Encode the ticket ID properly for URL
             const encodedTicketId = encodeURIComponent(ticketId);
             
-            // Use silent_sync.php instead of check_sync.php to avoid logging
             fetch('silent_sync.php?ticketId=' + encodedTicketId + 
                   '&deviceId=' + encodeURIComponent(deviceId) + 
                   '&lastCheck=' + encodeURIComponent(lastMessageTimestamp) + 
@@ -744,7 +741,7 @@ function getStatusColor($status) {
                 .then(data => {
                     console.log("Message saved successfully");
 
-                    // Only try WebSocket after successful database save
+                   // Only try WebSocket after successful database save
                     if (wsConnected) {
                         const messageObj = {
                             Message: messageToSend,
@@ -758,6 +755,13 @@ function getStatusColor($status) {
 
                         sendWebSocketMessage(messageObj, '<?php echo $ticket_id; ?>');
                     }
+
+                    // Remove the preview message after a short delay
+                    setTimeout(() => {
+                        if (messageDiv.parentNode) {
+                            messageDiv.parentNode.removeChild(messageDiv);
+                        }
+                    }, 2000);   
                 })
                 .catch(error => {
                     console.error("Error saving message:", error);

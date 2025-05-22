@@ -1,36 +1,37 @@
 <?php
-    // Conexão com a base de dados
-    $host = '127.0.0.1'; // Endereço do banco de dados
-    $dbname = 'xd'; // Nome do banco de dados
-    $username = 'root'; // Nome de usuário do MySQL
-    $password = ''; // Senha do MySQL
-    $port = '3306';  // Porta do MySQL
+// Include database logger if it exists
+if (file_exists(__DIR__ . '/db-log.php')) {
+    require_once __DIR__ . '/db-log.php';
+    db_log('Database connection initialized');
+}
 
-    try {
-        // Set connection timeout options
-        $options = array(
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_TIMEOUT => 3, // 3 seconds timeout
-            PDO::ATTR_PERSISTENT => false
-        );
-        
-        $pdo = new PDO("mysql:host=$host;dbname=$dbname;port=$port", $username, $password, $options);
-        // Success message for debug only - comment out in production
-        // echo "<span style='color:green;'>Database connection successful</span>";
-        
-    } catch (PDOException $e) {
-        // Display user-friendly error message
-        echo "<div class='alert alert-danger'>
-                <strong>Database Error:</strong> Unable to connect to the database server.<br>
-                Please verify the database server is running and try again later.<br>
-                <small>Details: " . $e->getMessage() . "</small>
-              </div>";
-        
-        // Log the error to a file (optional)
-        $error_log = 'db_error_log.txt';
-        $message = date('Y-m-d H:i:s') . ' - ' . $e->getMessage() . "\n";
-        file_put_contents($error_log, $message, FILE_APPEND);
-        
-        // Don't die, just continue without DB functionality
+// Conexão com a base de dados
+$host = '127.0.0.1'; // Endereço do banco de dados
+$dbname = 'xd'; // Nome do banco de dados
+$username = 'root'; // Nome de usuário do MySQL
+$password = ''; // Senha do MySQL
+$port = '3306';  // Porta do MySQL
+
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;port=$port;charset=utf8mb4", $username, $password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false
+    ]);
+    
+    // Log successful connection if db-log.php exists
+    if (function_exists('db_log')) {
+        db_log('Database connection established successfully');
     }
+} catch (PDOException $e) {
+    // Log the error if db-log.php exists
+    if (function_exists('db_log')) {
+        db_log('Database connection failed', ['error' => $e->getMessage()]);
+    }
+    
+    // Log to error log
+    error_log('Database Connection Error: ' . $e->getMessage());
+    
+    die("Erro ao conectar: " . $e->getMessage());
+}
 ?>

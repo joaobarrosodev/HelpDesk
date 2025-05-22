@@ -1,40 +1,20 @@
 <?php
-/**
- * Simple helper to create temp directory for WebSocket messages
- */
-
+// Simple script to create the temp directory
 header('Content-Type: application/json');
 
 $tempDir = __DIR__ . DIRECTORY_SEPARATOR . 'temp';
-$result = ['success' => false];
+$result = ['success' => false, 'message' => ''];
 
 if (!file_exists($tempDir)) {
     $created = @mkdir($tempDir, 0777, true);
-    $result['created'] = $created;
     if ($created) {
         @chmod($tempDir, 0777);
-        $result['success'] = true;
-        $result['message'] = 'Temp directory created successfully';
+        $result = ['success' => true, 'message' => 'Temp directory created'];
     } else {
-        $result['error'] = 'Failed to create temp directory';
-        $result['path'] = $tempDir;
+        $result = ['success' => false, 'message' => 'Failed to create temp directory'];
     }
 } else {
-    $result['success'] = true;
-    $result['message'] = 'Temp directory already exists';
-    
-    // Check if directory is writable
-    $result['writable'] = is_writable($tempDir);
-    
-    // Try to create a test file
-    $testFile = $tempDir . DIRECTORY_SEPARATOR . 'test_' . time() . '.txt';
-    $writeTest = @file_put_contents($testFile, 'Test');
-    $result['writeTest'] = ($writeTest !== false);
-    
-    if ($writeTest !== false) {
-        // Clean up test file
-        @unlink($testFile);
-    }
+    $result = ['success' => true, 'message' => 'Temp directory already exists'];
 }
 
 echo json_encode($result);

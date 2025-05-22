@@ -259,6 +259,46 @@ function getStatusColor($status)
     .message-image:hover {
         transform: scale(1.02);
     }
+
+    .ticket-closed-info {
+        margin-top: 20px;
+    }
+
+    .resolution-summary {
+        margin-top: 20px;
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .resolution-summary .card {
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .resolution-summary .card-header {
+        border-radius: 8px 8px 0 0;
+        font-weight: 500;
+    }
+
+    .resolution-summary .card-body {
+        padding: 1.5rem;
+    }
+
+    .resolution-summary .card-text {
+        font-size: 1rem;
+        line-height: 1.6;
+        margin-bottom: 0;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 
 <!-- Modal para Exibir Imagem -->
@@ -312,28 +352,24 @@ function getStatusColor($status)
                 <i class="bi bi-chevron-down toggle-icon"></i>
             </a>
             <div class="collapse" id="adminInfo">
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <!-- Status Update Form -->
-                        <div class="form-group mb-3">
-                            <label for="status" class="form-label">Estado</label>
-                            <div class="d-flex gap-2">
+                <form id="adminUpdateForm">
+                    <input type="hidden" name="keyid" value="<?php echo htmlspecialchars($ticket_id); ?>">
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <!-- Status Update Form -->
+                            <div class="form-group mb-3">
+                                <label for="status" class="form-label">Estado</label>
                                 <select id="status" name="status" class="form-select" data-original-value="<?php echo htmlspecialchars($ticket['Status']); ?>">
                                     <option value="Em Análise" <?php echo ($ticket['Status'] == 'Em Análise') ? 'selected' : ''; ?>>Em Análise</option>
                                     <option value="Em Resolução" <?php echo ($ticket['Status'] == 'Em Resolução') ? 'selected' : ''; ?>>Em Resolução</option>
                                     <option value="Aguarda Resposta" <?php echo ($ticket['Status'] == 'Aguarda Resposta') ? 'selected' : ''; ?>>Aguarda Resposta</option>
                                     <option value="Concluído" <?php echo ($ticket['Status'] == 'Concluído') ? 'selected' : ''; ?>>Concluído</option>
                                 </select>
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="updateField('status')">
-                                    <i class="bi bi-save"></i>
-                                </button>
                             </div>
-                        </div>
 
-                        <!-- Assigned User Update Form -->
-                        <div class="form-group mb-3">
-                            <label for="assigned_user" class="form-label">Atribuído a:</label>
-                            <div class="d-flex gap-2">
+                            <!-- Assigned User Update Form -->
+                            <div class="form-group mb-3">
+                                <label for="assigned_user" class="form-label">Atribuído a:</label>
                                 <select id="assigned_user" name="assigned_user" class="form-select" data-original-value="<?php echo htmlspecialchars($ticket['User']); ?>">
                                     <option value="">Selecione um responsável</option>
                                     <?php foreach ($users as $user): ?>
@@ -342,70 +378,57 @@ function getStatusColor($status)
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="updateField('assigned_user')">
-                                    <i class="bi bi-save"></i>
-                                </button>
                             </div>
-                        </div>
 
-                        <!-- Resolution Time Update Form -->
-                        <div class="form-group mb-3">
-                            <label for="resolution_time" class="form-label">Tempo de Resolução (minutos)</label>
-                            <div class="d-flex gap-2">
+                            <!-- Resolution Time Update Form -->
+                            <div class="form-group mb-3">
+                                <label for="resolution_time" class="form-label">Tempo de Resolução (minutos)</label>
                                 <input type="number" id="resolution_time" name="resolution_time" class="form-control" 
                                        min="1" step="1" placeholder="Ex: 90" 
                                        value="<?php echo !empty($ticket['Time']) ? htmlspecialchars($ticket['Time']) : ''; ?>"
                                        data-original-value="<?php echo !empty($ticket['Time']) ? htmlspecialchars($ticket['Time']) : ''; ?>">
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="updateField('resolution_time')">
-                                    <i class="bi bi-save"></i>
-                                </button>
+                                <small class="text-muted">Insira o tempo total em minutos (ex: 90 para 1 hora e 30 minutos)</small>
                             </div>
-                            <small class="text-muted">Insira o tempo total em minutos (ex: 90 para 1 hora e 30 minutos)</small>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <!-- Resolution Description Update Form -->
-                        <div class="form-group mb-3">
-                            <label for="resolution_description" class="form-label">Descrição da Resolução</label>
-                            <div class="d-flex flex-column gap-2">
+                        <div class="col-md-6">
+                            <!-- Resolution Description Update Form -->
+                            <div class="form-group mb-3">
+                                <label for="resolution_description" class="form-label">Descrição da Resolução</label>
                                 <textarea id="resolution_description" name="resolution_description" class="form-control" rows="3" 
                                           data-original-value="<?php echo htmlspecialchars($ticket['Descr'] ?? ''); ?>"><?php echo !empty($ticket['Descr']) ? htmlspecialchars($ticket['Descr']) : ''; ?></textarea>
-                                <button type="button" class="btn btn-sm btn-outline-primary align-self-end" onclick="updateField('resolution_description')">
-                                    <i class="bi bi-save"></i> Guardar
-                                </button>
+                                <small class="text-muted">Descreva a solução aplicada para resolver o problema (visível ao cliente)</small>
                             </div>
-                            <small class="text-muted">Descreva a solução aplicada para resolver o problema (visível ao cliente)</small>
-                        </div>
 
-                        <!-- Extra Info Update Form -->
-                        <div class="form-group mb-3">
-                            <label for="extra_info" class="form-label">Informação Extra (Interna)</label>
-                            <div class="d-flex flex-column gap-2">
+                            <!-- Extra Info Update Form -->
+                            <div class="form-group mb-3">
+                                <label for="extra_info" class="form-label">Informação Extra (Interna)</label>
                                 <textarea id="extra_info" name="extra_info" class="form-control" rows="3" 
                                           data-original-value="<?php echo htmlspecialchars($ticket['info'] ?? ''); ?>"><?php echo !empty($ticket['info']) ? htmlspecialchars($ticket['info']) : ''; ?></textarea>
-                                <button type="button" class="btn btn-sm btn-outline-primary align-self-end" onclick="updateField('extra_info')">
-                                    <i class="bi bi-save"></i> Guardar
-                                </button>
+                                <small class="text-muted">Informações adicionais apenas para uso interno (não visível ao cliente)</small>
                             </div>
-                            <small class="text-muted">Informações adicionais apenas para uso interno (não visível ao cliente)</small>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Quick Actions -->
-                <div class="d-flex justify-content-between mt-3 pt-3 border-top">
-                    <?php if ($ticket['Status'] !== 'Concluído') { ?>
-                        <button type="button" class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
-                            <i class="bi bi-x-circle"></i> Fechar Ticket
-                        </button>
-                    <?php } else { ?>
-                        <div></div>
-                    <?php } ?>
                     
-                    <button type="button" class="btn btn-secondary" onclick="resetAllFields()">
-                        <i class="bi bi-arrow-clockwise me-1"></i> Restaurar Valores
-                    </button>
-                </div>
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between mt-3 pt-3 border-top">
+                        <?php if ($ticket['Status'] !== 'Concluído') { ?>
+                            <button type="button" class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
+                                <i class="bi bi-x-circle"></i> Fechar Ticket
+                            </button>
+                        <?php } else { ?>
+                            <div></div>
+                        <?php } ?>
+                        
+                        <div>
+                            <button type="submit" class="btn btn-success" id="saveChangesBtn">
+                                <i class="bi bi-save me-1"></i> Guardar Alterações
+                            </button>
+                            <button type="button" class="btn btn-secondary ms-2" onclick="cancelChanges()">
+                                <i class="bi bi-x me-1"></i> Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -463,8 +486,54 @@ function getStatusColor($status)
                 </div>
             </form>
         <?php } else { ?>
-            <div class="d-flex justify-content-center align-items-center py-3">
-                <p class="text-muted m-0">Ticket fechado. Não é possível enviar novas mensagens.</p>
+            <div class="ticket-closed-info">
+                <div class="d-flex justify-content-center align-items-center py-3 mb-3">
+                    <p class="text-muted m-0"><i class="bi bi-lock-fill me-2"></i>Ticket fechado. Não é possível enviar novas mensagens.</p>
+                </div>
+                
+                <?php if (!empty($ticket['Descr'])) { ?>
+                <div class="resolution-summary">
+                    <div class="card border-success">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="bi bi-check-circle-fill me-2"></i>Resolução do Ticket</h6>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="card-title text-success">Descrição da Resolução:</h6>
+                            <p class="card-text"><?php echo nl2br(htmlspecialchars($ticket['Descr'])); ?></p>
+                            
+                            <?php if (!empty($ticket['Time'])) { ?>
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    <i class="bi bi-clock me-1"></i>
+                                    Tempo de resolução: 
+                                    <strong>
+                                        <?php 
+                                        $hours = floor($ticket['Time'] / 60);
+                                        $minutes = $ticket['Time'] % 60;
+                                        if ($hours > 0) {
+                                            echo $hours . 'h';
+                                            if ($minutes > 0) echo ' ' . $minutes . 'min';
+                                        } else {
+                                            echo $minutes . ' minutos';
+                                        }
+                                        ?>
+                                    </strong>
+                                </small>
+                            </div>
+                            <?php } ?>
+                            
+                            <?php if (!empty($ticket['atribuido_a'])) { ?>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-person-fill me-1"></i>
+                                    Resolvido por: <strong><?php echo htmlspecialchars($ticket['atribuido_a']); ?></strong>
+                                </small>
+                            </div>
+                            <?php } ?>
+                        </div>
+                    </div>
+                </div>
+                <?php } ?>
             </div>
         <?php } ?>
 
@@ -851,8 +920,9 @@ function getStatusColor($status)
                                 CommentTime: new Date().toISOString(),
                                 deviceId: deviceId,
                                 messageId: 'admin_msg_' + new Date().getTime(),
-                                alreadySaved: true
+                                alreadySaved: true // Mark as already saved
                             };
+                            
                             sendWebSocketMessage(messageObj, '<?php echo $ticket_id; ?>');
                         }
                     })
@@ -917,45 +987,69 @@ function getStatusColor($status)
             }
         }
 
-        // Function to update individual fields
-        function updateField(fieldName) {
-            const field = document.getElementById(fieldName);
-            const originalValue = field.getAttribute('data-original-value') || '';
-            const currentValue = field.value.trim();
-
-            // Check if value has changed
-            if (currentValue === originalValue) {
-                alert('Nenhuma alteração foi feita neste campo.');
+        // Function to update all modified fields automatically
+        function updateAllModifiedFields() {
+            const form = document.getElementById('adminUpdateForm');
+            const formData = new FormData(form);
+            
+            // Get all fields that have been modified
+            const fields = ['status', 'assigned_user', 'resolution_time', 'resolution_description', 'extra_info'];
+            const modifiedFields = {};
+            let hasChanges = false;
+            
+            fields.forEach(fieldName => {
+                const field = document.getElementById(fieldName);
+                const originalValue = field.getAttribute('data-original-value') || '';
+                const currentValue = field.value.trim();
+                
+                if (currentValue !== originalValue) {
+                    modifiedFields[fieldName] = currentValue;
+                    hasChanges = true;
+                }
+            });
+            
+            if (!hasChanges) {
+                showNotification('Nenhuma alteração foi feita.', 'info');
                 return;
             }
-
+            
             // Validate specific fields
-            if (fieldName === 'resolution_time') {
-                if (isNaN(currentValue) || currentValue <= 0) {
-                    alert('O tempo de resolução deve ser um número positivo!');
+            if (modifiedFields.resolution_time !== undefined) {
+                if (isNaN(modifiedFields.resolution_time) || modifiedFields.resolution_time <= 0) {
+                    showNotification('O tempo de resolução deve ser um número positivo!', 'error');
                     return;
                 }
             }
-
-            // Show confirmation
-            if (!confirm(`Tem certeza que deseja atualizar o campo "${getFieldLabel(fieldName)}"?`)) {
-                return;
+            
+            // Special validation if status is being changed to "Concluído"
+            if (modifiedFields.status === 'Concluído') {
+                const currentResolutionTime = document.getElementById('resolution_time').value;
+                const currentDescription = document.getElementById('resolution_description').value;
+                const currentAssignedUser = document.getElementById('assigned_user').value;
+                
+                if (!currentResolutionTime || isNaN(currentResolutionTime) || currentResolutionTime <= 0) {
+                    showNotification('Para fechar um ticket, é necessário informar o tempo de resolução.', 'error');
+                    return;
+                }
+                
+                if (!currentDescription.trim()) {
+                    showNotification('Para fechar um ticket, é necessário fornecer uma descrição da resolução.', 'error');
+                    return;
+                }
+                
+                if (!currentAssignedUser) {
+                    showNotification('Para fechar um ticket, é necessário atribuí-lo a um responsável.', 'error');
+                    return;
+                }
             }
-
-            // Create form data for single field update
-            const formData = new FormData();
-            formData.append('keyid', '<?php echo htmlspecialchars($ticket_id); ?>');
-            formData.append('field_name', fieldName);
-            formData.append('field_value', currentValue);
-            formData.append('single_field_update', '1');
-
+            
             // Show loading state
-            const button = field.parentNode.querySelector('button');
-            const originalButtonHtml = button.innerHTML;
-            button.innerHTML = '<i class="bi bi-arrow-repeat spin"></i>';
-            button.disabled = true;
-
-            // Send update request
+            const saveButton = document.getElementById('saveChangesBtn');
+            const originalButtonHtml = saveButton.innerHTML;
+            saveButton.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Guardando...';
+            saveButton.disabled = true;
+            
+            // Send update request - use the existing form submission logic
             fetch('processar_alteracao.php', {
                 method: 'POST',
                 body: formData,
@@ -966,55 +1060,58 @@ function getStatusColor($status)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Update the original value attribute
-                    field.setAttribute('data-original-value', currentValue);
+                    // Update all original values to current values
+                    fields.forEach(fieldName => {
+                        const field = document.getElementById(fieldName);
+                        field.setAttribute('data-original-value', field.value.trim());
+                    });
                     
-                    // Show success message
-                    showNotification('Campo atualizado com sucesso!', 'success');
+                    showNotification('Alterações guardadas com sucesso!', 'success');
                     
                     // If status was updated, refresh the page to update the badge
-                    if (fieldName === 'status') {
+                    if (modifiedFields.status !== undefined) {
                         setTimeout(() => {
                             window.location.reload();
                         }, 1000);
                     }
                 } else {
-                    showNotification('Erro ao atualizar campo: ' + (data.message || 'Erro desconhecido'), 'error');
-                    // Reset field to original value
-                    field.value = originalValue;
+                    showNotification('Erro ao guardar alterações: ' + (data.message || 'Erro desconhecido'), 'error');
                 }
             })
             .catch(error => {
-                console.error('Error updating field:', error);
-                showNotification('Erro ao atualizar campo. Tente novamente.', 'error');
-                // Reset field to original value
-                field.value = originalValue;
+                console.error('Error updating fields:', error);
+                showNotification('Erro ao guardar alterações. Tente novamente.', 'error');
             })
             .finally(() => {
                 // Reset button state
-                button.innerHTML = originalButtonHtml;
-                button.disabled = false;
+                saveButton.innerHTML = originalButtonHtml;
+                saveButton.disabled = false;
             });
         }
 
-        // Function to get field label for display
-        function getFieldLabel(fieldName) {
-            const labels = {
-                'status': 'Estado',
-                'assigned_user': 'Responsável',
-                'resolution_time': 'Tempo de Resolução',
-                'resolution_description': 'Descrição da Resolução',
-                'extra_info': 'Informação Extra'
-            };
-            return labels[fieldName] || fieldName;
+        // Function to cancel changes and close admin section
+        function cancelChanges() {
+            // Reset all fields to original values
+            const fields = ['status', 'assigned_user', 'resolution_time', 'resolution_description', 'extra_info'];
+            fields.forEach(fieldName => {
+                const field = document.getElementById(fieldName);
+                const originalValue = field.getAttribute('data-original-value') || '';
+                field.value = originalValue;
+            });
+
+            // Close the admin section
+            const accordionContent = document.getElementById('adminInfo');
+            const accordionHeader = document.querySelector('.admin-controls-header');
+            
+            if (accordionContent && accordionHeader) {
+                accordionContent.classList.remove('show');
+                accordionHeader.classList.add('collapsed');
+                accordionHeader.setAttribute('aria-expanded', 'false');
+            }
         }
 
-        // Function to reset all fields to original values
+        // Function to reset all fields to original values (kept for compatibility)
         function resetAllFields() {
-            if (!confirm('Tem certeza que deseja restaurar todos os campos aos valores originais?')) {
-                return;
-            }
-
             const fields = ['status', 'assigned_user', 'resolution_time', 'resolution_description', 'extra_info'];
             fields.forEach(fieldName => {
                 const field = document.getElementById(fieldName);
@@ -1148,118 +1245,13 @@ function getStatusColor($status)
                 });
             }
 
-            // Handle cancel button - now just resets fields
-            const cancelEditBtn = document.getElementById('cancelEditBtn');
-            if (cancelEditBtn) {
-                // The cancel button no longer exists in the new design
-                // This section can be removed or repurposed
-            }
-
-            // Remove old form submission handling since we now use individual field updates
-            const updateTicketForm = document.getElementById('updateTicketForm');
-            if (updateTicketForm) {
-                // The form no longer exists in the new design
-                // This section can be removed
-            }
-
-            // File upload functionality
-            const chatForm = document.getElementById('chatForm');
-            if (chatForm) {
-                const chatInputContainer = chatForm.querySelector('.chat-input-container');
-                if (chatInputContainer) {
-                    // Add file upload button
-                    const fileUploadBtn = document.createElement('button');
-                    fileUploadBtn.type = 'button';
-                    fileUploadBtn.className = 'file-upload-button';
-                    fileUploadBtn.innerHTML = '<i class="bi bi-image"></i>';
-                    fileUploadBtn.title = 'Anexar imagem';
-
-                    // Create hidden file input
-                    const fileInput = document.createElement('input');
-                    fileInput.type = 'file';
-                    fileInput.id = 'fileInput';
-                    fileInput.name = 'fileInput';
-                    fileInput.accept = 'image/*';
-                    fileInput.style.display = 'none';
-
-                    // Add elements to form
-                    chatInputContainer.insertBefore(fileUploadBtn, document.getElementById('sendButton'));
-                    chatForm.appendChild(fileInput);
-
-                    // Handle file upload button click
-                    fileUploadBtn.addEventListener('click', function() {
-                        fileInput.click();
-                    });
-
-                    // Handle file selection
-                    fileInput.addEventListener('change', function() {
-                        if (this.files && this.files[0]) {
-                            const file = this.files[0];
-                            
-                            // Show loading indicator
-                            fileUploadBtn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i>';
-                            fileUploadBtn.disabled = true;
-
-                            // Create FormData to upload file
-                            const formData = new FormData();
-                            formData.append('file', file);
-
-                            // Upload file via AJAX
-                            fetch('upload_imagem.php', {
-                                method: 'POST',
-                                body: formData
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                // Reset button
-                                fileUploadBtn.innerHTML = '<i class="bi bi-image"></i>';
-                                fileUploadBtn.disabled = false;
-
-                                if (data.success) {
-                                    // Add image link to message input
-                                    const messageInput = document.getElementById('messageInput');
-                                    const imagePath = data.caminho;
-                                    
-                                    // Insert at cursor position or append
-                                    const currentText = messageInput.value;
-                                    const imageText = `[Imagem anexada](${imagePath})`;
-                                    
-                                    if (messageInput.selectionStart || messageInput.selectionStart === 0) {
-                                        const startPos = messageInput.selectionStart;
-                                        const endPos = messageInput.selectionEnd;
-                                        
-                                        messageInput.value = currentText.substring(0, startPos) + 
-                                                           imageText + 
-                                                           currentText.substring(endPos);
-                                        
-                                        // Set cursor position after inserted text
-                                        messageInput.selectionStart = startPos + imageText.length;
-                                        messageInput.selectionEnd = startPos + imageText.length;
-                                    } else {
-                                        messageInput.value += imageText;
-                                    }
-                                    
-                                    // Trigger input event to resize textarea
-                                    messageInput.dispatchEvent(new Event('input'));
-                                    messageInput.focus();
-                                } else {
-                                    // Show error
-                                    alert('Erro ao enviar imagem: ' + (data.erro || 'Erro desconhecido'));
-                                }
-                                
-                                // Reset file input
-                                fileInput.value = '';
-                            })
-                            .catch(error => {
-                                console.error('Upload error:', error);
-                                fileUploadBtn.innerHTML = '<i class="bi bi-image"></i>';
-                                fileUploadBtn.disabled = false;
-                                alert('Erro ao enviar imagem. Por favor, tente novamente.');
-                                fileInput.value = '';
-                            });
-                        }
-                    });
-                }
+            // Admin form submission handling
+            const adminUpdateForm = document.getElementById('adminUpdateForm');
+            if (adminUpdateForm) {
+                adminUpdateForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    updateAllModifiedFields();
+                });
             }
 
             // Update message processing to handle image markdown

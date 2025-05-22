@@ -3,7 +3,7 @@ session_start();
 header('Content-Type: application/json');
 
 // Security check without logging
-if (!isset($_SESSION['usuario_email'])) {
+if (!isset($_SESSION['usuario_email']) && !isset($_SESSION['admin_email'])) {
     echo json_encode(['error' => 'Unauthorized']);
     exit;
 }
@@ -44,6 +44,9 @@ $result = [
     'ticketId' => $ticketId
 ];
 
+// Track processed files to prevent re-processing
+$processedFiles = [];
+
 // Now check for sync files
 $syncFiles = glob(TEMP_DIR . DIRECTORY_SEPARATOR . "sync_{$cleanTicketId}_*.txt");
 
@@ -62,27 +65,71 @@ if ($ticketId !== $cleanTicketId && $ticketId !== $ticketIdWithHash) {
     }
 }
 
+// Remove duplicates and sort by creation time
+if (is_array($syncFiles)) {
+    $syncFiles = array_unique($syncFiles);
+    
+    // Sort by file modification time (oldest first)
+    usort($syncFiles, function($a, $b) {
+        return filemtime($a) - filemtime($b);
+    });
+}
+
 // Process sync files
 if (is_array($syncFiles)) {
     foreach ($syncFiles as $file) {
         if (file_exists($file) && is_readable($file)) {
-            // Only consider files that have been created in the last 60 seconds
+            // Only consider files that have been created in the last 300 seconds (5 minutes)
             $fileTime = @filemtime($file);
-            if ($fileTime && (time() - $fileTime < 60)) {
+            if ($fileTime && (time() - $fileTime < 300)) {
                 $content = @file_get_contents($file);
                 if ($content) {
                     $data = json_decode($content, true);
                     if ($data && isset($data['message'])) {
-                        // Don't include messages from this device
-                        $sourceDeviceId = isset($data['message']['sourceDeviceId']) ? $data['message']['sourceDeviceId'] : null;
-                        if (!$deviceId || $deviceId !== $sourceDeviceId) {
-                            $result['messages'][] = $data['message'];
-                            $result['hasNewMessages'] = true;
+                        $message = $data['message'];
+                        
+                        // SIMPLIFIED: Only skip if same device sent this message
+                        $sourceDeviceId = isset($message['sourceDeviceId']) ? $message['sourceDeviceId'] : null;
+                        
+                        // Only skip if this exact device sent this message
+                        if ($deviceId && $deviceId === $sourceDeviceId) {
+                            continue;
+                        }
+                        
+                        // Check if we already processed this message (by messageId)
+                        $messageId = isset($message['messageId']) ? $message['messageId'] : null;
+                        if ($messageId && in_array($messageId, $processedFiles)) {
+                            continue;
+                        }
+                        
+                        // Filter by timestamp if lastCheck is provided - but allow some overlap
+                        if ($lastCheck && isset($message['CommentTime'])) {
+                            $messageTime = strtotime($message['CommentTime']);
+                            $lastCheckTime = strtotime($lastCheck);
+                            
+                            // Allow 5 second overlap to prevent missing messages
+                            if ($messageTime < ($lastCheckTime - 5)) {
+                                continue;
+                            }
+                        }
+                        
+                        $result['messages'][] = $message;
+                        $result['hasNewMessages'] = true;
+                        
+                        if ($messageId) {
+                            $processedFiles[] = $messageId;
                         }
                     }
                 }
+                
+                // CHANGED: Don't delete sync file immediately, let it exist for a bit
+                // Only clean up after file is older than 2 minutes
+                if (time() - $fileTime > 120) {
+                    @unlink($file);
+                }
+                
             } else {
-                // Clean up old sync files
+                // Clean up old sync files (older than 5 minutes)
                 @unlink($file);
             }
         }
@@ -91,4 +138,3 @@ if (is_array($syncFiles)) {
 
 // No debug information added
 echo json_encode($result);
-?>

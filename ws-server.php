@@ -1,5 +1,8 @@
 <?php
 // WebSocket server for HelpDesk chat
+// Define CLI_MODE constant to differentiate between CLI and HTTP modes
+define('CLI_MODE', php_sapi_name() === 'cli');
+
 require 'vendor/autoload.php';
 
 use Ratchet\MessageComponentInterface;
@@ -82,7 +85,7 @@ class ChatServer implements MessageComponentInterface {
                     'ticketId' => $ticketId,
                     'success' => true
                 ]));
-            }            elseif ($data->action === 'newMessage' && isset($data->ticketId) && isset($data->message)) {
+            } elseif ($data->action === 'newMessage' && isset($data->ticketId) && isset($data->message)) {
                 // Broadcast message to all clients subscribed to this ticket
                 $this->logMessage("Broadcasting message to ticket {$data->ticketId}");
                 
@@ -94,8 +97,7 @@ class ChatServer implements MessageComponentInterface {
                 }
                 
                 $this->broadcastToTicket($data->ticketId, $data, $from->deviceId ?? null);
-            }
-            elseif ($data->action === 'ping') {
+            } elseif ($data->action === 'ping') {
                 // Respond to ping with pong
                 $from->send(json_encode([
                     'action' => 'pong', 
@@ -157,14 +159,15 @@ class ChatServer implements MessageComponentInterface {
             }
         }
     }
-      protected function logMessage($message) {
+
+    protected function logMessage($message) {
         $timestamp = date('Y-m-d H:i:s');
         echo "[$timestamp] $message\n";
         
         // Log to file
         file_put_contents(
             __DIR__ . '/ws-server.log', 
-            "$message\n", 
+            "[$timestamp] $message\n", 
             FILE_APPEND
         );
     }
@@ -175,10 +178,16 @@ class ChatServer implements MessageComponentInterface {
      * @param string $ticketId The ticket ID
      * @param object $messageData The message data object
      * @return bool Success status
-     */    protected function saveMessageToDatabase($ticketId, $messageData) {
+     */
+    protected function saveMessageToDatabase($ticketId, $messageData) {
         try {
-            // Include database configuration
-            require_once __DIR__ . '/db.php';
+            // Log the attempt to save
+            $this->logMessage("Attempting to save message to database for ticket {$ticketId}");
+            
+            // Include database configuration with absolute path
+            $dbPath = __DIR__ . '/db.php';
+            $this->logMessage("Loading database file from: {$dbPath}");
+            require_once $dbPath;
             
             // Check if database connection is valid
             if (!isset($pdo) || !($pdo instanceof PDO)) {
@@ -196,11 +205,29 @@ class ChatServer implements MessageComponentInterface {
             } catch (\Exception $e) {
                 $this->logMessage("Database test query failed: " . $e->getMessage());
                 return false;
-            }// Extract message data
-            $message = isset($messageData->Message) ? $messageData->Message : '';
-            $user = isset($messageData->user) ? $messageData->user : '';
-            $type = isset($messageData->type) ? $messageData->type : 1;
-            $date = isset($messageData->CommentTime) ? $messageData->CommentTime : date('Y-m-d H:i:s');
+            }
+            
+            // Extract message data - handle both object and array formats
+            if (is_object($messageData)) {
+                $message = isset($messageData->Message) ? $messageData->Message : '';
+                $user = isset($messageData->user) ? $messageData->user : '';
+                $type = isset($messageData->type) ? intval($messageData->type) : 1;
+                $date = isset($messageData->CommentTime) ? $messageData->CommentTime : date('Y-m-d H:i:s');
+            } else {
+                $message = isset($messageData['Message']) ? $messageData['Message'] : '';
+                $user = isset($messageData['user']) ? $messageData['user'] : '';
+                $type = isset($messageData['type']) ? intval($messageData['type']) : 1;
+                $date = isset($messageData['CommentTime']) ? $messageData['CommentTime'] : date('Y-m-d H:i:s');
+            }
+            
+            // Log the message data for debugging
+            $this->logMessage("Message data: " . json_encode([
+                'message' => $message,
+                'user' => $user,
+                'type' => $type,
+                'date' => $date,
+                'ticketId' => $ticketId
+            ]));
             
             // Skip if any required field is missing
             if (empty($message) || empty($user) || empty($ticketId)) {
@@ -228,7 +255,7 @@ class ChatServer implements MessageComponentInterface {
             
             // Insert the message into the database
             $stmt = $pdo->prepare("INSERT INTO comments_xdfree01_extrafields (XDFree01_KeyID, Message, Date, user, type) 
-                                  VALUES (:keyid, :message, :date, :user, :type)");
+                                VALUES (:keyid, :message, :date, :user, :type)");
             
             $stmt->bindParam(':keyid', $ticketId);
             $stmt->bindParam(':message', $message);
@@ -239,14 +266,15 @@ class ChatServer implements MessageComponentInterface {
             $result = $stmt->execute();
             
             if ($result) {
-                $this->logMessage("Message saved to database for ticket {$ticketId}");
+                $insertId = $pdo->lastInsertId();
+                $this->logMessage("Message saved to database for ticket {$ticketId} with ID {$insertId}");
                 return true;
             } else {
-                $this->logMessage("Failed to save message to database");
+                $this->logMessage("Failed to save message to database: " . json_encode($stmt->errorInfo()));
                 return false;
             }
         } catch (\Exception $e) {
-            $this->logMessage("Database error: " . $e->getMessage());
+            $this->logMessage("Database error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
             return false;
         }
     }
@@ -258,15 +286,107 @@ if (!file_exists($tempDir)) {
     mkdir($tempDir, 0777, true);
 }
 
-// Create and run the WebSocket server
-$server = IoServer::factory(
-    new HttpServer(
-        new WsServer(
-            new ChatServer()
-        )
-    ),
-    8080
-);
-
-echo "WebSocket server running at 0.0.0.0:8080\n";
-$server->run();
+// Handle HTTP requests when not in CLI mode
+if (!CLI_MODE) {
+    // This is a simple HTTP endpoint handler to process messages sent via HTTP
+    if (isset($_SERVER['REQUEST_URI'])) {
+        // Handle the /send-message route
+        if ($_SERVER['REQUEST_URI'] === '/send-message' || strpos($_SERVER['REQUEST_URI'], '/send-message?') === 0) {
+            header('Content-Type: application/json');
+            
+            // Check for POST method
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                http_response_code(405);
+                echo json_encode(['error' => 'Method not allowed']);
+                exit;
+            }
+            
+            // Read raw input
+            $rawInput = file_get_contents('php://input');
+            $data = json_decode($rawInput, true);
+            
+            // Log the received data
+            file_put_contents(
+                __DIR__ . '/ws-http-requests.log',
+                date('[Y-m-d H:i:s]') . ' Received request to /send-message: ' . $rawInput . "\n",
+                FILE_APPEND
+            );
+            
+            // Check for basic validity
+            if (!$data || !isset($data['ticketId']) || !isset($data['message'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid request format']);
+                exit;
+            }
+            
+            $ticketId = $data['ticketId'];
+            $message = $data['message'];
+            $deviceId = isset($message['deviceId']) ? $message['deviceId'] : null;
+            
+            // Create a file that the WebSocket server will process
+            $tempFile = $tempDir . '/ws_message_' . uniqid() . '.json';
+            $payload = json_encode([
+                'action' => 'newMessage',
+                'ticketId' => $ticketId,
+                'message' => $message,
+                'timestamp' => time()
+            ]);
+            
+            $result = file_put_contents($tempFile, $payload);
+            
+            if ($result !== false) {
+                chmod($tempFile, 0666);
+                
+                // Also create a sync file for immediate sync
+                $syncId = uniqid();
+                $cleanTicketId = str_replace('#', '', $ticketId);
+                $syncFile = $tempDir . "/sync_{$cleanTicketId}_{$syncId}.txt";
+                
+                $syncData = [
+                    'timestamp' => date('Y-m-d H:i:s'),
+                    'message' => $message,
+                    'ticketId' => $ticketId,
+                    'created' => time()
+                ];
+                
+                file_put_contents($syncFile, json_encode($syncData));
+                chmod($syncFile, 0666);
+                
+                // Try to save directly to database
+                $server = new ChatServer();
+                $saved = $server->saveMessageToDatabase($ticketId, $message);
+                
+                // Return success
+                echo json_encode([
+                    'success' => true,
+                    'messageFile' => basename($tempFile),
+                    'syncFile' => basename($syncFile),
+                    'savedToDb' => $saved
+                ]);
+            } else {
+                http_response_code(500);
+                echo json_encode(['error' => 'Failed to create message file']);
+            }
+            exit;
+        }
+        
+        // Default response for other routes
+        header('Content-Type: application/json');
+        http_response_code(404);
+        echo json_encode(['error' => 'Endpoint not found']);
+        exit;
+    }
+} else {
+    // CLI mode - Run the WebSocket server
+    $server = IoServer::factory(
+        new HttpServer(
+            new WsServer(
+                new ChatServer()
+            )
+        ),
+        8080
+    );
+    
+    echo "WebSocket server running at 0.0.0.0:8080\n";
+    $server->run();
+}
