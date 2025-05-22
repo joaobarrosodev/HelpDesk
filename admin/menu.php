@@ -49,7 +49,7 @@
                 </li>
 
                 <li class="nav-item px-3 py-1">
-                    <a href="consultar_tickets_fechados.php" id="tickets-all" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'consultar_tickets_fechados.php' ? 'active' : ''; ?>">
+                    <a href="tickets_fechados.php" id="tickets-all" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'tickets_fechados.php' ? 'active' : ''; ?>">
                         <i class="bi bi-list-check me-3 fs-5" aria-hidden="true"></i> 
                         <span>Tickets Fechados</span>
                     </a>

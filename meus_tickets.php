@@ -30,10 +30,8 @@ $sql = "SELECT
             xdfree01 t
         LEFT JOIN 
             info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
-            LEFT JOIN 
-            internal_xdfree01_extrafields ie ON t.KeyId = ie.XDFree01_KeyID
         LEFT JOIN 
-            users u ON ie.User = u.id
+            users u ON i.Atribuido = u.id
         WHERE 
             i.Entity = :usuario_id";
 

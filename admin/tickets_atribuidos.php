@@ -7,7 +7,7 @@ $admin_id = $_SESSION['admin_id'];
 // Recupera o filtro de estado, se existir
 $estado_filtro = isset($_GET['status']) ? $_GET['status'] : '';
 // Prepara a SQL para admin
-$sql = "SELECT xdfree01.KeyId, xdfree01.id, xdfree01.Name, info_xdfree01_extrafields.User, 
+$sql = "SELECT xdfree01.KeyId, xdfree01.id, xdfree01.Name, info_xdfree01_extrafields.Atribuido as User, 
         info_xdfree01_extrafields.Description, info_xdfree01_extrafields.Priority, 
         info_xdfree01_extrafields.Status, info_xdfree01_extrafields.CreationDate, 
         info_xdfree01_extrafields.dateu, online.name as CreationUser,
@@ -16,8 +16,8 @@ $sql = "SELECT xdfree01.KeyId, xdfree01.id, xdfree01.Name, info_xdfree01_extrafi
         FROM xdfree01 
         JOIN info_xdfree01_extrafields ON xdfree01.KeyId = info_xdfree01_extrafields.XDFree01_KeyID
         LEFT JOIN online_entity_extrafields online on info_xdfree01_extrafields.CreationUser = online.email
-        WHERE info_xdfree01_extrafields.AttUser = :AttUser AND info_xdfree01_extrafields.Status <> 'Concluído'";
-$params[':AttUser'] = $admin_id;
+        WHERE info_xdfree01_extrafields.Status <> 'Concluído'";
+
 if (!empty($estado_filtro)) {
     $sql .= " AND info_xdfree01_extrafields.Status = :estado_filtro";
     $params[':estado_filtro'] = $estado_filtro;
@@ -37,14 +37,14 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="content">
         <h2>Meus Tickets</h2>
 
-        <form method="get" action="">
+        <form me="get" action="">
             <div class="mb-3">
-                <label for="status" class="form-label">Filtrar por Estado</label>
+               thod <label for="status" class="form-label">Filtrar por Estado</label>
                 <select id="status" name="status" class="form-select">
                     <option value="">Todos</option>
                     <option value="Em Análise" <?php echo ($estado_filtro == 'Em Análise') ? 'selected' : ''; ?>>Em Análise</option>
                     <option value="Em Resolução" <?php echo ($estado_filtro == 'Em Resolução') ? 'selected' : ''; ?>>Em Resolução</option>
-                    <option value="Aguarda Resposta Cliente" <?php echo ($estado_filtro == 'Aguarda Resposta Cliente') ? 'selected' : ''; ?>>Aguarda Resposta Cliente</option>
+                    <option value="Aguarda Resposta" <?php echo ($estado_filtro == ' Aguarda Resposta') ? 'selected' : ''; ?>> Aguarda Resposta</option>
                     <option value="Concluído" <?php echo ($estado_filtro == 'Concluído') ? 'selected' : ''; ?>>Concluído</option>
                 </select>
             </div>
@@ -73,7 +73,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <td><?php echo $ticket['Name']; ?></td>
                             <td><?php echo $ticket['User']; ?></td>
                             <td><span class="badge bg-<?php echo ($ticket['Priority'] == 'Alta') ? 'danger' : (($ticket['Priority'] == 'Normal') ? 'warning' : 'success'); ?>"> <?php echo $ticket['Priority']; ?> </span></td>
-                            <td><span class="badge bg-<?php echo ($ticket['Status'] == 'Em Análise') ? 'info' : (($ticket['Status'] == 'Em Resolução') ? 'warning' : (($ticket['Status'] == 'Aguarda Resposta Cliente') ? 'secondary' : 'success')); ?>"> <?php echo $ticket['Status']; ?> </span></td>
+                            <td><span class="badge bg-<?php echo ($ticket['Status'] == 'Em Análise') ? 'info' : (($ticket['Status'] == 'Em Resolução') ? 'warning' : (($ticket['Status'] == ' Aguarda Resposta') ? 'secondary' : 'success')); ?>"> <?php echo $ticket['Status']; ?> </span></td>
                             <td><?php echo $ticket['CreationUser']; ?></td>
                             <td><?php echo $ticket['CreationDate']; ?></td>
                             <td><?php echo $ticket['dateu']; ?></td>

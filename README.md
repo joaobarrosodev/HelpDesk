@@ -53,7 +53,7 @@ start-ws-server.bat
   - `index.php`: Página inicial
   - `login.php`: Página de login
   - `ticket.php`: Criação de tickets
-  - `consultar_tickets_fechados.php`: Consulta de tickets fechados
+  - `tickets_fechados.php`: Consulta de tickets fechados
 
 - **Admin:**
   - Recursos exclusivos para administradores, como alteração de tickets e consulta de dados.

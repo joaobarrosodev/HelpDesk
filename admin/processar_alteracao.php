@@ -3,49 +3,72 @@ session_start();
 include('db.php'); // Conexão com o banco de dados
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+
+// Processar ação de "fechar ticket" via GET
+if (isset($_GET['action']) && $_GET['action'] == 'close' && isset($_GET['keyid'])) {
+    $keyid = $_GET['keyid'];
+    
+    try {
+        // Atualizar o status do ticket para "Concluído"
+        $sql = "UPDATE info_xdfree01_extrafields 
+                SET Status = 'Concluído', 
+                    dateu = NOW()
+                WHERE XDFree01_KeyID = (SELECT KeyId FROM xdfree01 WHERE id = :keyid)";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':keyid', $keyid);
+        $stmt->execute();
+        
+        echo "<script>alert('Ticket fechado com sucesso!'); window.location.href='consultar_tickets.php';</script>";
+        exit;
+    } catch (Exception $e) {
+        // Em caso de erro, desfaz as alterações
+        echo "<script>alert('Erro ao fechar o ticket: " . $e->getMessage() . "'); window.history.back();</script>";
+        exit;
+    }
+}
+
+// Processar formulário via POST
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $keyid = $_POST['keyid'];
     $status = $_POST['status'];
-    $user = $_SESSION['admin_id'];
-    $description = $_POST['resolution_description'];
+    
+    // Use o usuário selecionado no formulário se existir, caso contrário usa o atual admin
+    $user = isset($_POST['assigned_user']) && !empty($_POST['assigned_user']) 
+            ? $_POST['assigned_user'] 
+            : $_SESSION['admin_id'];
+      $description = $_POST['resolution_description'];
     $extra_info = $_POST['extra_info'];
     $resolution_time = $_POST['resolution_time'];
 
-     // Validar e converter o tempo para formato DATETIME
-    if (preg_match('/^([0-9]{1,2}):([0-5][0-9])$/', $resolution_time, $matches)) {
-        $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-        $minutes = str_pad($matches[2], 2, '0', STR_PAD_LEFT);
-        $time_formatted = date('Y-m-d') . " $hours:$minutes:00";  // Adiciona a data de hoje
-    } else {
-        echo "<script>alert('Formato de tempo inválido! Use HH:MM'); window.history.back();</script>";
+    // Validar que o tempo é um número positivo
+    if (!is_numeric($resolution_time) || $resolution_time <= 0) {
+        echo "<script>alert('Tempo de resolução inválido! Deve ser um número positivo.'); window.history.back();</script>";
         exit;
-    }
-
-try {
+    }    // Converter para inteiro
+    $time_formatted = (int)$resolution_time;
+    
+    try {
         // Iniciar transação
         $pdo->beginTransaction();
 
-        // Atualizar a tabela `internal_xdfree01_extrafields`
-        $sql1 = "UPDATE internal_xdfree01_extrafields 
-                 SET User = :user, Description = :description, 
-                     Info = :extra_info, Time = :time, 
-                 XDFree01_KeyID = :keyid";
-        $stmt1 = $pdo->prepare($sql1);
-        $stmt1->bindParam(':user', $user);
-        $stmt1->bindParam(':description', $description);
-        $stmt1->bindParam(':extra_info', $extra_info);
-        $stmt1->bindParam(':time', $time_formatted);
-        $stmt1->bindParam(':keyid', $keyid, PDO::PARAM_INT);
-        $stmt1->execute();
-        
-        // Atualizar a tabela `info_xdfree01_extrafields`
-        $sql2 = "UPDATE info_xdfree01_extrafields 
-                 SET Status = :status, dateu = NOW() 
-                 WHERE XDFree01_KeyID = :keyid";
-        $stmt2 = $pdo->prepare($sql2);
-        $stmt2->bindParam(':status', $status);
-        $stmt2->bindParam(':keyid', $keyid, PDO::PARAM_INT);
-        $stmt2->execute();
+        // Atualizar a tabela `info_xdfree01_extrafields` com todos os campos relevantes
+        $sql = "UPDATE info_xdfree01_extrafields 
+                SET Status = :status, 
+                    dateu = NOW(),
+                    Atribuido = :user, 
+                    Tempo = :time, 
+                    Relatorio = :description,
+                    MensagensInternas = :extra_info
+                WHERE XDFree01_KeyID = :keyid";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':status', $status);
+        $stmt->bindParam(':user', $user);
+        $stmt->bindParam(':time', $time_formatted);
+        $stmt->bindParam(':description', $description);
+        $stmt->bindParam(':extra_info', $extra_info);
+        $stmt->bindParam(':keyid', $keyid, PDO::PARAM_INT);
+        $stmt->execute();
 
         // Confirmar as alterações no banco de dados
         $pdo->commit();
@@ -59,4 +82,3 @@ try {
 } else {
     echo "<script>alert('Acesso inválido!'); window.location.href='tickets_atribuidos.php';</script>";
 }
-?>

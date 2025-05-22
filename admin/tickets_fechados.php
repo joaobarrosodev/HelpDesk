@@ -5,17 +5,16 @@ include('conflogin.php');
 include('db.php');
 
 // Prepara a SQL para tickets fechados (concluídos)
-$sql = "SELECT xdfree01.KeyId, xdfree01.id, xdfree01.Name, info_xdfree01_extrafields.User, 
+$sql = "SELECT xdfree01.KeyId, xdfree01.id, xdfree01.Name, info_xdfree01_extrafields.Atribuido as User, 
         info_xdfree01_extrafields.Description, info_xdfree01_extrafields.Priority, 
         info_xdfree01_extrafields.Status, info_xdfree01_extrafields.CreationDate, 
         info_xdfree01_extrafields.dateu, online.name as CreationUser,
         (SELECT user FROM comments_xdfree01_extrafields WHERE XDFree01_KeyID = xdfree01.KeyId 
         ORDER BY Date DESC LIMIT 1) as LastCommentUser,
-        internal_xdfree01_extrafields.Time as ResolutionTime
+        info_xdfree01_extrafields.Tempo as ResolutionTime
         FROM xdfree01 
         JOIN info_xdfree01_extrafields ON xdfree01.KeyId = info_xdfree01_extrafields.XDFree01_KeyID
         LEFT JOIN online_entity_extrafields online on info_xdfree01_extrafields.CreationUser = online.email
-        LEFT JOIN internal_xdfree01_extrafields on xdfree01.KeyId = internal_xdfree01_extrafields.XDFree01_KeyID
         WHERE info_xdfree01_extrafields.Status = 'Concluído'";
 
 $sql .= " ORDER BY info_xdfree01_extrafields.dateu DESC"; // Ordenar pelo mais recente

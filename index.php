@@ -34,7 +34,7 @@ include('conflogin.php');
         }
 
         // Contar tickets em aberto para o usuário atual
-        $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields WHERE (status = 'Em Análise' OR status = 'Em Resolução' OR status = 'Aguarda Resposta Cliente') AND Entity = :usuario_id";
+        $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields WHERE (status = 'Em Análise' OR status = 'Em Resolução' OR status = ' Aguarda Resposta') AND Entity = :usuario_id";
         $stmt_tickets = $pdo->prepare($sql_tickets);
         $stmt_tickets->bindParam(':usuario_id', $_SESSION['usuario_id']);
         $stmt_tickets->execute();

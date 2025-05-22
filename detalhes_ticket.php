@@ -12,16 +12,13 @@ if (isset($_GET['keyid'])) {
     $keyid = $_GET['keyid'];
 
     // Remover o símbolo '#' caso ele exista (se o banco não usa o '#')
-    $keyid_sem_hash = str_replace('#', '', $keyid);
-
-    // Consultar os detalhes do ticket
+    $keyid_sem_hash = str_replace('#', '', $keyid);    // Consultar os detalhes do ticket
     $sql = "SELECT free.KeyId, free.id, free.Name, info.Description, info.Priority, info.Status, 
-            info.CreationUser, info.CreationDate, info.dateu, info.image, internal.User, 
-            u.Name as atribuido_a, internal.Time, internal.Description as Descr, internal.info
+            info.CreationUser, info.CreationDate, info.dateu, info.image, info.Atribuido as User, 
+            u.Name as atribuido_a, info.Tempo as Time, info.Relatorio as Descr, info.MensagensInternas as info
             FROM xdfree01 free
             LEFT JOIN info_xdfree01_extrafields info ON free.KeyId = info.XDFree01_KeyID
-            LEFT JOIN internal_xdfree01_extrafields internal on free.KeyId = internal.XDFree01_KeyID
-            LEFT JOIN users u ON internal.User = u.id
+            LEFT JOIN users u ON info.Atribuido = u.id
             WHERE free.id = :keyid";  // Comparar sem o #
 
     // Preparar a consulta

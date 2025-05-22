@@ -12,7 +12,7 @@ try {
     $total_abertos = $stmt_abertos->fetch(PDO::FETCH_ASSOC)['total'];
 
     // Tickets atribuídos ao admin atual
-    $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE AttUser = :admin_id AND Status <> 'Concluído'";
+    $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status <> 'Concluído'";
     $stmt_atribuidos = $pdo->prepare($sql_atribuidos);
     $stmt_atribuidos->bindParam(':admin_id', $_SESSION['admin_id']);
     $stmt_atribuidos->execute();
@@ -50,10 +50,6 @@ try {
             <!-- Cabeçalho da página -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="mb-0">Painel de Administração</h2>
-                <div class="d-flex align-items-center">
-                    <span class="text-muted me-2">Hoje:</span>
-                    <span class="badge bg-light text-dark"><?php echo date('d/m/Y'); ?></span>
-                </div>
             </div>
             
             <?php if(isset($erro_db)): ?>
@@ -150,7 +146,7 @@ try {
                             </a>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <a href="consultar_tickets_fechados.php" class="btn btn-secondary d-flex align-items-center justify-content-center w-100 p-3">
+                            <a href="tickets_fechados.php" class="btn btn-secondary d-flex align-items-center justify-content-center w-100 p-3">
                                 <i class="bi bi-list-check fs-4 me-2"></i>
                                 <span>Tickets Fechados</span>
                             </a>

@@ -10,16 +10,13 @@ if (isset($_GET['keyid'])) {
     $keyid = $_GET['keyid'];
 
     // Remover o símbolo '#' caso ele exista (se o banco não usa o '#')
-    $keyid_sem_hash = str_replace('#', '', $keyid);
-
-    // Consultar os detalhes do ticket
+    $keyid_sem_hash = str_replace('#', '', $keyid);    // Consultar os detalhes do ticket
     $sql = "SELECT free.KeyId, free.id, free.Name, info.Description, info.Priority, info.Status,
-            info.CreationUser, info.CreationDate, info.dateu, info.image, internal.User,
-            u.Name as atribuido_a, internal.Time, internal.Description as Descr, internal.info
+            info.CreationUser, info.CreationDate, info.dateu, info.image, info.Atribuido as User,
+            u.Name as atribuido_a, info.Tempo as Time, info.Relatorio as Descr, info.MensagensInternas as info
             FROM xdfree01 free
             LEFT JOIN info_xdfree01_extrafields info ON free.KeyId = info.XDFree01_KeyID
-            LEFT JOIN internal_xdfree01_extrafields internal on free.KeyId = internal.XDFree01_KeyID
-            LEFT JOIN users u ON internal.User = u.id
+            LEFT JOIN users u ON info.Atribuido = u.id
             WHERE free.id = :keyid";  // Comparar sem o #
 
     // Preparar a consulta
@@ -31,11 +28,7 @@ if (isset($_GET['keyid'])) {
     if (!$ticket) {
         echo "Ticket não encontrado.";
         exit;
-    }
-
-    // TODO:
-
-    $ticket_id = $ticket['KeyId'];
+    }    $ticket_id = $ticket['KeyId'];
 
     // Consultar todas as mensagens associadas ao ticket
     $sql_messages = "SELECT comments.Message, comments.type, comments.Date as CommentTime, comments.user
@@ -47,15 +40,21 @@ if (isset($_GET['keyid'])) {
     $stmt_messages->bindParam(':keyid', $ticket_id);
     $stmt_messages->execute();
     $messages = $stmt_messages->fetchAll(PDO::FETCH_ASSOC);
-
+    
+    // Consultar todos os usuários para o dropdown de atribuição
+    $sql_users = "SELECT id, Name FROM users ORDER BY Name ASC";
+    $stmt_users = $pdo->prepare($sql_users);
+    $stmt_users->execute();
+    $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
 } else {
     echo "Ticket não especificado.";
     exit;
 }
 
 // Função para determinar a cor da prioridade
-function getPriorityColor($priority) {
-    switch(strtolower($priority)) {
+function getPriorityColor($priority)
+{
+    switch (strtolower($priority)) {
         case 'alta':
             return 'danger';
         case 'normal':
@@ -71,8 +70,9 @@ function getPriorityColor($priority) {
 }
 
 // Função para determinar a cor do status
-function getStatusColor($status) {
-    switch(strtolower(trim($status))) {
+function getStatusColor($status)
+{
+    switch (strtolower(trim($status))) {
         case 'concluído':
             return 'success';
         case 'em análise':
@@ -99,8 +99,15 @@ function getStatusColor($status) {
     }
 
     @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .close-ticket-btn {
@@ -135,9 +142,7 @@ function getStatusColor($status) {
 
     .admin-controls .form-group {
         margin-bottom: 15px;
-    }
-
-    .admin-controls-header {
+    }    .admin-controls-header {
         transition: all 0.3s ease;
         padding: 8px 0;
         border-radius: 4px;
@@ -155,21 +160,41 @@ function getStatusColor($status) {
     .collapsed .toggle-icon {
         transform: rotate(-90deg);
     }
+    
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .btn-success {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+    
+    .btn-success:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+    }
 </style>
 <!-- Modal para Exibir Imagem -->
 <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="imageModalLabel">Imagem do Ticket</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body text-center">
-        <img id="modalImage" src="" class="img-fluid" alt="Imagem do Ticket">
-      </div>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalLabel">Imagem do Ticket</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" class="img-fluid" alt="Imagem do Ticket">
+            </div>
+        </div>
     </div>
-  </div>
 </div>
+
 <body>
     <?php include('menu.php'); ?>
 
@@ -186,53 +211,81 @@ function getStatusColor($status) {
                 <span class="badge bg-<?php echo getPriorityColor($ticket['Priority']); ?>"><?php echo $ticket['Priority']; ?></span>
             </div>
         </div>
-      <!-- Admin controls section -->
-<div class="admin-controls">
-    <a href="javascript:void(0);" class="d-flex align-items-center justify-content-between admin-controls-header collapsed"
-       aria-expanded="false"
-       aria-controls="adminInfo"
-       style="cursor: pointer; text-decoration: none; color: inherit;">
-        <h5 class="m-0">Informações Administrativas</h5>
-        <i class="bi bi-chevron-down toggle-icon"></i>
-    </a>
-    <div class="collapse" id="adminInfo">
-        <div class="row mt-3">
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label class="form-label">Atribuído a:</label>
-                    <div class="form-control bg-light"><?php echo !empty($ticket['atribuido_a']) ? $ticket['atribuido_a'] : 'Não atribuído'; ?></div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Tempo despendido:</label>
-                    <div class="form-control bg-light"><?php echo !empty($ticket['Time']) ? $ticket['Time'] : 'Não registrado'; ?></div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label class="form-label">Detalhes Internos:</label>
-                    <div class="form-control bg-light" style="height: auto; min-height: 60px;"><?php echo !empty($ticket['Descr']) ? $ticket['Descr'] : 'Sem detalhes'; ?></div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Informações Extra:</label>
-                    <div class="form-control bg-light" style="height: auto; min-height: 60px;"><?php echo !empty($ticket['info']) ? $ticket['info'] : 'Sem informações extras'; ?></div>
-                </div>
-            </div>
-        </div>
-        <div class="d-flex justify-content-end mt-3">
-            <?php if ($ticket['Status'] !== 'Concluído') { ?>
-                           <button class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
-                               <i class="bi bi-x-circle"></i> Fechar Ticket
-                           </button>
-                       <?php } ?>
-                        <a href="alterar_tickets.php?keyid=<?php echo $ticket['id']; ?>" class="btn btn-primary">
-                <i class="bi bi-pencil-square me-1"></i> Editar Ticket
+        <!-- Admin controls section -->
+        <div class="admin-controls">
+            <a href="javascript:void(0);" class="d-flex align-items-center justify-content-between admin-controls-header collapsed" 
+                data-bs-toggle="collapse" 
+                data-bs-target="#adminInfo" 
+                aria-expanded="false" 
+                aria-controls="adminInfo"
+                style="cursor: pointer; text-decoration: none; color: inherit;">
+                <h5 class="m-0">Informações Administrativas</h5>
             </a>
+            <div class="collapse" id="adminInfo">
+                <form id="updateTicketForm" action="processar_alteracao.php" method="POST">
+                    <input type="hidden" name="keyid" value="<?php echo htmlspecialchars($ticket_id); ?>">
+                    <div class="row mt-3">
+                        <div class="col-md-6">                            <div class="form-group mb-3">
+                                <label for="status" class="form-label">Estado</label>
+                                <select id="status" name="status" class="form-select">
+                                    <option value="Em Análise" <?php echo ($ticket['Status'] == 'Em Análise') ? 'selected' : ''; ?>>Em Análise</option>
+                                    <option value="Em Resolução" <?php echo ($ticket['Status'] == 'Em Resolução') ? 'selected' : ''; ?>>Em Resolução</option>
+                                    <option value="Aguarda Resposta" <?php echo ($ticket['Status'] == ' Aguarda Resposta') ? 'selected' : ''; ?>> Aguarda Resposta</option>
+                                    <option value="Concluído" <?php echo ($ticket['Status'] == 'Concluído') ? 'selected' : ''; ?>>Concluído</option>
+                                </select>
+                            </div>
 
+                            <div class="form-group mb-3">
+                                <label for="assigned_user" class="form-label">Atribuído a:</label>
+                                <select id="assigned_user" name="assigned_user" class="form-select">
+                                    <option value="">Selecione um responsável</option>
+                                    <?php foreach ($users as $user): ?>
+                                        <option value="<?php echo $user['id']; ?>" <?php echo ($ticket['User'] == $user['id']) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($user['Name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>                            <div class="form-group mb-3">
+                                <label for="resolution_time" class="form-label">Tempo de Resolução (minutos)</label>
+                                <input type="number" id="resolution_time" name="resolution_time" class="form-control" 
+                                       min="1" step="1" placeholder="Ex: 90" 
+                                       value="<?php echo !empty($ticket['Time']) ? htmlspecialchars($ticket['Time']) : ''; ?>" required>
+                                <small class="text-muted">Insira o tempo total em minutos (ex: 90 para 1 hora e 30 minutos)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="resolution_description" class="form-label">Descrição da Resolução</label>
+                                <textarea id="resolution_description" name="resolution_description" class="form-control" rows="3"><?php echo !empty($ticket['Descr']) ? htmlspecialchars($ticket['Descr']) : ''; ?></textarea>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="extra_info" class="form-label">Informação Extra</label>
+                                <textarea id="extra_info" name="extra_info" class="form-control" rows="3"><?php echo !empty($ticket['info']) ? htmlspecialchars($ticket['info']) : ''; ?></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-3">
+                        <?php if ($ticket['Status'] !== 'Concluído') { ?>
+                            <button type="button" class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
+                                <i class="bi bi-x-circle"></i> Fechar Ticket
+                            </button>
+                        <?php } else { ?>
+                            <div></div> <!-- Placeholder for flex spacing when no close button -->
+                        <?php } ?>
+                        
+                        <div>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-save me-1"></i> Guardar Alterações
+                            </button>
+                            <button type="button" id="cancelEditBtn" class="btn btn-secondary ms-2">
+                                <i class="bi bi-x me-1"></i> Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
-</div>
         <div class="chat-body" id="chatBody">
             <!-- Ticket information message at the top -->
             <div class="ticket-info">
@@ -241,9 +294,9 @@ function getStatusColor($status) {
                 <p><strong>Criado por:</strong> <?php echo $ticket['CreationUser']; ?></p>
                 <p><strong>Criado em:</strong> <?php echo $ticket['CreationDate']; ?></p>
                 <?php if (!empty($ticket['image'])) { ?>
-                <p><strong>Imagem:</strong>
-                    <img src="<?php echo $ticket['image']; ?>" alt="Imagem do Ticket" class="message-image" onclick="showImage('<?php echo $ticket['image']; ?>')">
-                </p>
+                    <p><strong>Imagem:</strong>
+                        <img src="<?php echo $ticket['image']; ?>" alt="Imagem do Ticket" class="message-image" onclick="showImage('<?php echo $ticket['image']; ?>')">
+                    </p>
                 <?php } ?>
             </div>
 
@@ -319,7 +372,7 @@ function getStatusColor($status) {
         let wsLastErrorTime = 0;
 
         // Simplified approach - only keep track of the last message timestamp
-        let lastMessageTimestamp = '<?php echo !empty($messages) ? date('Y-m-d H:i:s', strtotime($messages[count($messages)-1]['CommentTime'])) : date('Y-m-d H:i:s'); ?>';
+        let lastMessageTimestamp = '<?php echo !empty($messages) ? date('Y-m-d H:i:s', strtotime($messages[count($messages) - 1]['CommentTime'])) : date('Y-m-d H:i:s'); ?>';
         let deviceId = generateDeviceId(); // Generate unique device ID
         let syncCheckInterval = null;
 
@@ -561,9 +614,9 @@ function getStatusColor($status) {
 
             // Use silent_sync.php instead of check_sync.php to avoid logging
             fetch('../silent_sync.php?ticketId=' + encodedTicketId +
-                  '&deviceId=' + encodeURIComponent(deviceId) +
-                  '&lastCheck=' + encodeURIComponent(lastMessageTimestamp) +
-                  '&_=' + timestamp)
+                    '&deviceId=' + encodeURIComponent(deviceId) +
+                    '&lastCheck=' + encodeURIComponent(lastMessageTimestamp) +
+                    '&_=' + timestamp)
                 .then(response => {
                     if (!response.ok) {
                         return null;
@@ -747,26 +800,26 @@ function getStatusColor($status) {
 
             // Send to server
             fetch('inserir_mensagem.php', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Error saving message: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log("Message saved to database:", data);
-                // Mark as saved to prevent duplicate saves
-                messageData.alreadySaved = true;
-            })
-            .catch(error => {
-                console.error("Failed to save message:", error);
-            });
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error saving message: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Message saved to database:", data);
+                    // Mark as saved to prevent duplicate saves
+                    messageData.alreadySaved = true;
+                })
+                .catch(error => {
+                    console.error("Failed to save message:", error);
+                });
         }
 
         // Submit form with animation
@@ -807,55 +860,55 @@ function getStatusColor($status) {
 
                 // Direct form submission (more reliable for database saving)
                 fetch('inserir_mensagem.php', {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Erro ao enviar mensagem: ${response.status}`);
-                    }
-                    return response.text();
-                })
-                .then(data => {
-                    console.log("Message saved successfully");
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Erro ao enviar mensagem: ${response.status}`);
+                        }
+                        return response.text();
+                    })
+                    .then(data => {
+                        console.log("Message saved successfully");
 
-                    // Force check for sync files to update any other clients
-                    setTimeout(checkSyncFiles, 200);
+                        // Force check for sync files to update any other clients
+                        setTimeout(checkSyncFiles, 200);
 
-                    // Only try WebSocket after successful database save
-                    if (wsConnected) {
-                        const messageObj = {
-                            Message: messageToSend,
-                            user: '<?php echo $_SESSION['admin_email'] ?? "Admin"; ?>',
-                            type: 2, // Admin message type is always 2
-                            CommentTime: new Date().toISOString(),
-                            deviceId: deviceId,
-                            messageId: 'admin_msg_' + new Date().getTime(),
-                            alreadySaved: true // Mark as already saved
-                        };
+                        // Only try WebSocket after successful database save
+                        if (wsConnected) {
+                            const messageObj = {
+                                Message: messageToSend,
+                                user: '<?php echo $_SESSION['admin_email'] ?? "Admin"; ?>',
+                                type: 2, // Admin message type is always 2
+                                CommentTime: new Date().toISOString(),
+                                deviceId: deviceId,
+                                messageId: 'admin_msg_' + new Date().getTime(),
+                                alreadySaved: true // Mark as already saved
+                            };
 
-                        sendWebSocketMessage(messageObj, '<?php echo $ticket_id; ?>');
-                    }
-                })
-                .catch(error => {
-                    console.error("Error saving message:", error);
+                            sendWebSocketMessage(messageObj, '<?php echo $ticket_id; ?>');
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error saving message:", error);
 
-                    // Remove the preview message since it failed
-                    if (messageDiv.parentNode) {
-                        messageDiv.parentNode.removeChild(messageDiv);
-                    }
+                        // Remove the preview message since it failed
+                        if (messageDiv.parentNode) {
+                            messageDiv.parentNode.removeChild(messageDiv);
+                        }
 
-                    alert('Ocorreu um erro ao enviar a mensagem. Por favor, tente novamente.');
+                        alert('Ocorreu um erro ao enviar a mensagem. Por favor, tente novamente.');
 
-                    // Restore the message so the admin doesn't have to retype it
-                    messageInput.value = messageToSend;
-                    messageInput.style.height = 'auto';
-                    messageInput.style.height = (messageInput.scrollHeight) + 'px';
-                    document.getElementById('sendButton').disabled = false;
-                });
+                        // Restore the message so the admin doesn't have to retype it
+                        messageInput.value = messageToSend;
+                        messageInput.style.height = 'auto';
+                        messageInput.style.height = (messageInput.scrollHeight) + 'px';
+                        document.getElementById('sendButton').disabled = false;
+                    });
             }
         });
 
@@ -864,7 +917,9 @@ function getStatusColor($status) {
             // If the form is valid, trigger submit event
             const form = document.getElementById('chatForm');
             if (form && messageInput.value.trim()) {
-                form.dispatchEvent(new Event('submit', {cancelable: true}));
+                form.dispatchEvent(new Event('submit', {
+                    cancelable: true
+                }));
             }
         });
 
@@ -875,14 +930,112 @@ function getStatusColor($status) {
                 modalImage.src = imageUrl;
                 new bootstrap.Modal(document.getElementById('imageModal')).show();
             }
-        }
-
-        // Function to close a ticket
+        }        // Function to close a ticket
         function fecharTicket(id) {
             if (confirm('Tem certeza que deseja fechar este ticket?')) {
-                window.location.href = 'processar_alteracao.php?id=' + id + '&Status=Concluído';
+                // Create a form to submit
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'processar_alteracao.php';
+                form.style.display = 'none';
+                
+                // Add needed fields
+                const assignedUser = document.getElementById('assigned_user')?.value || '';
+                const resolutionTime = document.getElementById('resolution_time').value;
+                
+                // Validate time
+                if (isNaN(resolutionTime) || resolutionTime <= 0) {
+                    alert('O tempo de resolução deve ser um número positivo!');
+                    return;
+                }
+                
+                const fields = {
+                    'keyid': id,
+                    'status': 'Concluído',
+                    'assigned_user': assignedUser,
+                    'resolution_time': resolutionTime,
+                    'resolution_description': document.getElementById('resolution_description').value || 'Ticket fechado pelo administrador',
+                    'extra_info': document.getElementById('extra_info').value || ''
+                };
+                
+                // Create form fields
+                for (const key in fields) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = fields[key];
+                    form.appendChild(input);
+                }
+                
+                // Add form to body and submit
+                document.body.appendChild(form);
+                form.submit();
             }
         }
+
+        // Admin form handling
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle admin info panel
+            const accordionHeader = document.querySelector('.admin-controls-header');
+            const accordionContent = document.getElementById('adminInfo');
+            
+            if (accordionHeader && accordionContent) {
+                accordionHeader.addEventListener('click', function() {
+                    const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                    this.setAttribute('aria-expanded', !isExpanded);
+                    this.classList.toggle('collapsed', isExpanded);
+                    
+                    const icon = this.querySelector('.toggle-icon');
+                    if (icon) {
+                        icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
+                    }
+                    
+                    const bsCollapse = new bootstrap.Collapse(accordionContent, {
+                        toggle: false
+                    });
+                    
+                    if (isExpanded) {
+                        bsCollapse.hide();
+                    } else {
+                        bsCollapse.show();
+                    }
+                });
+            }
+            
+            // Handle cancel button
+            const cancelEditBtn = document.getElementById('cancelEditBtn');
+            if (cancelEditBtn) {
+                cancelEditBtn.addEventListener('click', function() {
+                    const bsCollapse = bootstrap.Collapse.getInstance(accordionContent);
+                    if (bsCollapse) {
+                        bsCollapse.hide();
+                    } else {
+                        accordionContent.classList.remove('show');
+                    }
+                    
+                    // Reset form to original values
+                    document.getElementById('updateTicketForm').reset();
+                });
+            }
+            
+            // Form submission handling
+            const updateTicketForm = document.getElementById('updateTicketForm');
+            if (updateTicketForm) {                updateTicketForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // Validate form
+                    const resolutionTime = document.getElementById('resolution_time').value;
+                    
+                    if (isNaN(resolutionTime) || resolutionTime <= 0) {
+                        alert('O tempo de resolução deve ser um número positivo!');
+                        return;
+                    }
+                    
+                    // Submit form if validation passed
+                    this.submit();
+                });
+            }
+        });
     </script>
 </body>
 </html>
