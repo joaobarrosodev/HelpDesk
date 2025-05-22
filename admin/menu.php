@@ -33,11 +33,17 @@
                         <span>Dashboard</span>
                     </a>
                 </li>
+                  <li class="nav-item px-3 py-1">
+                    <a href="tickets_sem_atribuicao.php" id="tickets" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'tickets_sem_atribuicao.php' ? 'active' : ''; ?>">
+                        <i class="bi bi-ticket me-3 fs-5" aria-hidden="true"></i> 
+                        <span>Tickets sem Atribuição</span>
+                    </a>
+                </li>
                 
                 <li class="nav-item px-3 py-1">
-                    <a href="consultar_tickets.php" id="tickets" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'consultar_tickets.php' ? 'active' : ''; ?>">
-                        <i class="bi bi-ticket me-3 fs-5" aria-hidden="true"></i> 
-                        <span>Tickets por Atribuir</span>
+                    <a href="consultar_tickets.php" id="tickets-todos" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'consultar_tickets.php' ? 'active' : ''; ?>">
+                        <i class="bi bi-search me-3 fs-5" aria-hidden="true"></i> 
+                        <span>Consultar Tickets</span>
                     </a>
                 </li>
                 

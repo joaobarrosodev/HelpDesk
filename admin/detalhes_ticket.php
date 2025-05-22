@@ -221,23 +221,21 @@ function getStatusColor($status)
                 style="cursor: pointer; text-decoration: none; color: inherit;">
                 <h5 class="m-0">Informações Administrativas</h5>
             </a>
-            <div class="collapse" id="adminInfo">
-                <form id="updateTicketForm" action="processar_alteracao.php" method="POST">
+            <div class="collapse" id="adminInfo">                <form id="updateTicketForm" action="processar_alteracao.php" method="POST">
                     <input type="hidden" name="keyid" value="<?php echo htmlspecialchars($ticket_id); ?>">
                     <div class="row mt-3">
                         <div class="col-md-6">                            <div class="form-group mb-3">
-                                <label for="status" class="form-label">Estado</label>
-                                <select id="status" name="status" class="form-select">
-                                    <option value="Em Análise" <?php echo ($ticket['Status'] == 'Em Análise') ? 'selected' : ''; ?>>Em Análise</option>
-                                    <option value="Em Resolução" <?php echo ($ticket['Status'] == 'Em Resolução') ? 'selected' : ''; ?>>Em Resolução</option>
-                                    <option value="Aguarda Resposta" <?php echo ($ticket['Status'] == ' Aguarda Resposta') ? 'selected' : ''; ?>> Aguarda Resposta</option>
-                                    <option value="Concluído" <?php echo ($ticket['Status'] == 'Concluído') ? 'selected' : ''; ?>>Concluído</option>
+                                <label for="status" class="form-label">Estado</label>                                <select id="status" name="status" class="form-select">
+                                    <option value="Em Análise" <?php echo isset($_GET['pre_close']) ? '' : (($ticket['Status'] == 'Em Análise') ? 'selected' : ''); ?>>Em Análise</option>
+                                    <option value="Em Resolução" <?php echo isset($_GET['pre_close']) ? '' : (($ticket['Status'] == 'Em Resolução') ? 'selected' : ''); ?>>Em Resolução</option>
+                                    <option value="Aguarda Resposta" <?php echo isset($_GET['pre_close']) ? '' : (($ticket['Status'] == ' Aguarda Resposta') ? 'selected' : ''); ?>> Aguarda Resposta</option>
+                                    <option value="Concluído" <?php echo (isset($_GET['pre_close']) || $ticket['Status'] == 'Concluído') ? 'selected' : ''; ?>>Concluído</option>
                                 </select>
                             </div>
 
                             <div class="form-group mb-3">
-                                <label for="assigned_user" class="form-label">Atribuído a:</label>
-                                <select id="assigned_user" name="assigned_user" class="form-select">
+                                <label for="assigned_user" class="form-label">Atribuído a: <span class="text-danger">*</span></label>
+                                <select id="assigned_user" name="assigned_user" class="form-select" <?php echo isset($_GET['pre_close']) ? 'required' : ''; ?>>
                                     <option value="">Selecione um responsável</option>
                                     <?php foreach ($users as $user): ?>
                                         <option value="<?php echo $user['id']; ?>" <?php echo ($ticket['User'] == $user['id']) ? 'selected' : ''; ?>>
@@ -245,8 +243,7 @@ function getStatusColor($status)
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
-                            </div>                            <div class="form-group mb-3">
-                                <label for="resolution_time" class="form-label">Tempo de Resolução (minutos)</label>
+                            </div>                            <div class="form-group mb-3">                                <label for="resolution_time" class="form-label">Tempo de Resolução (minutos) <span class="text-danger">*</span></label>
                                 <input type="number" id="resolution_time" name="resolution_time" class="form-control" 
                                        min="1" step="1" placeholder="Ex: 90" 
                                        value="<?php echo !empty($ticket['Time']) ? htmlspecialchars($ticket['Time']) : ''; ?>" required>
@@ -255,13 +252,15 @@ function getStatusColor($status)
                         </div>
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label for="resolution_description" class="form-label">Descrição da Resolução</label>
-                                <textarea id="resolution_description" name="resolution_description" class="form-control" rows="3"><?php echo !empty($ticket['Descr']) ? htmlspecialchars($ticket['Descr']) : ''; ?></textarea>
+                                <label for="resolution_description" class="form-label">Descrição da Resolução <span class="text-danger">*</span></label>
+                                <textarea id="resolution_description" name="resolution_description" class="form-control" rows="3" <?php echo $preClose ? 'required' : ''; ?>><?php echo !empty($ticket['Descr']) ? htmlspecialchars($ticket['Descr']) : ''; ?></textarea>
+                                <small class="text-muted">Descreva a solução aplicada para resolver o problema (visível ao cliente)</small>
                             </div>
 
                             <div class="form-group mb-3">
-                                <label for="extra_info" class="form-label">Informação Extra</label>
+                                <label for="extra_info" class="form-label">Informação Extra (Interna)</label>
                                 <textarea id="extra_info" name="extra_info" class="form-control" rows="3"><?php echo !empty($ticket['info']) ? htmlspecialchars($ticket['info']) : ''; ?></textarea>
+                                <small class="text-muted">Informações adicionais apenas para uso interno (não visível ao cliente)</small>
                             </div>
                         </div>
                     </div>

@@ -6,26 +6,10 @@ ini_set('display_errors', 1);
 
 // Processar ação de "fechar ticket" via GET
 if (isset($_GET['action']) && $_GET['action'] == 'close' && isset($_GET['keyid'])) {
+    // Redirecionar para a página de detalhes com um parâmetro para pré-selecionar o status "Concluído"
     $keyid = $_GET['keyid'];
-    
-    try {
-        // Atualizar o status do ticket para "Concluído"
-        $sql = "UPDATE info_xdfree01_extrafields 
-                SET Status = 'Concluído', 
-                    dateu = NOW()
-                WHERE XDFree01_KeyID = (SELECT KeyId FROM xdfree01 WHERE id = :keyid)";
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindParam(':keyid', $keyid);
-        $stmt->execute();
-        
-        echo "<script>alert('Ticket fechado com sucesso!'); window.location.href='consultar_tickets.php';</script>";
-        exit;
-    } catch (Exception $e) {
-        // Em caso de erro, desfaz as alterações
-        echo "<script>alert('Erro ao fechar o ticket: " . $e->getMessage() . "'); window.history.back();</script>";
-        exit;
-    }
+    echo "<script>window.location.href='detalhes_ticket.php?keyid=" . $keyid . "&pre_close=1';</script>";
+    exit;
 }
 
 // Processar formulário via POST
@@ -37,15 +21,37 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $user = isset($_POST['assigned_user']) && !empty($_POST['assigned_user']) 
             ? $_POST['assigned_user'] 
             : $_SESSION['admin_id'];
-      $description = $_POST['resolution_description'];
+    $description = $_POST['resolution_description'];
     $extra_info = $_POST['extra_info'];
     $resolution_time = $_POST['resolution_time'];
+
+    // Verificações adicionais se o status for "Concluído"
+    if ($status == 'Concluído') {
+        // Verificar se o tempo de resolução está preenchido
+        if (empty($resolution_time) || !is_numeric($resolution_time) || $resolution_time <= 0) {
+            echo "<script>alert('Para fechar um ticket, é necessário informar o tempo de resolução em minutos.'); window.history.back();</script>";
+            exit;
+        }
+        
+        // Verificar se a descrição da resolução está preenchida
+        if (empty($description)) {
+            echo "<script>alert('Para fechar um ticket, é necessário fornecer uma descrição da resolução.'); window.history.back();</script>";
+            exit;
+        }
+        
+        // Verificar se um usuário está atribuído ao ticket
+        if (empty($user)) {
+            echo "<script>alert('Para fechar um ticket, é necessário atribuí-lo a um responsável.'); window.history.back();</script>";
+            exit;
+        }
+    }
 
     // Validar que o tempo é um número positivo
     if (!is_numeric($resolution_time) || $resolution_time <= 0) {
         echo "<script>alert('Tempo de resolução inválido! Deve ser um número positivo.'); window.history.back();</script>";
         exit;
-    }    // Converter para inteiro
+    }    
+    // Converter para inteiro
     $time_formatted = (int)$resolution_time;
     
     try {
