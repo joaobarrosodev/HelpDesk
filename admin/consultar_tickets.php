@@ -205,9 +205,9 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                                                         <i class="bi bi-gear"></i>
                                                     </button>
                                                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton<?php echo $ticket['id']; ?>">
-                                                        <li><a class="dropdown-item" href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>"><i class="bi bi-eye me-2"></i> Ver detalhes</a></li>
+                                                        <li><a class="dropdown-item" href="detalhes_ticket.php?keyid=<?php echo $ticket['KeyId']; ?>"><i class="bi bi-eye me-2"></i> Ver detalhes</a></li>
                                                         <?php if ($ticket['status'] !== 'Concluído'): ?>
-                                                            <li><a class="dropdown-item text-danger fechar-ticket" href="#" data-id="<?php echo $ticket['id']; ?>"><i class="bi bi-x-circle me-2"></i> Fechar ticket</a></li>
+                                                            <li><a class="dropdown-item text-danger fechar-ticket" href="#" data-id="<?php echo $ticket['KeyId']; ?>"><i class="bi bi-x-circle me-2"></i> Fechar ticket</a></li>
                                                         <?php endif; ?>
                                                     </ul>
                                                 </div>
