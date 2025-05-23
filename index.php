@@ -98,6 +98,29 @@ include('conflogin.php');
             $prioridade_counts = [0, 0, 0];
         }
         
+        // Calcular o tempo médio de resposta baseado na coluna Tempo
+        $sql_tempo_resposta = "SELECT AVG(Tempo) as media_tempo FROM info_xdfree01_extrafields 
+                              WHERE Tempo IS NOT NULL AND Tempo > 0";
+        $stmt_tempo = $pdo->prepare($sql_tempo_resposta);
+        $stmt_tempo->execute();
+        $tempo_result = $stmt_tempo->fetch(PDO::FETCH_ASSOC);
+        
+        // Formatar o tempo médio de resposta - sem arredondamento para cima
+        if ($tempo_result && isset($tempo_result['media_tempo']) && !is_null($tempo_result['media_tempo'])) {
+            $minutos_totais = (int)$tempo_result['media_tempo']; // Cast para int em vez de arredondar
+            $horas = floor($minutos_totais / 60);
+            $minutos = $minutos_totais % 60;
+            
+            if ($horas > 0) {
+                $tempo_medio_resposta = $horas . ":" . str_pad($minutos, 2, '0', STR_PAD_LEFT);
+            } else {
+                $tempo_medio_resposta = $minutos;
+            }
+        } else {
+            // Valor padrão caso não haja dados
+            $tempo_medio_resposta = "0";
+        }
+        
         // Data for Avaliação dos Clientes
         // Normalmente, isso viria de uma tabela de avaliações de clientes
         // Como não temos essa tabela nos arquivos fornecidos, usaremos valores padrão
@@ -106,13 +129,6 @@ include('conflogin.php');
         $negative_percentage = 4;
         $neutral_percentage = 24;
 
-        // Calcular o tempo médio de resposta (exemplo)
-        // Em uma implementação real, você consultaria a diferença entre a data de criação 
-        // e a data da primeira resposta nos tickets
-        
-        // Tempo médio de resposta - placeholder
-        // Em uma implementação real, você calcularia isso com base nas datas de resposta
-        $tempo_medio_resposta = "4:34";
         ?>
 
         <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
@@ -151,7 +167,7 @@ include('conflogin.php');
                     <div class="card dashboard-card">
                         <div class="flex-row d-flex card-body" style="gap: 10px;">
                             <p class="m-0">Tempo Médio de Resposta</p>
-                            <p class="m-0 fw-bold text-primary"><?php echo $tempo_medio_resposta; ?>min</p>
+                            <p class="m-0 fw-bold text-primary"><?php echo $tempo_medio_resposta; ?> min</p>
                         </div>
                     </div>
                 </div>

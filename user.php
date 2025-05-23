@@ -22,7 +22,9 @@ $sql_tickets = "SELECT
     SUM(CASE WHEN i.Status != 'Concluído' THEN 1 ELSE 0 END) as tickets_ativos,
     SUM(CASE WHEN i.Status = 'Concluído' THEN 1 ELSE 0 END) as tickets_concluidos,
     SUM(CASE WHEN i.Status = 'Em Análise' THEN 1 ELSE 0 END) as tickets_em_analise,
-    AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_resposta
+    AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_resposta,
+    AVG(i.Tempo) as avg_tempo,
+    SUM(i.Tempo) as total_tempo
 FROM 
     info_xdfree01_extrafields i
 WHERE 
@@ -296,23 +298,47 @@ try {
                             <div class="card shadow-sm h-100">
                                 <div class="card-body text-center">
                                     <?php
-                                    $avg_time = $avg_response['tempo_medio_fechados'] ?? 0;
-                                    $avg_horas = floor($avg_time);
+                                    // Utilizar o campo Tempo para média de tempo por ticket
+                                    $avg_tempo = $estatisticas['avg_tempo'] ?? 0;
+                                    if ($avg_tempo > 0) {
+                                        $avg_horas = floor($avg_tempo / 60);
+                                        $avg_minutos = $avg_tempo % 60;
+                                        
+                                        if ($avg_horas > 0) {
+                                            $tempo_formatado = $avg_horas . "h" . ($avg_minutos > 0 ? " " . $avg_minutos . "m" : "");
+                                        } else {
+                                            $tempo_formatado = $avg_minutos . "m";
+                                        }
+                                    } else {
+                                        $tempo_formatado = "0h";
+                                    }
                                     ?>
-                                    <h2 class="display-4 mb-1 fw-bold text-danger"><?php echo $avg_horas; ?>h</h2>
+                                    <h2 class="display-4 mb-1 fw-bold text-danger"><?php echo $tempo_formatado; ?></h2>
                                     <p class="text-muted mb-0">Tickets AVG Ticket</p>
                                 </div>
                             </div>
-                        </div>                        <div class="col-md-3 mb-3">
+                        </div>
+                        
+                        <div class="col-md-3 mb-3">
                             <div class="card shadow-sm h-100">
                                 <div class="card-body text-center">
                                     <?php
-                                    // Calcular o tempo total (soma de todos os tempos de resposta)
-                                    $total_tickets = $estatisticas['total_tickets'] ?? 0;
-                                    $tempo_medio = $estatisticas['tempo_medio_resposta'] ?? 0;
-                                    $tempo_total = $total_tickets > 0 ? floor($tempo_medio * $total_tickets) : 0;
+                                    // Utilizar o campo de soma total de Tempo
+                                    $tempo_total = $estatisticas['total_tempo'] ?? 0;
+                                    if ($tempo_total > 0) {
+                                        $total_horas = floor($tempo_total / 60);
+                                        $total_minutos = $tempo_total % 60;
+                                        
+                                        if ($total_horas > 0) {
+                                            $total_formatado = $total_horas . "h" . ($total_minutos > 0 ? " " . $total_minutos . "m" : "");
+                                        } else {
+                                            $total_formatado = $total_minutos . "m";
+                                        }
+                                    } else {
+                                        $total_formatado = "0h";
+                                    }
                                     ?>
-                                    <h2 class="display-4 mb-1 fw-bold text-success"><?php echo $tempo_total; ?>h</h2>
+                                    <h2 class="display-4 mb-1 fw-bold text-success"><?php echo $total_formatado; ?></h2>
                                     <p class="text-muted mb-0">Tempo Total</p>
                                 </div>
                             </div>
