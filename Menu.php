@@ -1,4 +1,4 @@
-<!-- filepath: c:\xampp\htdocs\infoexe\HelpDesk\Menu.php -->
+<!-- filepath: c:\xampp\htdocs\infoexe\HelpDesk\menu.php -->
 <?php
 /**
  * Menu principal do sistema HelpDesk
@@ -56,7 +56,8 @@
                             <span>Conta Corrente</span>
                         </a>
                     </li>
-                <?php endif; ?>                <!-- Dropdown para Manuais - implementação personalizada -->
+                <?php endif; ?>                
+                <!-- Dropdown para Manuais - implementação personalizada -->
                 <li class="nav-item px-2 py-1">
                     <a href="javascript:void(0);" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center justify-content-between text-dark" 
                        aria-expanded="false" 
@@ -134,7 +135,7 @@
             </div>
         </a>
         <div class="px-2 mb-3">
-            <a href="logout.php" class="btn btn-danger text-white w-100 d-flex align-items-center justify-content-between py-2 px-3" role="button">
+            <a href="logout.php" class="btn btn-danger w-100 d-flex align-items-center justify-content-center" role="button">
                 <span>Terminar Sessão</span> 
             </a>
         </div>

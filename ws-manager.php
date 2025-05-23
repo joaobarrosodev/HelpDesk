@@ -32,38 +32,42 @@ function broadcastMessageToWebSocket($ticketId, $messageData) {
         return false;
     }
     
-    // Generate a unique ID for this message
+    // Generate a unique ID for this message if not present
     if (!isset($messageData['messageId'])) {
         $messageData['messageId'] = uniqid('msg_');
     }
     
-    // Format the payload
-    $payload = json_encode([
-        'action' => 'newMessage',
-        'ticketId' => $ticketId,
-        'message' => $messageData,
-        'timestamp' => time()
-    ]);
-    
-    // Write to file for processing
-    $wsFilename = 'ws_message_' . uniqid() . '.json';
-    $wsFile = TEMP_DIR . DIRECTORY_SEPARATOR . $wsFilename;
-    
-    $result = @file_put_contents($wsFile, $payload);
-    
-    if ($result === false) {
-        if (DEBUG) error_log("Failed to create WebSocket message file: $wsFilename");
-        $syncResult = createSyncFile($ticketId, $messageData);
-        return $syncResult;
+    // Add device tracking to prevent loops (but still allow sync)
+    if (isset($messageData['deviceId'])) {
+        $messageData['sourceDeviceId'] = $messageData['deviceId'];
     }
     
-    @chmod($wsFile, 0666);
-    if (DEBUG) error_log("Created WebSocket message file: $wsFilename");
-    
-    // Also create sync file as backup (more reliable)
+    // ALWAYS create sync file for message synchronization
     $syncResult = createSyncFile($ticketId, $messageData);
     
-    return true;
+    // Also try WebSocket if not already saved
+    if (!isset($messageData['alreadySaved']) || $messageData['alreadySaved'] !== true) {
+        // Format the payload
+        $payload = json_encode([
+            'action' => 'newMessage',
+            'ticketId' => $ticketId,
+            'message' => $messageData,
+            'timestamp' => time()
+        ]);
+        
+        // Write to file for processing
+        $wsFilename = 'ws_message_' . uniqid() . '.json';
+        $wsFile = TEMP_DIR . DIRECTORY_SEPARATOR . $wsFilename;
+        
+        $result = @file_put_contents($wsFile, $payload);
+        
+        if ($result !== false) {
+            @chmod($wsFile, 0666);
+            if (DEBUG) error_log("Created WebSocket message file: $wsFilename");
+        }
+    }
+    
+    return $syncResult;
 }
 
 /**
@@ -89,9 +93,16 @@ function createSyncFile($ticketId, $messageData) {
     $cleanTicketId = str_replace('#', '', $ticketId);
     $syncFile = TEMP_DIR . DIRECTORY_SEPARATOR . "sync_{$cleanTicketId}_{$syncId}.txt";
     
+    // Add device tracking info
+    if (isset($messageData['deviceId']) && !isset($messageData['sourceDeviceId'])) {
+        $messageData['sourceDeviceId'] = $messageData['deviceId'];
+    }
+    
     $syncData = [
         'timestamp' => date('Y-m-d H:i:s'),
-        'message' => $messageData
+        'message' => $messageData,
+        'ticketId' => $ticketId,
+        'created' => time()
     ];
     
     $result = @file_put_contents($syncFile, json_encode($syncData));
@@ -154,5 +165,34 @@ function sendDirectHttpRequest($ticketId, $messageData) {
     } catch (Exception $e) {
         error_log('Exception in direct HTTP request: ' . $e->getMessage());
         return false;
+    }
+}
+
+/**
+ * Clean up old temp files to prevent accumulation
+ */
+function cleanupTempFiles() {
+    if (!file_exists(TEMP_DIR)) {
+        return;
+    }
+    
+    // Clean sync files older than 5 minutes
+    $syncFiles = glob(TEMP_DIR . DIRECTORY_SEPARATOR . 'sync_*.txt');
+    if (is_array($syncFiles)) {
+        foreach ($syncFiles as $file) {
+            if (file_exists($file) && (time() - filemtime($file)) > 300) {
+                @unlink($file);
+            }
+        }
+    }
+    
+    // Clean WebSocket message files older than 2 minutes
+    $wsFiles = glob(TEMP_DIR . DIRECTORY_SEPARATOR . 'ws_message_*.json');
+    if (is_array($wsFiles)) {
+        foreach ($wsFiles as $file) {
+            if (file_exists($file) && (time() - filemtime($file)) > 120) {
+                @unlink($file);
+            }
+        }
     }
 }

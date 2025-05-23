@@ -1,6 +1,6 @@
 <?php
 session_start();
-include('admin/db.php');
+include('../db.php');
 
 // Set JSON header
 header('Content-Type: application/json');
@@ -55,7 +55,7 @@ try {
     }
     
 } catch (Exception $e) {
-    error_log('Error in silent_sync.php: ' . $e->getMessage());
+    error_log('Error in admin/silent_sync.php: ' . $e->getMessage());
     echo json_encode(['error' => 'Database error']);
 }
 ?>

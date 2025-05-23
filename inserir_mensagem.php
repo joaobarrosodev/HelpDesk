@@ -1,8 +1,14 @@
 <?php
+// This file should be placed in the root directory for client access
+// It uses the same logic as admin/inserir_mensagem.php but adapted for clients
+
 session_start();
-include('conflogin.php');
-include('db.php');
-include('ws-manager.php'); // Include WebSocket manager functions
+
+// Include database
+include_once('db.php');
+
+// Set timezone to Portugal
+date_default_timezone_set('Europe/Lisbon');
 
 // Check if user is logged in
 if (!isset($_SESSION['usuario_email'])) {
@@ -11,7 +17,9 @@ if (!isset($_SESSION['usuario_email'])) {
     exit;
 }
 
-$isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+$user = $_SESSION['usuario_email'];
+$isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+          strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
 // Check for required parameters
 if (!isset($_POST['keyid']) || !isset($_POST['id']) || !isset($_POST['message'])) {
@@ -27,87 +35,184 @@ if (!isset($_POST['keyid']) || !isset($_POST['id']) || !isset($_POST['message'])
 $keyid = $_POST['keyid'];
 $id = $_POST['id'];
 $message = trim($_POST['message']);
-$user = $_SESSION['usuario_email'];
-$date = date('Y-m-d H:i:s');
-
-// Get device ID if provided
 $deviceId = isset($_POST['deviceId']) ? $_POST['deviceId'] : null;
-
-// Determine message type (1 for user, 2 for admin/support)
-$messageType = (isset($_SESSION['usuario_admin']) && $_SESSION['usuario_admin']) ? 2 : 1;
+$ws_origin = isset($_POST['ws_origin']) ? $_POST['ws_origin'] : '0';
 
 try {
-    // Insert the message into the database
-    $stmt = $pdo->prepare("INSERT INTO comments_xdfree01_extrafields (XDFree01_KeyID, Message, Date, user, type) 
-                          VALUES (:keyid, :message, :date, :user, :type)");
+    // Start transaction
+    $pdo->beginTransaction();
     
+    // Check for duplicate messages
+    $checkSql = "SELECT id FROM comments_xdfree01_extrafields 
+                WHERE XDFree01_KeyID = :keyid 
+                AND Message = :message 
+                AND user = :user 
+                AND ABS(TIMESTAMPDIFF(SECOND, Date, NOW())) < 5";
+    
+    $checkStmt = $pdo->prepare($checkSql);
+    $checkStmt->bindParam(':keyid', $keyid);
+    $checkStmt->bindParam(':message', $message);
+    $checkStmt->bindParam(':user', $user);
+    $checkStmt->execute();
+    
+    if ($checkStmt->rowCount() > 0) {
+        $pdo->rollBack();
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Message already saved',
+                'duplicate' => true
+            ]);
+        } else {
+            header('Location: detalhes_ticket.php?keyid=' . urlencode($id));
+        }
+        exit;
+    }
+    
+    // Save message to database
+    $sql = "INSERT INTO comments_xdfree01_extrafields 
+            (XDFree01_KeyID, Message, type, Date, user) 
+            VALUES (:keyid, :message, :type, NOW(), :user)";
+    
+    $stmt = $pdo->prepare($sql);
     $stmt->bindParam(':keyid', $keyid);
     $stmt->bindParam(':message', $message);
-    $stmt->bindParam(':date', $date);
+    $stmt->bindValue(':type', 1); // Client type
     $stmt->bindParam(':user', $user);
-    $stmt->bindParam(':type', $messageType);
     
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        throw new Exception('Failed to insert message into database');
+    }
+    
+    // Get the inserted message ID
     $messageId = $pdo->lastInsertId();
     
-    // Prepare the message data for WebSocket
-    $messageData = [
-        'Message' => $message,
-        'user' => $user,
-        'type' => $messageType,
-        'CommentTime' => $date,
-        'deviceId' => $deviceId,
-        'messageId' => 'db_' . $messageId
-    ];
+    // Update ticket's last update time
+    $updateSql = "UPDATE info_xdfree01_extrafields 
+                  SET dateu = NOW() 
+                  WHERE XDFree01_KeyID = :keyid";
+    $updateStmt = $pdo->prepare($updateSql);
+    $updateStmt->bindParam(':keyid', $keyid);
+    $updateStmt->execute();
     
-    // Update status to "Em análise" for new tickets or if status is "Pendente"
-    $updateStatus = false;
+    // Commit transaction
+    $pdo->commit();
     
-    // Get current status
-    $stmtStatus = $pdo->prepare("SELECT Status FROM info_xdfree01_extrafields WHERE XDFree01_KeyID = :keyid");
-    $stmtStatus->bindParam(':keyid', $keyid);
-    $stmtStatus->execute();
-    $currentStatus = $stmtStatus->fetchColumn();
-    
-    // Update status if necessary
-    if ($currentStatus == 'Pendente' && $messageType == 2) {
-        $newStatus = 'Em análise';
-        $updateStatus = true;
+    // Only send to WebSocket if this message wasn't originated from WebSocket
+    if ($ws_origin !== '1') {
+        // Prepare message data for WebSocket/sync
+        $messageData = [
+            'action' => 'sendMessage',
+            'ticketId' => $keyid,
+            'ticketNumericId' => $id,
+            'message' => $message,
+            'user' => $user,
+            'type' => 1, // Client type
+            'deviceId' => $deviceId,
+            'timestamp' => date('Y-m-d H:i:s'),
+            'messageId' => 'db_' . $messageId,
+            'alreadySaved' => true
+        ];
+        
+        // Try to send to WebSocket server
+        $wsSuccess = sendToWebSocketServer($messageData);
+    } else {
+        $wsSuccess = true;
     }
-    else if ($currentStatus == 'Em análise' && $messageType == 1) {
-        $newStatus = 'Aguarda resposta';
-        $updateStatus = true;
-    }
-    
-    if ($updateStatus) {
-        $stmtUpdateStatus = $pdo->prepare("UPDATE info_xdfree01_extrafields SET Status = :status WHERE XDFree01_KeyID = :keyid");
-        $stmtUpdateStatus->bindParam(':status', $newStatus);
-        $stmtUpdateStatus->bindParam(':keyid', $keyid);
-        $stmtUpdateStatus->execute();
-    }
-    
-    // Broadcast the message via WebSocket
-    broadcastMessageToWebSocket($keyid, $messageData);
     
     if ($isAjax) {
         header('Content-Type: application/json');
         echo json_encode([
-            'status' => 'success', 
+            'status' => 'success',
+            'message' => 'Message saved successfully',
             'messageId' => $messageId,
-            'websocketBroadcast' => true,
-            'statusUpdated' => $updateStatus,
-            'newStatus' => $updateStatus ? $newStatus : null
+            'websocketSent' => $wsSuccess
         ]);
     } else {
         header('Location: detalhes_ticket.php?keyid=' . urlencode($id));
     }
     
-} catch (PDOException $e) {
+} catch (Exception $e) {
+    // Rollback transaction on error
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    
+    error_log('Error in inserir_mensagem.php: ' . $e->getMessage());
+    
     if ($isAjax) {
         header('Content-Type: application/json');
-        echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Failed to save message: ' . $e->getMessage()
+        ]);
     } else {
-        header('Location: meus_tickets.php?error=2');
+        header('Location: meus_tickets.php?error=3');
     }
+}
+
+/**
+ * Send message to WebSocket server via HTTP or temp file
+ */
+function sendToWebSocketServer($messageData) {
+    // Try HTTP first
+    $wsUrl = 'http://localhost:8080/send-message';
+    
+    if (function_exists('curl_init')) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $wsUrl);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($messageData));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Authorization: Bearer helpdesk_secret_key'
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode == 200) {
+            return true;
+        }
+    }
+    
+    // Fallback: create a temp file for WebSocket to process
+    $tempDir = __DIR__ . '/temp';
+    if (!file_exists($tempDir)) {
+        @mkdir($tempDir, 0777, true);
+    }
+    
+    // Create sync file for immediate synchronization
+    $syncId = uniqid();
+    $cleanTicketId = str_replace('#', '', $messageData['ticketId']);
+    $syncFile = $tempDir . "/sync_{$cleanTicketId}_{$syncId}.txt";
+    
+    $syncData = [
+        'timestamp' => date('Y-m-d H:i:s'),
+        'message' => [
+            'Message' => $messageData['message'],
+            'user' => $messageData['user'],
+            'type' => $messageData['type'],
+            'CommentTime' => $messageData['timestamp'],
+            'deviceId' => $messageData['deviceId'],
+            'messageId' => $messageData['messageId']
+        ],
+        'ticketId' => $messageData['ticketId'],
+        'created' => time()
+    ];
+    
+    $result = @file_put_contents($syncFile, json_encode($syncData));
+    
+    if ($result !== false) {
+        @chmod($syncFile, 0666);
+        return true;
+    }
+    
+    return false;
 }
 ?>

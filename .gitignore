@@ -30,3 +30,4 @@ composer.lock
 
 /temp/*
 vendor/*
+ws-server.log

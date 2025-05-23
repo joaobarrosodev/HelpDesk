@@ -1,26 +1,57 @@
 <?php
-$targetDir = "uploads/";
+// Diretório para salvar as imagens
+$uploadDir = 'uploads/';
 
-if (!is_dir($targetDir)) {
-    mkdir($targetDir, 0777, true);  // Cria a pasta se não existir
+// Criar diretório se não existir
+if (!file_exists($uploadDir) && !is_dir($uploadDir)) {
+    mkdir($uploadDir, 0755, true);
 }
 
-if (!empty($_FILES["file"]["name"])) {
-    $fileName = time() . "_" . basename($_FILES["file"]["name"]);
-    $targetFilePath = $targetDir . $fileName;
-    $fileType = pathinfo($targetFilePath, PATHINFO_EXTENSION);
+// Resposta padrão (será modificada em caso de sucesso)
+$response = array('success' => false, 'erro' => 'Nenhum arquivo enviado');
 
-    // Extensões permitidas
-    $allowTypes = array('jpg', 'png', 'jpeg', 'gif', 'webp');
-    if (in_array($fileType, $allowTypes)) {
-        if (move_uploaded_file($_FILES["file"]["tmp_name"], $targetFilePath)) {
-            header('Content-Type: application/json');
-            echo json_encode(["caminho" => $targetFilePath]);
+if (isset($_FILES['file']) && !empty($_FILES['file']['name'])) {
+    // Obter informações do arquivo
+    $fileName = $_FILES['file']['name'];
+    $fileType = $_FILES['file']['type'];
+    $fileTmp = $_FILES['file']['tmp_name'];
+    $fileError = $_FILES['file']['error'];
+    
+    // Validar se é uma imagem
+    $allowedTypes = array('image/jpeg', 'image/png', 'image/gif', 'image/jpg');
+    
+    if (in_array($fileType, $allowedTypes)) {
+        // Gerar nome único
+        $newFileName = uniqid() . '_' . $fileName;
+        $destination = $uploadDir . $newFileName;
+        
+        // Mover para o diretório final
+        if (move_uploaded_file($fileTmp, $destination)) {
+            // Caminho absoluto para o servidor
+            $fullPath = $_SERVER['DOCUMENT_ROOT'] . '/' . basename(dirname($_SERVER['SCRIPT_NAME'])) . '/' . $destination;
+            
+            // Caminho relativo para uso em URLs
+            $relativePath = '/' . basename(dirname($_SERVER['SCRIPT_NAME'])) . '/' . $destination;
+            
+            // Resposta de sucesso com os caminhos da imagem
+            $response = array(
+                'success' => true,
+                'caminho' => $relativePath,
+                'fullPath' => $fullPath,
+                'fileName' => $newFileName
+            );
         } else {
-            echo json_encode(["erro" => "Erro ao mover o arquivo."]);
+            $response = array('success' => false, 'erro' => 'Falha ao mover o arquivo enviado');
         }
     } else {
-        echo json_encode(["erro" => "Formato de arquivo não permitido."]);
+        $response = array('success' => false, 'erro' => 'Formato de arquivo não permitido. Apenas JPG, JPEG, PNG e GIF são aceitos.');
     }
+} else {
+    $response = array('success' => false, 'erro' => 'Nenhum arquivo enviado');
 }
+
+// Retornar resposta em JSON
+header('Content-Type: application/json');
+echo json_encode($response);
+exit;
 ?>

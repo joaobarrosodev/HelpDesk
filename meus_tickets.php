@@ -1,6 +1,10 @@
 <?php
 session_start();  // Inicia a sessão
 
+// Debug session information
+error_log("meus_tickets.php - Session ID: " . session_id());
+error_log("meus_tickets.php - Session data: " . print_r($_SESSION, true));
+
 include('conflogin.php');
 include('db.php');
 
@@ -30,10 +34,8 @@ $sql = "SELECT
             xdfree01 t
         LEFT JOIN 
             info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
-            LEFT JOIN 
-            internal_xdfree01_extrafields ie ON t.KeyId = ie.XDFree01_KeyID
         LEFT JOIN 
-            users u ON ie.User = u.id
+            users u ON i.Atribuido = u.id
         WHERE 
             i.Entity = :usuario_id";
 
@@ -74,7 +76,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <h1 class="mb-3 display-5">Os Meus Tickets</h1>
                     <p class="">Lista de todos os seus tickets, incluindo tickets em aberto e resolvidos. Utilize os filtros abaixo para refinar a visualização.</p>
                 </div>
-                <a href="ticket.php" class="btn btn-primary d-flex align-items-center">
+                <a href="abrir_ticket.php" class="btn btn-primary d-flex align-items-center">
                     Abrir Novo Ticket
                 </a>
             </div>
@@ -129,7 +131,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <?php if (count($tickets) > 0): ?>                                    
                                     <?php foreach ($tickets as $ticket): ?>                                     
                                            <tr>                                            <td>
-                                                <a href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>" class="text-decoration-none text-dark d-flex align-items-center text-nowrap">
+                                                <a href="detalhes_ticket.php?keyid=<?php echo urlencode($ticket['KeyId']); ?>" class="text-decoration-none text-dark d-flex align-items-center text-nowrap">
                                                     <i class="bi bi-arrow-right-circle me-2"></i> 
                                                     <?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?>
                                                 </a>

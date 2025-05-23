@@ -34,7 +34,7 @@ include('conflogin.php');
         }
 
         // Contar tickets em aberto para o usuário atual
-        $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields WHERE (status = 'Em Análise' OR status = 'Em Resolução' OR status = 'Aguarda Resposta Cliente') AND Entity = :usuario_id";
+        $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields WHERE (status = 'Em Análise' OR status = 'Em Resolução' OR status = ' Aguarda Resposta') AND Entity = :usuario_id";
         $stmt_tickets = $pdo->prepare($sql_tickets);
         $stmt_tickets->bindParam(':usuario_id', $_SESSION['usuario_id']);
         $stmt_tickets->execute();
@@ -120,7 +120,7 @@ include('conflogin.php');
                 <h1 class="mb-3 display-5">Bem Vindo, <span class="text-primary"><?php echo isset($_SESSION['Nome']) ? htmlspecialchars($_SESSION['Nome']) : 'Utilizador'; ?></span> </h1>
                 <p class="text-muted mb-3 w-100">Aqui pode acompanhar os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real.</p>
             </div>
-            <a href="ticket.php" class="btn btn-primary btn-primary">Abrir Novo Ticket</a>
+            <a href="abrir_ticket.php" class="btn btn-primary btn-primary">Abrir Novo Ticket</a>
         </div>
 
         <!-- Dashboard Cards -->
@@ -221,12 +221,14 @@ include('conflogin.php');
                         label: 'Categoria dos Tickets',
                         data: <?php echo json_encode($categoria_counts); ?>,
                         backgroundColor: [
-                            '#28a745', // Green
-                            '#529ebe', // Blue
-                            '#ffc107', // Yellow
-                            '#dc3545', // Red
-                            '#6f42c1', // Purple
-                            '#fd7e14'  // Orange
+                            '#4A90E2', // Medium blue
+                            '#7ED321', // Medium green
+                            '#F5A623', // Medium orange/yellow
+                            '#D0021B', // Medium red
+                            '#9013FE', // Medium purple
+                            '#FF6B35', // Medium orange
+                            '#50E3C2', // Medium teal
+                            '#BD10E0'  // Medium magenta
                         ],
                         borderColor: '#fff',
                         borderWidth: 5

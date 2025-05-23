@@ -3,18 +3,14 @@ session_start();  // Inicia a sessão
 
 include('conflogin.php');
 include('db.php');
-$admin_id = $_SESSION['admin_id'];
 
-// Recupera o filtro de estado, se existir
-$estado_filtro = isset($_GET['status']) ? $_GET['status'] : '';
-$params = [];
-
-// Prepara a SQL para tickets atribuídos
+// Prepara a SQL para tickets fechados (concluídos)
 $sql = "SELECT 
             xdfree01.KeyId, 
             xdfree01.id, 
             xdfree01.Name as titulo_do_ticket, 
             info_xdfree01_extrafields.Atribuido as User, 
+            info_xdfree01_extrafields.Relatorio as Description, 
             info_xdfree01_extrafields.Priority as prioridade, 
             info_xdfree01_extrafields.Status as status, 
             DATE_FORMAT(info_xdfree01_extrafields.CreationDate, '%d/%m/%Y') as criado, 
@@ -25,22 +21,18 @@ $sql = "SELECT
              FROM comments_xdfree01_extrafields c 
              JOIN online_entity_extrafields oee ON c.user = oee.email 
              WHERE c.XDFree01_KeyID = xdfree01.KeyId 
-             ORDER BY c.Date DESC LIMIT 1) as LastCommentUser
+             ORDER BY c.Date DESC LIMIT 1) as LastCommentUser,
+            info_xdfree01_extrafields.Tempo as ResolutionTime,
+            info_xdfree01_extrafields.Relatorio as ResolutionDescription
         FROM xdfree01 
         JOIN info_xdfree01_extrafields ON xdfree01.KeyId = info_xdfree01_extrafields.XDFree01_KeyID
         LEFT JOIN users u ON info_xdfree01_extrafields.Atribuido = u.id
-        LEFT JOIN online_entity_extrafields online on info_xdfree01_extrafields.CreationUser = online.email
-        WHERE (info_xdfree01_extrafields.Atribuido IS NOT NULL AND info_xdfree01_extrafields.Atribuido <> '') 
-        AND info_xdfree01_extrafields.Status <> 'Concluído'";
+        LEFT JOIN online_entity_extrafields online ON info_xdfree01_extrafields.CreationUser = online.email
+        WHERE info_xdfree01_extrafields.Status = 'Concluído'";
 
-if (!empty($estado_filtro)) {
-    $sql .= " AND info_xdfree01_extrafields.Status = :estado_filtro";
-    $params[':estado_filtro'] = $estado_filtro;
-}
-
-$sql .= " ORDER BY info_xdfree01_extrafields.dateu DESC";
+$sql .= " ORDER BY info_xdfree01_extrafields.dateu DESC"; // Ordenar pelo mais recente
 $stmt = $pdo->prepare($sql);
-$stmt->execute($params);
+$stmt->execute();
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -53,30 +45,13 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="container-fluid p-4">
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
-                    <h1 class="mb-3 display-5">Tickets Atribuídos</h1>
-                    <p class="">Lista de tickets em andamento que já possuem um responsável designado.</p>
+                    <h1 class="mb-3 display-5">Tickets Fechados</h1>
+                    <p class="">Lista de todos os tickets concluídos, com tempo de resolução e informações de conclusão.</p>
                 </div>
             </div>
             
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
-                    <!-- Filters -->
-                    <form method="get" action="" class="row g-3 mb-4">
-                        <div class="col-md-3">
-                            <label for="status" class="form-label">Estado</label>
-                            <select class="form-select" id="status" name="status">
-                                <option value="">Todos</option>
-                                <option value="Em Análise" <?php echo $estado_filtro == 'Em Análise' ? 'selected' : ''; ?>>Em Análise</option>
-                                <option value="Em Resolução" <?php echo $estado_filtro == 'Em Resolução' ? 'selected' : ''; ?>>Em Resolução</option>
-                                <option value="Aguarda Resposta" <?php echo $estado_filtro == 'Aguarda Resposta' ? 'selected' : ''; ?>>Aguarda Resposta</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-dark w-100">Filtrar</button>
-                        </div>
-                    </form>
-                        
                     <!-- Table -->
                     <div class="table-responsive">
                         <table class="table align-middle">
@@ -85,11 +60,10 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <th scope="col" class="sortable text-nowrap">Título</th>
                                     <th scope="col" class="sortable text-nowrap">Atualizado</th>
                                     <th scope="col" class="sortable text-nowrap">Criado</th>
-                                    <th scope="col" class="sortable text-nowrap">Estado</th>
                                     <th scope="col" class="sortable text-nowrap">Prioridade</th>
-                                    <th scope="col" class="sortable text-nowrap">Criador</th>
+                                    <th scope="col" class="sortable text-nowrap">Tempo (min)</th>
                                     <th scope="col" class="sortable text-nowrap">Atribuído a</th>
-                                    <th scope="col" class="sortable text-nowrap">Última Mensagem Por</th>
+                                    <th scope="col" class="sortable text-nowrap">Criador</th>
                                     <th scope="col" class="text-nowrap">Ações</th>
                                 </tr>
                             </thead>
@@ -99,28 +73,12 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <tr>
                                             <td>
                                                 <a href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>" class="text-decoration-none text-dark d-flex align-items-center text-nowrap">
-                                                    <i class="bi bi-arrow-right-circle me-2"></i> 
+                                                    <i class="bi bi-check-circle-fill me-2 text-success"></i> 
                                                     <?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?>
                                                 </a>
                                             </td>
                                             <td><?php echo $ticket['atualizado']; ?></td>
                                             <td><?php echo $ticket['criado']; ?></td>
-                                            <td>
-                                                <?php 
-                                                $status = $ticket['status'];
-                                                $statusClass = '';
-                                                if ($status == 'Em Análise') {
-                                                    $statusClass = 'badge w-100 bg-info';
-                                                } elseif ($status == 'Em Resolução') {
-                                                    $statusClass = 'badge w-100 bg-warning';
-                                                } elseif ($status == 'Aguarda Resposta') {
-                                                    $statusClass = 'badge w-100 bg-secondary';
-                                                } else {
-                                                    $statusClass = 'badge w-100 bg-dark';
-                                                }
-                                                ?>
-                                                <span class="<?php echo $statusClass; ?>"><?php echo $status; ?></span>
-                                            </td>
                                             <td>
                                                 <?php 
                                                 $badgeClass = 'w-100 bg-success';
@@ -132,9 +90,9 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                 ?>
                                                 <span class="badge <?php echo $badgeClass; ?>"><?php echo $ticket['prioridade']; ?></span>
                                             </td>
-                                            <td><?php echo $ticket['CreationUser']; ?></td>
+                                            <td><?php echo !empty($ticket['ResolutionTime']) ? htmlspecialchars($ticket['ResolutionTime']) : '-'; ?></td>
                                             <td><?php echo !empty($ticket['atribuido_a']) ? htmlspecialchars($ticket['atribuido_a']) : '-'; ?></td>
-                                            <td><?php echo !empty($ticket['LastCommentUser']) ? htmlspecialchars($ticket['LastCommentUser']) : '-'; ?></td>
+                                            <td><?php echo $ticket['CreationUser']; ?></td>
                                             <td>
                                                 <div class="dropdown">
                                                     <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton<?php echo $ticket['id']; ?>" data-bs-toggle="dropdown" aria-expanded="false">
@@ -142,17 +100,55 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                     </button>
                                                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton<?php echo $ticket['id']; ?>">
                                                         <li><a class="dropdown-item" href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>"><i class="bi bi-eye me-2"></i> Ver detalhes</a></li>
-                                                        <li><a class="dropdown-item text-danger" href="processar_alteracao.php?action=close&keyid=<?php echo $ticket['id']; ?>"><i class="bi bi-x-circle me-2"></i> Fechar ticket</a></li>
+                                                        <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalResolucao<?php echo $ticket['id']; ?>" href="#"><i class="bi bi-info-circle me-2"></i> Ver resolução</a></li>
                                                     </ul>
+                                                </div>
+
+                                                <!-- Modal de Resolução -->
+                                                <div class="modal fade" id="modalResolucao<?php echo $ticket['id']; ?>" tabindex="-1" aria-labelledby="modalLabel<?php echo $ticket['id']; ?>" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title" id="modalLabel<?php echo $ticket['id']; ?>">Detalhes da Resolução</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="mb-3">
+                                                                    <h6>Título do Ticket</h6>
+                                                                    <p><?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?></p>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <h6>Resolvido por</h6>
+                                                                    <p><?php echo !empty($ticket['atribuido_a']) ? htmlspecialchars($ticket['atribuido_a']) : 'Não especificado'; ?></p>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <h6>Tempo de Resolução</h6>
+                                                                    <p><?php echo !empty($ticket['ResolutionTime']) ? htmlspecialchars($ticket['ResolutionTime']) . ' minutos' : 'Não especificado'; ?></p>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <h6>Descrição da Resolução</h6>
+                                                                    <p><?php echo !empty($ticket['ResolutionDescription']) ? nl2br(htmlspecialchars($ticket['ResolutionDescription'])) : 'Não especificado'; ?></p>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <h6>Data de Conclusão</h6>
+                                                                    <p><?php echo $ticket['atualizado']; ?></p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                                                                <a href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>" class="btn btn-primary">Ver Ticket Completo</a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="9" class="text-center py-4">
+                                        <td colspan="8" class="text-center py-4">
                                             <div class="alert alert-info mb-0">
-                                                <i class="bi bi-info-circle me-2"></i> Não há tickets atribuídos no momento.
+                                                <i class="bi bi-info-circle me-2"></i> Não há tickets fechados para exibir.
                                             </div>
                                         </td>
                                     </tr>
@@ -195,8 +191,8 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     const cellAContent = rowA.cells[index].textContent.trim();
                     const cellBContent = rowB.cells[index].textContent.trim();
                     
-                    // Special sorting for "Prioridade" column (index 4)
-                    if (index === 4) {
+                    // Special sorting for "Prioridade" column (index 3)
+                    if (index === 3) {
                         const priorityA = priorityMap[cellAContent] || 0;
                         const priorityB = priorityMap[cellBContent] || 0;
                         return isAscending ? priorityA - priorityB : priorityB - priorityA;
@@ -208,6 +204,14 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     
                     if (dateA && dateB) {
                         return isAscending ? dateA - dateB : dateB - dateA;
+                    }
+                    
+                    // Try to sort as numbers if possible
+                    const numA = Number(cellAContent);
+                    const numB = Number(cellBContent);
+                    
+                    if (!isNaN(numA) && !isNaN(numB)) {
+                        return isAscending ? numA - numB : numB - numA;
                     }
                     
                     // Otherwise sort as strings
