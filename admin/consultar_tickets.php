@@ -142,14 +142,14 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                         <table class="table align-middle">
                             <thead class="table-dark">
                                 <tr>
-                                    <th scope="col" class="sortable text-nowrap">Código</th>
-                                    <th scope="col" class="sortable text-nowrap">Título</th>
+
+                                    <th scope="col" class="sortable text-nowrap">Título</th>                                    
+                                    <th scope="col" class="sortable text-nowrap">Assunto</th>
                                     <th scope="col" class="sortable text-nowrap">Atualizado</th>
                                     <th scope="col" class="sortable text-nowrap">Criado</th>
                                     <th scope="col" class="sortable text-nowrap">Estado</th>
                                     <th scope="col" class="sortable text-nowrap">Prioridade</th>
                                     <th scope="col" class="sortable text-nowrap">Criador</th>
-                                    <th scope="col" class="sortable text-nowrap">Atribuído a</th>
                                     <th scope="col" class="sortable text-nowrap">Última Mensagem Por</th>
                                     <th scope="col" class="text-nowrap">Ações</th>
                                 </tr>
@@ -158,13 +158,13 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                                 <?php if (count($tickets) > 0): ?>
                                     <?php foreach ($tickets as $ticket): ?>
                                         <tr>
-                                            <td><?php echo $ticket['KeyId']; ?></td>
                                             <td>
                                                 <a href="detalhes_ticket.php?keyid=<?php echo urlencode($ticket['KeyId']); ?>" class="text-decoration-none text-dark d-flex align-items-center text-nowrap">
                                                     <i class="bi bi-arrow-right-circle me-2"></i> 
                                                     <?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?>
                                                 </a>
                                             </td>
+                                            <td><?php echo $ticket['assunto']; ?></td>
                                             <td><?php echo $ticket['atualizado']; ?></td>
                                             <td><?php echo $ticket['criado']; ?></td>
                                             <td>
@@ -197,7 +197,6 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                                                 <span class="badge <?php echo $badgeClass; ?>"><?php echo $ticket['prioridade']; ?></span>
                                             </td>
                                             <td><?php echo $ticket['CreationUser']; ?></td>
-                                            <td><?php echo !empty($ticket['atribuido_a']) ? htmlspecialchars($ticket['atribuido_a']) : '-'; ?></td>
                                             <td><?php echo !empty($ticket['LastCommentUser']) ? htmlspecialchars($ticket['LastCommentUser']) : '-'; ?></td>
                                             <td>
                                                 <div class="dropdown">

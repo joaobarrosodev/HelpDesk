@@ -22,7 +22,7 @@
         <button class="btn border-0 bg-transparent d-lg-none d-block p-0 fs-5" id="sidebarClose" aria-label="Fechar menu">
             <i class="bi bi-x text-muted" aria-hidden="true"></i>
         </button>
-    </header>
+        </header>
     
     <div class="mt-2">
         <ul class="nav flex-column m-0 p-0">
@@ -111,7 +111,8 @@
                 </li>
             <?php endif; ?>
         </ul>
-    </div>   <!-- Área do Usuário -->
+    </div>   
+    <!-- Área do Usuário -->
     <?php if (isset($_SESSION['usuario_id'])): ?>
         <a href="user.php" class="mt-auto text-decoration-none user-profile-link p-3 d-flex align-items-center rounded-2 mx-2 mb-1 bg-light" title="Ver perfil de utilizador">
             <div class="user-avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" aria-hidden="true">                <?php 
