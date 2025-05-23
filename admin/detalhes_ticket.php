@@ -1,4 +1,14 @@
 <?php
+// Start session first
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Debug session information
+error_log("admin/detalhes_ticket.php - Session ID: " . session_id());
+error_log("admin/detalhes_ticket.php - Session data: " . print_r($_SESSION, true));
+error_log("admin/detalhes_ticket.php - GET parameters: " . print_r($_GET, true));
+
 // Try to auto-start the WebSocket server if needed
 include('../auto-start.php');
 
@@ -697,7 +707,7 @@ function getStatusColor($status)
             const ticketId = '<?php echo $ticket_id; ?>';
             const encodedTicketId = encodeURIComponent(ticketId);
 
-            fetch('../silent_sync.php?ticketId=' + encodedTicketId +
+            fetch('silent_sync.php?ticketId=' + encodedTicketId +
                     '&deviceId=' + encodeURIComponent(deviceId) +
                     '&lastCheck=' + encodeURIComponent(lastMessageTimestamp) +
                     '&_=' + timestamp)
@@ -757,16 +767,71 @@ function getStatusColor($status)
                 const messageText = message.Message || '';
                 const user = message.user || 'unknown';
                 const time = message.CommentTime || new Date().toISOString();
-                const messageKey = message.messageId || `${user}-${time}-${messageText.substring(0, 20)}`;
 
-                if (document.querySelector(`[data-message-key="${messageKey}"]`)) {
+                // Create multiple possible keys for this message
+                const possibleKeys = [
+                    message.messageId,
+                    `${user}-${formatMessageTime(time)}-${messageText.substring(0, 20)}`,
+                    `${user}-${time}-${messageText.substring(0, 20)}`,
+                    `db_${message.messageId}`,
+                    `admin_msg_${message.messageId}`,
+                    `temp_admin_${message.messageId}`
+                ];
+
+                // Check if any of these keys already exist
+                let messageExists = false;
+                possibleKeys.forEach(key => {
+                    if (key && processedMessageIds.has(key)) {
+                        messageExists = true;
+                    }
+                });
+
+                // Also check DOM for existing message (but not temp messages)
+                if (!messageExists) {
+                    possibleKeys.forEach(key => {
+                        if (key) {
+                            const existingElement = document.querySelector(`[data-message-key="${key}"]`);
+                            if (existingElement && !existingElement.getAttribute('data-temp-message')) {
+                                messageExists = true;
+                            }
+                        }
+                    });
+                }
+
+                // Special handling: if this message matches a temp message from the same user,
+                // remove the temp message and add the real one
+                const tempMessageSelector = `[data-temp-message="true"][data-awaiting-sync="true"]`;
+                const tempMessages = document.querySelectorAll(tempMessageSelector);
+                
+                tempMessages.forEach(tempMsg => {
+                    const tempUser = tempMsg.querySelector('.message-user-info')?.textContent;
+                    const tempTime = tempMsg.querySelector('.message-time')?.textContent;
+                    const tempText = tempMsg.querySelector('.message-content')?.textContent;
+                    
+                    // Check if this real message matches the temp message
+                    if (tempUser === user && tempText === messageText) {
+                        console.log("Found matching temp message, removing it");
+                        tempMsg.parentNode.removeChild(tempMsg);
+                        messageExists = false; // Allow the real message to be added
+                    }
+                });
+
+                if (messageExists) {
                     return;
                 }
 
+                // Add all possible keys to processed set
+                possibleKeys.forEach(key => {
+                    if (key) {
+                        processedMessageIds.add(key);
+                    }
+                });
+
                 newMessagesAdded = true;
+
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${messageClass} new-message`;
-                messageDiv.setAttribute('data-message-key', messageKey);
+                messageDiv.setAttribute('data-message-key', message.messageId || possibleKeys[1]);
 
                 let timeDisplay = formatMessageTime(time);
 
@@ -860,22 +925,36 @@ function getStatusColor($status)
             const message = messageInput.value.trim();
             
             if (message) {
+                // Create a unique message ID for tracking
+                const tempMessageId = 'temp_admin_' + new Date().getTime() + '_' + Math.random().toString(36).substring(7);
+                const currentTime = new Date().toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'});
+                
                 // Add message with animation (preview)
                 const chatBody = document.getElementById('chatBody');
                 const messageDiv = document.createElement('div');
-                messageDiv.className = 'message message-admin new-message';
+                messageDiv.className = 'message message-admin new-message temp-message';
+                messageDiv.setAttribute('data-message-key', tempMessageId);
+                messageDiv.setAttribute('data-temp-message', 'true');
                 messageDiv.innerHTML = `
                     <p class="message-content">${message.replace(/\n/g, '<br>')}</p>
                     <div class="message-meta">
                         <span class="message-user-info"><?php echo $_SESSION['admin_email'] ?? 'Admin'; ?></span>
-                        <span class="message-time">${new Date().toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}</span>
+                        <span class="message-time">${currentTime}</span>
                     </div>
                 `;
                 chatBody.appendChild(messageDiv);
                 chatBody.scrollTop = chatBody.scrollHeight;
 
-                // Reset textarea
+                // Add to processed messages immediately to prevent sync duplication
+                const messageKey = `<?php echo $_SESSION['admin_email'] ?? 'Admin'; ?>-${currentTime}-${message.substring(0, 20)}`;
+                processedMessageIds.add(messageKey);
+                processedMessageIds.add(tempMessageId);
+
+                // Store message details for cleanup
                 const messageToSend = message;
+                const messageUserKey = `<?php echo $_SESSION['admin_email'] ?? 'Admin'; ?>`;
+                
+                // Reset textarea
                 messageInput.value = '';
                 messageInput.style.height = 'auto';
                 document.getElementById('sendButton').disabled = true;
@@ -883,15 +962,12 @@ function getStatusColor($status)
                 // Always use AJAX to ensure database persistence
                 const formData = new FormData(this);
                 
-                // Ensure we're sending the right message
                 if (!formData.get('message')) {
                     formData.set('message', messageToSend);
                 }
                 
-                // Add device ID to the form data
                 formData.append('deviceId', deviceId);
 
-                // Direct form submission
                 fetch('inserir_mensagem.php', {
                         method: 'POST',
                         body: formData,
@@ -903,28 +979,48 @@ function getStatusColor($status)
                         if (!response.ok) {
                             throw new Error(`Erro ao enviar mensagem: ${response.status}`);
                         }
-                        return response.text();
+                        return response.json();
                     })
                     .then(data => {
                         console.log("Message saved successfully");
                         
-                        // Force check for sync files to update any other clients
-                        setTimeout(checkSyncFiles, 200);
+                        // Mark temp message for removal when sync detects the real message
+                        messageDiv.setAttribute('data-awaiting-sync', 'true');
+                        
+                        // Force check for sync files to detect our own message
+                        setTimeout(() => {
+                            checkSyncFiles();
+                            // Check again after a delay to ensure we caught the message
+                            setTimeout(checkSyncFiles, 1000);
+                        }, 500);
                         
                         // Only try WebSocket after successful database save
                         if (wsConnected) {
                             const messageObj = {
                                 Message: messageToSend,
-                                user: '<?php echo $_SESSION['admin_email'] ?? "Admin"; ?>',
+                                user: messageUserKey,
                                 type: 2,
                                 CommentTime: new Date().toISOString(),
                                 deviceId: deviceId,
                                 messageId: 'admin_msg_' + new Date().getTime(),
-                                alreadySaved: true // Mark as already saved
+                                alreadySaved: true
                             };
+
+                            // Add final message key to processed set
+                            const finalMessageKey = `${messageObj.user}-${formatMessageTime(messageObj.CommentTime)}-${messageObj.Message.substring(0, 20)}`;
+                            processedMessageIds.add(finalMessageKey);
+                            processedMessageIds.add(messageObj.messageId);
                             
                             sendWebSocketMessage(messageObj, '<?php echo $ticket_id; ?>');
                         }
+                        
+                        // Safety fallback: remove temp message after 10 seconds if still there
+                        setTimeout(() => {
+                            if (messageDiv.parentNode && messageDiv.getAttribute('data-temp-message') === 'true') {
+                                console.log("Safety cleanup: removing temp message");
+                                messageDiv.parentNode.removeChild(messageDiv);
+                            }
+                        }, 10000);
                     })
                     .catch(error => {
                         console.error("Error saving message:", error);
@@ -933,6 +1029,10 @@ function getStatusColor($status)
                         if (messageDiv.parentNode) {
                             messageDiv.parentNode.removeChild(messageDiv);
                         }
+
+                        // Remove from processed messages since it failed
+                        processedMessageIds.delete(messageKey);
+                        processedMessageIds.delete(tempMessageId);
                         
                         alert('Ocorreu um erro ao enviar a mensagem. Por favor, tente novamente.');
                         
@@ -944,6 +1044,112 @@ function getStatusColor($status)
                     });
             }
         });
+
+        function processNewMessages(messages) {
+            if (!messages || messages.length === 0) {
+                return;
+            }
+
+            const chatBody = document.getElementById('chatBody');
+            let newMessagesAdded = false;
+
+            messages.forEach(message => {
+                if (!message || typeof message !== 'object') {
+                    return;
+                }
+
+                const type = parseInt(message.type);
+                const isUser = (type === 1);
+                const messageClass = isUser ? 'message-user' : 'message-admin';
+                const messageText = message.Message || '';
+                const user = message.user || 'unknown';
+                const time = message.CommentTime || new Date().toISOString();
+
+                // Create multiple possible keys for this message
+                const possibleKeys = [
+                    message.messageId,
+                    `${user}-${formatMessageTime(time)}-${messageText.substring(0, 20)}`,
+                    `${user}-${time}-${messageText.substring(0, 20)}`,
+                    `db_${message.messageId}`,
+                    `admin_msg_${message.messageId}`,
+                    `temp_admin_${message.messageId}`
+                ];
+
+                // Check if any of these keys already exist
+                let messageExists = false;
+                possibleKeys.forEach(key => {
+                    if (key && processedMessageIds.has(key)) {
+                        messageExists = true;
+                    }
+                });
+
+                // Also check DOM for existing message (but not temp messages)
+                if (!messageExists) {
+                    possibleKeys.forEach(key => {
+                        if (key) {
+                            const existingElement = document.querySelector(`[data-message-key="${key}"]`);
+                            if (existingElement && !existingElement.getAttribute('data-temp-message')) {
+                                messageExists = true;
+                            }
+                        }
+                    });
+                }
+
+                // Special handling: if this message matches a temp message from the same user,
+                // remove the temp message and add the real one
+                const tempMessageSelector = `[data-temp-message="true"][data-awaiting-sync="true"]`;
+                const tempMessages = document.querySelectorAll(tempMessageSelector);
+                
+                tempMessages.forEach(tempMsg => {
+                    const tempUser = tempMsg.querySelector('.message-user-info')?.textContent;
+                    const tempTime = tempMsg.querySelector('.message-time')?.textContent;
+                    const tempText = tempMsg.querySelector('.message-content')?.textContent;
+                    
+                    // Check if this real message matches the temp message
+                    if (tempUser === user && tempText === messageText) {
+                        console.log("Found matching temp message, removing it");
+                        tempMsg.parentNode.removeChild(tempMsg);
+                        messageExists = false; // Allow the real message to be added
+                    }
+                });
+
+                if (messageExists) {
+                    return;
+                }
+
+                // Add all possible keys to processed set
+                possibleKeys.forEach(key => {
+                    if (key) {
+                        processedMessageIds.add(key);
+                    }
+                });
+
+                newMessagesAdded = true;
+
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${messageClass} new-message`;
+                messageDiv.setAttribute('data-message-key', message.messageId || possibleKeys[1]);
+
+                let timeDisplay = formatMessageTime(time);
+
+                messageDiv.innerHTML = `
+                    <p class="message-content">${messageText.replace(/\n/g, '<br>')}</p>
+                    <div class="message-meta">
+                        <span class="message-user-info">${user}</span>
+                        <span class="message-time">${timeDisplay}</span>
+                    </div>
+                `;
+
+                chatBody.appendChild(messageDiv);
+            });
+
+            if (newMessagesAdded) {
+                const isAtBottom = chatBody.scrollHeight - chatBody.clientHeight <= chatBody.scrollTop + 100;
+                if (isAtBottom) {
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                }
+            }
+        }
 
         // Also handle button click explicitly
         document.getElementById('sendButton')?.addEventListener('click', function(e) {
@@ -1210,13 +1416,24 @@ function getStatusColor($status)
             // Start sync file checking as a fallback
             syncCheckInterval = setInterval(checkSyncFiles, 1000);
 
-            // Add existing message IDs to the set
+            // Add existing message IDs to the set with multiple key formats
             document.querySelectorAll('.message').forEach(msg => {
                 const user = msg.querySelector('.message-user-info')?.textContent || 'unknown';
                 const time = msg.querySelector('.message-time')?.textContent || '';
                 const text = msg.querySelector('.message-content')?.textContent.substring(0, 20) || '';
-                const compositeId = `${user}-${time}-${text}`;
-                processedMessageIds.add(compositeId);
+                
+                // Add multiple possible key formats
+                const keys = [
+                    `${user}-${time}-${text}`,
+                    `${user.trim()}-${time.trim()}-${text.trim()}`,
+                    `${user}-${time}-${text.replace(/\s+/g, ' ')}`
+                ];
+                
+                keys.forEach(key => {
+                    if (key) {
+                        processedMessageIds.add(key);
+                    }
+                });
             });
 
             // Admin controls accordion

@@ -20,16 +20,35 @@ Inner Join entities on online.Entity_KeyId = entities.KeyId where online.email =
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($usuario && $senha == $usuario['Password']) {
+        // Regenerate session ID for security
+        session_regenerate_id(true);
+        
         // Se as credenciais estiverem corretas, iniciar a sessão
         $_SESSION['usuario_id'] = $usuario['KeyId'];
         $_SESSION['usuario_email'] = $usuario['email'];
         $_SESSION['Nome'] = $usuario['Name'];
         $_SESSION['Grupo'] = $usuario['Grupo'];
+        $_SESSION['last_activity'] = time();
+        
+        // Log successful login
+        error_log("User logged in successfully: " . $usuario['email'] . " (ID: " . $usuario['KeyId'] . ")");
 
-        // Redirecionar para a página principal ou dashboard
-        header("Location: index.php");
+        // Check if there's a redirect parameter
+        $redirect = isset($_GET['redirect']) ? $_GET['redirect'] : 'index.php';
+        
+        // Validate redirect URL to prevent open redirect attacks
+        if (strpos($redirect, 'http') === 0 || strpos($redirect, '//') !== false) {
+            $redirect = 'index.php';
+        }
+
+        // Redirecionar para a página solicitada ou dashboard
+        header("Location: " . $redirect);
         exit;
-    } else {        // Se a autenticação falhar, mostrar mensagem de erro
+    } else {
+        // Log failed login attempt
+        error_log("Failed login attempt for email: " . $email);
+        
+        // Se a autenticação falhar, mostrar mensagem de erro
         $erro = "Correio eletrónico ou palavra-passe incorretos.";
         header("Location: login.php?error=" . urlencode($erro));
         exit;
@@ -70,6 +89,6 @@ Inner Join entities on online.Entity_KeyId = entities.KeyId where online.email =
     </div>
     </div>
     <!-- Scripts do Bootstrap e JQuery -->
-    <script src="script/script.js"></script>    
+    <script src="script/script.js"></script>
 
 

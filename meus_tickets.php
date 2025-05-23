@@ -1,6 +1,10 @@
 <?php
 session_start();  // Inicia a sessão
 
+// Debug session information
+error_log("meus_tickets.php - Session ID: " . session_id());
+error_log("meus_tickets.php - Session data: " . print_r($_SESSION, true));
+
 include('conflogin.php');
 include('db.php');
 
@@ -127,7 +131,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <?php if (count($tickets) > 0): ?>                                    
                                     <?php foreach ($tickets as $ticket): ?>                                     
                                            <tr>                                            <td>
-                                                <a href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>" class="text-decoration-none text-dark d-flex align-items-center text-nowrap">
+                                                <a href="detalhes_ticket.php?keyid=<?php echo urlencode($ticket['KeyId']); ?>" class="text-decoration-none text-dark d-flex align-items-center text-nowrap">
                                                     <i class="bi bi-arrow-right-circle me-2"></i> 
                                                     <?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?>
                                                 </a>

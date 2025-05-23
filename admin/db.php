@@ -2,7 +2,6 @@
 // Include database logger if it exists
 if (file_exists(__DIR__ . '/db-log.php')) {
     require_once __DIR__ . '/db-log.php';
-    db_log('Database connection initialized');
 }
 
 // Conexão com a base de dados
@@ -18,20 +17,9 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false
     ]);
-    
-    // Log successful connection if db-log.php exists
-    if (function_exists('db_log')) {
-        db_log('Database connection established successfully');
-    }
 } catch (PDOException $e) {
-    // Log the error if db-log.php exists
-    if (function_exists('db_log')) {
-        db_log('Database connection failed', ['error' => $e->getMessage()]);
-    }
-    
     // Log to error log
     error_log('Database Connection Error: ' . $e->getMessage());
-    
     die("Erro ao conectar: " . $e->getMessage());
 }
 ?>

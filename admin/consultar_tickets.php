@@ -160,7 +160,7 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                                         <tr>
                                             <td><?php echo $ticket['KeyId']; ?></td>
                                             <td>
-                                                <a href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>" class="text-decoration-none text-dark d-flex align-items-center text-nowrap">
+                                                <a href="detalhes_ticket.php?keyid=<?php echo urlencode($ticket['KeyId']); ?>" class="text-decoration-none text-dark d-flex align-items-center text-nowrap">
                                                     <i class="bi bi-arrow-right-circle me-2"></i> 
                                                     <?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?>
                                                 </a>

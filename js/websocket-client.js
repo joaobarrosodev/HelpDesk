@@ -1,99 +1,218 @@
-// WebSocket client for HelpDesk chat
-// This file will be used for standalone implementations
-// If we detect that the parent page already has WebSocket functionality,
-// we'll avoid initializing duplicate connections
-
-// Expose a global helper for the main page to check
-window.chatWebSocketHelper = {
-    isInitialized: false,
-    init: function(ticketId, parentDeviceId) {
-        // If already initialized by parent page, don't initialize again
-        if (window.wsConnected !== undefined || this.isInitialized) {
-            console.log("WebSocket already initialized by parent page");
+// WebSocket Client for HelpDesk Chat
+class HelpDeskWebSocket {
+    constructor(ticketId, deviceId) {
+        this.ticketId = ticketId;
+        this.deviceId = deviceId;
+        this.ws = null;
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 10;
+        this.reconnectDelay = 1000;
+        this.isConnected = false;
+        this.messageQueue = [];
+        this.serverUrl = 'ws://' + window.location.hostname + ':8080';
+        
+        this.connect();
+    }
+    
+    connect() {
+        try {
+            this.ws = new WebSocket(this.serverUrl);
+            
+            this.ws.onopen = () => {
+                console.log('WebSocket connected');
+                this.isConnected = true;
+                this.reconnectAttempts = 0;
+                this.reconnectDelay = 1000;
+                
+                // Subscribe to ticket
+                this.subscribe();
+                
+                // Send queued messages
+                this.processMessageQueue();
+                
+                // Update UI
+                this.updateConnectionStatus(true);
+            };
+            
+            this.ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    this.handleMessage(data);
+                } catch (e) {
+                    console.error('Error parsing WebSocket message:', e);
+                }
+            };
+            
+            this.ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                this.isConnected = false;
+                this.updateConnectionStatus(false);
+                this.scheduleReconnect();
+            };
+            
+            this.ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                this.isConnected = false;
+                this.updateConnectionStatus(false);
+            };
+            
+        } catch (e) {
+            console.error('Failed to create WebSocket:', e);
+            this.scheduleReconnect();
+        }
+    }
+    
+    subscribe() {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                action: 'subscribe',
+                ticketId: this.ticketId,
+                deviceId: this.deviceId
+            }));
+        }
+    }
+    
+    sendMessage(message) {
+        const messageData = {
+            action: 'newMessage',
+            ticketId: this.ticketId,
+            message: message,
+            deviceId: this.deviceId
+        };
+        
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify(messageData));
+        } else {
+            // Queue message for later
+            this.messageQueue.push(messageData);
+        }
+    }
+    
+    handleMessage(data) {
+        switch (data.action) {
+            case 'connected':
+                console.log('Connected with ID:', data.clientId);
+                break;
+                
+            case 'subscribed':
+                console.log('Subscribed to ticket:', data.ticketId);
+                break;
+                
+            case 'newMessage':
+                if (data.ticketId === this.ticketId) {
+                    this.displayNewMessage(data.message);
+                }
+                break;
+                
+            case 'pong':
+                // Keep-alive response
+                break;
+        }
+    }
+    
+    displayNewMessage(message) {
+        // Skip if message is from this device
+        if (message.deviceId === this.deviceId || 
+            message.sourceDeviceId === this.deviceId) {
             return;
         }
-
-        console.log("Initializing standalone WebSocket client");
-        this.isInitialized = true;
-
-        // Start the standalone client
-        initStandaloneClient(ticketId, parentDeviceId);
+        
+        // Check if message already exists
+        const messageKey = message.messageId || 
+            `${message.user}-${message.CommentTime}-${message.Message?.substring(0, 20)}`;
+        
+        if (document.querySelector(`[data-message-key="${messageKey}"]`)) {
+            return;
+        }
+        
+        // Add message to chat
+        const chatBody = document.getElementById('chatBody');
+        if (!chatBody) return;
+        
+        const isUser = parseInt(message.type) === 1;
+        const messageClass = isUser ? 'message-user' : 'message-admin';
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${messageClass} new-message`;
+        messageDiv.setAttribute('data-message-key', messageKey);
+        
+        const timeDisplay = this.formatTime(message.CommentTime);
+        
+        messageDiv.innerHTML = `
+            <p class="message-content">${this.escapeHtml(message.Message)}</p>
+            <div class="message-meta">
+                <span class="message-user-info">${this.escapeHtml(message.user)}</span>
+                <span class="message-time">${timeDisplay}</span>
+            </div>
+        `;
+        
+        chatBody.appendChild(messageDiv);
+        
+        // Scroll to bottom if near bottom
+        if (chatBody.scrollHeight - chatBody.clientHeight <= chatBody.scrollTop + 100) {
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
     }
-};
-
-// The standalone client implementation (only used if parent page doesn't have WebSocket)
-function initStandaloneClient(ticketId, parentDeviceId) {
-    let socket;
-    let isConnected = false;
-    let reconnectAttempts = 0;
-    const maxReconnectAttempts = 5;
-    const reconnectInterval = 3000; // 3 seconds
-
-    // Use the parent's deviceId if provided, otherwise generate our own
-    const deviceId = parentDeviceId || generateDeviceId();
-
-    // Use secure WebSocket if page is loaded over HTTPS
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.hostname}:8080`;
-
-    try {
-        console.log("Connecting to WebSocket server...");
-        socket = new WebSocket(wsUrl);
-
-        socket.onopen = function() {
-            console.log('Standalone WebSocket connected');
-            isConnected = true;
-            reconnectAttempts = 0;
-
-            // Subscribe to this ticket's channel
-            if (ticketId) {
-                console.log("Subscribing to ticket: " + ticketId);
-                socket.send(JSON.stringify({
-                    action: 'subscribe',
-                    ticketId: ticketId,
-                    deviceId: deviceId
-                }));
+    
+    formatTime(time) {
+        try {
+            const date = new Date(time);
+            return date.toLocaleTimeString('pt-PT', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (e) {
+            return time;
+        }
+    }
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    scheduleReconnect() {
+        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+            console.log('Max reconnection attempts reached');
+            return;
+        }
+        
+        this.reconnectAttempts++;
+        const delay = Math.min(this.reconnectDelay * this.reconnectAttempts, 30000);
+        
+        console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+        setTimeout(() => this.connect(), delay);
+    }
+    
+    processMessageQueue() {
+        while (this.messageQueue.length > 0 && this.isConnected) {
+            const message = this.messageQueue.shift();
+            this.ws.send(JSON.stringify(message));
+        }
+    }
+    
+    updateConnectionStatus(connected) {
+        // Update any UI elements that show connection status
+        const statusElements = document.querySelectorAll('.ws-status');
+        statusElements.forEach(el => {
+            if (connected) {
+                el.classList.add('ws-status-connected');
+                el.classList.remove('ws-status-disconnected');
+            } else {
+                el.classList.add('ws-status-disconnected');
+                el.classList.remove('ws-status-connected');
             }
-        };
-
-        socket.onmessage = function(event) {
-            console.log("Received message from WebSocket", event.data);
-            try {
-                const data = JSON.parse(event.data);
-                // Handle message here
-            } catch (e) {
-                console.error("Error parsing WebSocket message", e);
-            }
-        };
-
-        socket.onclose = function() {
-            console.log('Standalone WebSocket connection closed');
-            isConnected = false;
-
-            if (reconnectAttempts < maxReconnectAttempts) {
-                reconnectAttempts++;
-                setTimeout(function() {
-                    console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
-                    initStandaloneClient(ticketId, deviceId);
-                }, reconnectInterval);
-            }
-        };
-
-        socket.onerror = function(error) {
-            console.error('Standalone WebSocket error:', error);
-        };
-    } catch (e) {
-        console.error('Failed to initialize standalone WebSocket:', e);
+        });
+    }
+    
+    disconnect() {
+        if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+        }
     }
 }
 
-// Helper function to generate a device ID
-function generateDeviceId() {
-    let id = localStorage.getItem('helpdesk_device_id');
-    if (!id) {
-        id = 'device_' + Math.random().toString(36).substring(2, 15);
-        localStorage.setItem('helpdesk_device_id', id);
-    }
-    return id;
-}
-
+// Export for use
+window.HelpDeskWebSocket = HelpDeskWebSocket;
