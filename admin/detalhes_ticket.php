@@ -15,10 +15,13 @@ include('../auto-start.php');
 include('conflogin.php');
 include('db.php');
 
-// Verificar se o 'KeyId' do ticket foi passado pela URL
+// Properly decode the ticket ID
+$ticket_id = isset($_GET['keyid']) ? urldecode($_GET['keyid']) : '';
+
+// We need to check if keyid exists and proceed directly to the ticket query
 if (isset($_GET['keyid'])) {
     $keyid = $_GET['keyid'];
-
+    
     // Remover o símbolo '#' caso ele exista (se o banco não usa o '#')
     $keyid_sem_hash = str_replace('#', '', $keyid);
     
@@ -38,7 +41,10 @@ if (isset($_GET['keyid'])) {
     $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$ticket) {
-        echo "Ticket não encontrado.";
+        echo '<div class="alert alert-danger" role="alert">';
+        echo 'Ticket ' . htmlspecialchars($keyid) . ' não encontrado. Verifique se o ID do ticket está correto.';
+        echo '<br><a href="index.php" class="btn btn-primary mt-3">Voltar para Dashboard</a>';
+        echo '</div>';
         exit;
     }
 
@@ -46,9 +52,9 @@ if (isset($_GET['keyid'])) {
 
     // Consultar todas as mensagens associadas ao ticket
     $sql_messages = "SELECT comments.Message, comments.type, comments.Date as CommentTime, comments.user
-                     FROM comments_xdfree01_extrafields comments
-                     WHERE comments.XDFree01_KeyID = :keyid
-                     ORDER BY comments.Date ASC";
+                    FROM comments_xdfree01_extrafields comments
+                    WHERE comments.XDFree01_KeyID = :keyid
+                    ORDER BY comments.Date ASC";
 
     $stmt_messages = $pdo->prepare($sql_messages);
     $stmt_messages->bindParam(':keyid', $ticket_id);
@@ -61,7 +67,10 @@ if (isset($_GET['keyid'])) {
     $stmt_users->execute();
     $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
 } else {
-    echo "Ticket não especificado.";
+    echo '<div class="alert alert-danger" role="alert">';
+    echo 'Ticket não especificado.';
+    echo '<br><a href="index.php" class="btn btn-primary mt-3">Voltar para Dashboard</a>';
+    echo '</div>';
     exit;
 }
 
@@ -451,7 +460,13 @@ function getStatusColor($status)
                 <p><strong>Criado em:</strong> <?php echo htmlspecialchars($ticket['CreationDate']); ?></p>
                 <?php if (!empty($ticket['image'])) { 
                     $imagePath = $ticket['image'];
+                    // Fix the image path - ensure it has the correct format
+                    // Remove /HelpDesk if it's in the path to prevent double path issues
                     $imagePath = str_replace('/HelpDesk', '', $imagePath);
+                    // Ensure the path starts with a slash
+                    if (!str_starts_with($imagePath, '/')) {
+                        $imagePath = '/' . $imagePath;
+                    }
                 ?>
                     <p><strong>Imagem:</strong>
                         <img src="<?php echo htmlspecialchars($imagePath); ?>" alt="Imagem do Ticket" class="message-image" 
@@ -1168,25 +1183,37 @@ function getStatusColor($status)
             const openLink = document.getElementById('openImageLink');
 
             if (modalImage) {
+                // Fix image URL path
+                let fixedImageUrl = imageUrl;
+                
                 // Make sure the image URL has the correct base path
-                if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
-                    imageUrl = '/' + imageUrl;
+                if (!fixedImageUrl.startsWith('http') && !fixedImageUrl.startsWith('/')) {
+                    fixedImageUrl = '/' + fixedImageUrl;
+                }
+                
+                // If we're in the admin folder, we need to go up one level
+                if (window.location.pathname.includes('/admin/')) {
+                    if (fixedImageUrl.startsWith('/')) {
+                        fixedImageUrl = '..' + fixedImageUrl;
+                    } else if (!fixedImageUrl.startsWith('../')) {
+                        fixedImageUrl = '../' + fixedImageUrl;
+                    }
                 }
 
-                modalImage.src = imageUrl;
+                modalImage.src = fixedImageUrl;
                 modalImage.style.maxWidth = '100%';
                 modalImage.style.maxHeight = '80vh';
 
                 // Set the download link
                 if (downloadLink) {
-                    downloadLink.href = imageUrl;
-                    const filename = imageUrl.split('/').pop();
+                    downloadLink.href = fixedImageUrl;
+                    const filename = fixedImageUrl.split('/').pop();
                     downloadLink.setAttribute('download', filename);
                 }
                 
                 // Set the open link
                 if (openLink) {
-                    openLink.href = imageUrl;
+                    openLink.href = fixedImageUrl;
                 }
                 
                 new bootstrap.Modal(document.getElementById('imageModal')).show();
