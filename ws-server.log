@@ -7410,3 +7410,37 @@ Message from 2510: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","
 Message from 2510: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748019837379}
 Message from 2510: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748019867674}
 Connection 2510 disconnected
+New connection: 2519
+Message from 2519: {"action":"subscribe","ticketId":"#026","deviceId":"device_phgejwjr71aubjzk539fwd"}
+PHP Notice:  Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+
+Notice: Indirect modification of overloaded property Ratchet\WebSocket\WsConnection::$ticketSubscriptions has no effect in C:\xampp\htdocs\infoexe\HelpDesk\ws-server.php on line 43
+Client 2519 subscribed to ticket #026
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029304153}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029334160}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029364161}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029394163}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029424164}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029454171}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029484179}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029514190}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029544202}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029574216}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029604222}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029634233}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029664240}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029694247}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029724251}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029754257}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029784260}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029814269}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029844279}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029874287}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029904292}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029934300}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029964305}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748029994314}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748030024324}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748030054339}
+Message from 2519: {"action":"ping","deviceId":"device_phgejwjr71aubjzk539fwd","timestamp":1748030084350}
+Connection 2519 disconnected

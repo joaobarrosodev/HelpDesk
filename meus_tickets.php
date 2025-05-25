@@ -19,7 +19,7 @@ $assunto_filtro = isset($_GET['assunto']) ? $_GET['assunto'] : ''; // Novo filtr
 
 $params = [];
 
-// Cria a consulta SQL base - corrigindo as informações de atribuição
+// Cria a consulta SQL base - corrigindo o erro de coluna não encontrada
 $sql = "SELECT 
             t.id, 
             t.KeyId,
@@ -29,13 +29,11 @@ $sql = "SELECT
             DATE_FORMAT(i.CreationDate, '%d/%m/%Y') as criado,
             i.Status as status,
             i.Priority as prioridade,
-            u.Name as atribuido_a,
-            i.Atribuido as atribuido_id,
             (SELECT 
                 CASE
-                    WHEN oee.Name IS NOT NULL THEN oee.Name
                     WHEN c.user = 'admin' THEN 'Administrador'
-                    ELSE c.user
+                    WHEN oee.Name IS NOT NULL THEN oee.Name
+                    ELSE SUBSTRING_INDEX(c.user, '@', 1)
                 END
              FROM comments_xdfree01_extrafields c 
              LEFT JOIN online_entity_extrafields oee ON c.user = oee.email 
@@ -45,8 +43,6 @@ $sql = "SELECT
             xdfree01 t
         LEFT JOIN 
             info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
-        LEFT JOIN 
-            users u ON i.Atribuido = u.id
         WHERE 
             i.Entity = :usuario_id";
 
@@ -169,7 +165,6 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
                                     <th scope="col" class="sortable text-nowrap">Criado</th>
                                     <th scope="col" class="sortable text-nowrap">Estado</th>
                                     <th scope="col" class="sortable text-nowrap">Prioridade</th>
-                                    <th scope="col" class="sortable text-nowrap">Atribuído a</th>
                                     <th scope="col" class="sortable text-nowrap">Última Mensagem Por</th>
                                 </tr>
                             </thead>
@@ -215,13 +210,12 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
                                                 ?>
                                                 <span class="badge <?php echo $badgeClass; ?>"><?php echo $ticket['prioridade']; ?></span>
                                             </td>
-                                            <td><?php echo !empty($ticket['atribuido_a']) ? htmlspecialchars($ticket['atribuido_a']) : '-'; ?></td>
                                             <td><?php echo !empty($ticket['LastCommentUser']) ? htmlspecialchars($ticket['LastCommentUser']) : '-'; ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="8" class="text-center py-4">
+                                        <td colspan="7" class="text-center py-4">
                                             <div class="alert alert-info mb-0">
                                                 <i class="bi bi-info-circle me-2"></i> Não há tickets para exibir.
                                             </div>
