@@ -7,21 +7,56 @@ include('db.php');
 <html lang="pt-pt">
 <?php include('head.php'); ?>
 <link rel="stylesheet" href="css/filter.css">
+<style>
+    /* Standardize row heights in the table */
+    #account-table tbody tr {
+        height: 60px; /* Fixed height for all rows */
+        vertical-align: middle;
+    }
+    
+    #account-table td {
+        padding-top: 10px;
+        padding-bottom: 10px;
+        white-space: nowrap;
+    }
+    
+    /* Ensure consistent cell height for empty cells */
+    #account-table td:empty::after {
+        content: "-";
+        color: #ccc;
+    }
+    
+    /* Improve table appearance */
+    #account-table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    /* Highlight on hover */
+    #account-table tbody tr:hover {
+        background-color: rgba(0,0,0,0.02) !important;
+    }
+</style>
 
 <body>
-    <?php include('menu.php'); ?>    <div class="content p-5">    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/sortTable.js"></script>
-    <script src="js/filter-functions.js"></script>
-    <script src="js/auto-filter.js"></script>
-    <script src="js/script.js"></script>
-                    <h1 class="mb-3 display-5">Extrato de Conta Corrente</h1>
-                    <p class="">Aqui tem um pequena lista de compras que fez</p>        <div class=" mt-4">
+    <?php include('menu.php'); ?>    
+    <div class="content p-5">
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="js/sortTable.js"></script>
+        <script src="js/filter-functions.js"></script>
+        <script src="js/auto-filter.js"></script>
+        <script src="js/script.js"></script>
+        
+        <h1 class="mb-3 display-5">Extrato de Conta Corrente</h1>
+        <p class="">Aqui tem um pequena lista de compras que fez</p>
+        
+        <div class="mt-4">
             <div class="card mb-4 shadow-sm">
                 <div class="card-body"> 
-                         <div class="row mb-4">                     
-                       <div class="col-md-6">
+                    <div class="row mb-4">                     
+                        <div class="col-md-6">
                             <div class="card border-0">
                                 <div class="card-body p-0">
                                     <h6 class="fw-bold mb-3">Informações Bancárias</h6>
@@ -30,11 +65,11 @@ include('db.php');
                                         <span class="fw-medium">Crédito Agrícola</span>
                                     </div>
                                     <div class="d-flex align-items-center mb-2">
-                                        <span class="text-secondary me-2" >BIC/SWIFT:</span>
+                                        <span class="text-secondary me-2">BIC/SWIFT:</span>
                                         <span class="fw-medium">CCCMPTPL</span>
                                     </div>
                                     <div class="d-flex align-items-center">
-                                        <span class="text-secondary me-2" >IBAN:</span>
+                                        <span class="text-secondary me-2">IBAN:</span>
                                         <span class="fw-medium" style="font-size: 0.95rem;">PT50 0045 1405 4029 4772 6307 5</span>
                                     </div>
                                 </div>
@@ -51,7 +86,8 @@ include('db.php');
                             </div>
                         </div>
                     </div>
-                <!-- Formulário de Filtros -->
+
+                    <!-- Formulário de Filtros -->
                     <form id="filterForm" class="row g-3 mb-4">
                         <div class="col-md-2">
                             <label for="document-type" class="form-label">Tipo de Documento:</label>
@@ -77,7 +113,9 @@ include('db.php');
                                 <input type="number" class="form-control" id="min-value" placeholder="Mín" step="0.01">
                                 <input type="number" class="form-control" id="max-value" placeholder="Máx" step="0.01">
                             </div>
-                        </div>                        <div class="col-md-2 d-flex align-items-end">
+                        </div>
+                        
+                        <div class="col-md-2 d-flex align-items-end">
                             <div class="d-flex gap-2 w-100">
                                 <!-- Removed filter button as it's now automatic -->
                                 <button type="button" class="btn btn-outline-danger" onclick="clearAllFilters()">
@@ -85,7 +123,8 @@ include('db.php');
                                 </button>
                             </div>
                         </div>
-                        <!-- TODO: Show filter statistics -->
+                        
+                        <!-- Filter statistics -->
                         <div class="col-12 mt-2">
                             <div class="alert alert-info p-2 d-flex align-items-center" id="filter-results" style="display: none !important;">
                                 <i class="bi bi-funnel-fill me-2"></i>
@@ -150,7 +189,9 @@ include('db.php');
         // Preparar e executar a consulta
         $stmt = $pdo->prepare($sql);
         $stmt->bindParam(':keyid', $_SESSION['usuario_id']);
-        $stmt->execute();        // Verificando se encontrou algum registro
+        $stmt->execute();
+        
+        // Verificando se encontrou algum registro
         $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         if (!$transactions) {
@@ -163,16 +204,20 @@ include('db.php');
         $totalMovC = 0;
         $total = 0;
         $totalDueValue = 0;
-          // Calcular totais primeiro
+        
+        // Calcular totais primeiro
         foreach ($transactions as $transaction) {
             $totalMovD += $transaction['MovD'];
             $totalMovC += $transaction['MovC'];
             $total += $transaction['Total'];
-            $totalDueValue += $transaction['DueValue'];        }          // Exibindo os dados em uma tabela HTML com estilo Bootstrap moderno
+            $totalDueValue += $transaction['DueValue'];
+        }
+        
+        // Exibindo os dados em uma tabela HTML com estilo Bootstrap moderno
         echo "<div class='table-responsive'>
                 <table id='account-table' class='table'>
                 <thead class='table-light'>
-                  <tr>
+                  <tr style='height: 50px;'>
                     <th scope='col' onclick='sortTable(0)'>Documento</th>
                     <th scope='col' onclick='sortTable(1)'>Criação</th>
                     <th scope='col' onclick='sortTable(2)'>Débito</th>
@@ -183,7 +228,9 @@ include('db.php');
                     <th scope='col' class='text-center'></th>
                   </tr>
                 </thead>
-                <tbody>";// Totais já foram calculados anteriormente        // Exibindo os dados da transação
+                <tbody>";
+
+        // Exibindo os dados da transação
         foreach ($transactions as $transaction) {
             // Mapeamento de descrições para siglas
             $mapa_descricoes = [
@@ -199,8 +246,12 @@ include('db.php');
             $data_registro = date('d/m/Y', strtotime($transaction['RegisterDate']));
             
             // Formatar a data de expiração (vencimento)
-            $data_vencimento = date('d/m/Y', strtotime($transaction['ExpirationDate']));            // Verificar se há valor em dívida
-            $divida_class = $transaction['DueValue'] != 0 ? 'text-danger' : '';            // Criar uma borda entre as linhas com estilo leve            // Mapear siglas para nomes completos de documentos
+            $data_vencimento = date('d/m/Y', strtotime($transaction['ExpirationDate']));
+            
+            // Verificar se há valor em dívida
+            $divida_class = $transaction['DueValue'] != 0 ? 'text-danger' : '';
+            
+            // Mapear siglas para nomes completos de documentos
             $tiposDocumentos = [
                 "FAC" => "Fatura",
                 "REC" => "Recibo",
@@ -211,14 +262,15 @@ include('db.php');
             // Obter o nome do tipo de documento
             $tipoDocumento = isset($tiposDocumentos[$sigla]) ? $tiposDocumentos[$sigla] : "Documento";
             
-            echo "<tr class='border-top border-bottom' style='background-color: #fff;' data-doc-type='" . $sigla . "'>
+            echo "<tr class='border-top border-bottom' style='background-color: #fff; height: 60px;' data-doc-type='" . $sigla . "'>
                 <td>" . $tipoDocumento . " Nº " . $transaction['SerieId'] . "/" . $transaction['DocNumber'] . "</td>
                 <td>" . $data_registro . "</td>
                 <td>" . number_format($transaction['MovD'], 2, ',', '.') . "</td>
                 <td>" . number_format($transaction['MovC'], 2, ',', '.') . "</td>
                 <td class='text-danger'>-" . number_format(abs($transaction['Total']), 2, ',', '.') . "€</td>
                 <td class='{$divida_class}'>";
-              // Mostra a dívida apenas se não for zero
+                
+            // Mostra a dívida apenas se não for zero
             if ($transaction['DueValue'] != 0) {
                 echo "-" . number_format(abs($transaction['DueValue']), 2, ',', '.') . "€";
             } else {
@@ -233,7 +285,9 @@ include('db.php');
 
             // Caminho do arquivo
             $pasta_arquivos = "docs/";
-            $caminho_completo = $pasta_arquivos . $nome_arquivo;            // Verifica se o arquivo existe e gera o link para download
+            $caminho_completo = $pasta_arquivos . $nome_arquivo;
+            
+            // Verifica se o arquivo existe e gera o link para download
             if (file_exists($caminho_completo)) {
                 echo "<td class='text-center'><a href='$caminho_completo' target='_blank' class='btn btn-light'><i class='bi bi-download'></i></a></td>";
             } else {
@@ -241,17 +295,23 @@ include('db.php');
             }
 
             echo "</tr>";
-        }        // Fim da tabela HTML
+        }
+        
+        // Fim da tabela HTML
         echo "</tbody>";
         echo "</table>";
         echo "</div>";
-                
+        
         // Fechando a div container, card, etc.
         echo "</div>";
         echo "</div>";
-        echo "</div>";        // Fechando a conexão com o banco de dados
+        echo "</div>";
+        
+        // Fechando a conexão com o banco de dados
         $pdo = null;
-        ?>        <script>
+?>
+
+        <script>
         // Update the pending amount with the calculated value
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('pending-amount').innerHTML = '-<?php echo number_format(abs($totalDueValue), 2, ',', '.'); ?>€';
@@ -370,7 +430,6 @@ include('db.php');
                 'NC': 'Nota de Crédito'
             };
             
-      
             // Itera pelas linhas da tabela (começando em 1 para pular o cabeçalho)
             for (let i = 1; i < rows.length; i++) {
                 let showRow = true; // Por padrão, mostra a linha
@@ -390,7 +449,9 @@ include('db.php');
                             }
                         }
                     }
-                }                  // Filtra por tipo de documento
+                }
+                
+                // Filtra por tipo de documento
                 if (showRow && documentType !== 'all') {
                     // Check the data attribute first (most reliable)
                     const rowDocType = rows[i].getAttribute('data-doc-type');
@@ -462,7 +523,8 @@ include('db.php');
                         }
                     }
                 }
-                  // Aplica a visibilidade com base nos filtros
+                
+                // Aplica a visibilidade com base nos filtros
                 rows[i].style.display = showRow ? '' : 'none';
                 
                 // Aplica um efeito de destaque às linhas filtradas
@@ -476,7 +538,8 @@ include('db.php');
             // Atualiza informações sobre os resultados filtrados
             updateFilteredResults();
         }
-          // Função para atualizar as informações sobre os resultados filtrados
+        
+        // Função para atualizar as informações sobre os resultados filtrados
         function updateFilteredResults() {
             // Conta quantas linhas estão visíveis (filtradas)
             const table = document.getElementById('account-table');
@@ -522,8 +585,9 @@ include('db.php');
                 filterResultsDiv.style.display = 'flex';
             }
         }
-    </script>    </div>
-      <!-- jQuery, Popper.js, and Bootstrap JS -->
+        </script>
+    </div>
+    <!-- jQuery, Popper.js, and Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

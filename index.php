@@ -121,13 +121,44 @@ include('conflogin.php');
             $tempo_medio_resposta = "0";
         }
         
-        // Data for Avaliação dos Clientes
-        // Normalmente, isso viria de uma tabela de avaliações de clientes
-        // Como não temos essa tabela nos arquivos fornecidos, usaremos valores padrão
-        $respostas_recebidas = 156;
-        $positive_percentage = 72;
-        $negative_percentage = 4;
-        $neutral_percentage = 24;
+        // Obter dados reais da avaliação dos clientes da tabela info_xdfree01_extrafields
+        try {
+            // Total de respostas
+            $sql_total = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Review IS NOT NULL";
+            $stmt_total = $pdo->prepare($sql_total);
+            $stmt_total->execute();
+            $respostas_recebidas = $stmt_total->fetchColumn();
+            
+            // Contagem de avaliações por tipo (1=positivo, 2=neutro, 3=negativo)
+            $sql_avaliacoes = "SELECT 
+                                SUM(CASE WHEN Review = 1 THEN 1 ELSE 0 END) as positivas,
+                                SUM(CASE WHEN Review = 2 THEN 1 ELSE 0 END) as neutras,
+                                SUM(CASE WHEN Review = 3 THEN 1 ELSE 0 END) as negativas
+                               FROM info_xdfree01_extrafields 
+                               WHERE Review IS NOT NULL";
+            $stmt_avaliacoes = $pdo->prepare($sql_avaliacoes);
+            $stmt_avaliacoes->execute();
+            $avaliacoes = $stmt_avaliacoes->fetch(PDO::FETCH_ASSOC);
+            
+            // Calcular percentagens
+            if ($respostas_recebidas > 0) {
+                $positive_percentage = round(($avaliacoes['positivas'] / $respostas_recebidas) * 100);
+                $neutral_percentage = round(($avaliacoes['neutras'] / $respostas_recebidas) * 100);
+                $negative_percentage = round(($avaliacoes['negativas'] / $respostas_recebidas) * 100);
+            } else {
+                // Valores padrão caso não haja dados
+                $positive_percentage = 0;
+                $neutral_percentage = 0;
+                $negative_percentage = 0;
+            }
+        } catch (PDOException $e) {
+            // Em caso de erro, definir valores padrão
+            $respostas_recebidas = 0;
+            $positive_percentage = 0;
+            $negative_percentage = 0;
+            $neutral_percentage = 0;
+            // Pode-se adicionar um log de erro aqui, se necessário
+        }
 
         ?>
 
@@ -181,7 +212,7 @@ include('conflogin.php');
                         <div class="row w-100">
                             <div class="col-6 d-flex justify-content-center align-items-center flex-column mb-3">
                                 <p class="w-100 text-muted">Respostas:</p>
-                                <p class="w-100"><strong><?php echo $respostas_recebidas; ?> Clientes</strong></p>
+                                <p class="w-100"><strong><?php echo $respostas_recebidas; ?> <?php echo ($respostas_recebidas == 1) ? 'Cliente' : 'Clientes'; ?></strong></p>
                             </div>
 
                             <div class="col-6 d-flex justify-content-center align-items-center flex-row mb-3">
@@ -237,14 +268,14 @@ include('conflogin.php');
                         label: 'Categoria dos Tickets',
                         data: <?php echo json_encode($categoria_counts); ?>,
                         backgroundColor: [
-                            '#4A90E2', // Medium blue
-                            '#7ED321', // Medium green
-                            '#F5A623', // Medium orange/yellow
-                            '#D0021B', // Medium red
-                            '#9013FE', // Medium purple
-                            '#FF6B35', // Medium orange
-                            '#50E3C2', // Medium teal
-                            '#BD10E0'  // Medium magenta
+                            '#36b9cc', // Teal
+                            '#92033f', // Burgundy
+                            '#2185a9', // Blue
+                            '#00a89c', // Turquoise
+                            '#f7941e', // Orange
+                            '#e63c5f', // Red
+                            '#0072b1', // Deep Blue
+                            '#780c42'  // Dark Burgundy
                         ],
                         borderColor: '#fff',
                         borderWidth: 5
@@ -288,9 +319,9 @@ include('conflogin.php');
                         label: 'Prioridade',
                         data: <?php echo json_encode($prioridade_counts); ?>,
                         backgroundColor: [
-                            '#000000', // All bars in black
-                            '#000000',
-                            '#000000'
+                            '#5f5f5f', 
+                            '#5f5f5f',
+                            '#5f5f5f'
                         ],
                         borderWidth: 0,
                         categoryPercentage: 1.0, // Use full category width

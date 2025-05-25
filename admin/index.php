@@ -12,7 +12,7 @@ try {
     $total_abertos = $stmt_abertos->fetch(PDO::FETCH_ASSOC)['total'];
 
     // Tickets atribuídos ao admin atual
-    $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status <> 'Concluído'";
+    $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status <> 'Concluído' AND Atribuido = :admin_id";
     $stmt_atribuidos = $pdo->prepare($sql_atribuidos);
     $stmt_atribuidos->bindParam(':admin_id', $_SESSION['admin_id']);
     $stmt_atribuidos->execute();
@@ -62,14 +62,14 @@ try {
             <!-- Cartões de estatísticas -->
             <div class="row">
                 <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="card border-left-primary shadow h-100">
+                    <div class="card shadow h-100">
                         <div class="card-body">
                             <div class="d-flex align-items-center">
-                                <div class="p-2 rounded-circle bg-primary bg-opacity-10">
-                                    <i class="bi bi-ticket-fill fs-3 text-primary"></i>
+                                <div class="p-2 bg-opacity-10">
+                                    <i class="bi bi-ticket-fill fs-3 "></i>
                                 </div>
                                 <div class="ms-3">
-                                    <div class="text-xs text-uppercase fw-bold text-primary mb-1">Tickets Abertos</div>
+                                    <div class="text-xs text-uppercase fw-bold mb-1">Tickets Abertos</div>
                                     <div class="h3 mb-0 fw-bold"><?php echo $total_abertos; ?></div>
                                 </div>
                             </div>
@@ -78,14 +78,14 @@ try {
                 </div>
 
                 <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="card border-left-success shadow h-100">
+                    <div class="card border-left-info shadow h-100">
                         <div class="card-body">
                             <div class="d-flex align-items-center">
-                                <div class="p-2 rounded-circle bg-success bg-opacity-10">
-                                    <i class="bi bi-person-check fs-3 text-success"></i>
+                                <div class="p-2 bg-opacity-10">
+                                    <i class="bi bi-person-check fs-3 text-info"></i>
                                 </div>
                                 <div class="ms-3">
-                                    <div class="text-xs text-uppercase fw-bold text-success mb-1">Atribuídos a Mim</div>
+                                    <div class="text-xs text-uppercase fw-bold text-info mb-1">Atribuídos a Mim</div>
                                     <div class="h3 mb-0 fw-bold"><?php echo $total_atribuidos; ?></div>
                                 </div>
                             </div>
@@ -97,11 +97,11 @@ try {
                     <div class="card border-left-info shadow h-100">
                         <div class="card-body">
                             <div class="d-flex align-items-center">
-                                <div class="p-2 rounded-circle bg-info bg-opacity-10">
-                                    <i class="bi bi-check-circle fs-3 text-info"></i>
+                                <div class="p-2  bg-opacity-10">
+                                    <i class="bi bi-check-circle fs-3 text-success"></i>
                                 </div>
                                 <div class="ms-3">
-                                    <div class="text-xs text-uppercase fw-bold text-info mb-1">Tickets Concluídos</div>
+                                    <div class="text-xs text-uppercase fw-bold text-success mb-1">Tickets Concluídos</div>
                                     <div class="h3 mb-0 fw-bold"><?php echo $total_fechados; ?></div>
                                 </div>
                             </div>
@@ -113,7 +113,7 @@ try {
                     <div class="card border-left-warning shadow h-100">
                         <div class="card-body">
                             <div class="d-flex align-items-center">
-                                <div class="p-2 rounded-circle bg-warning bg-opacity-10">
+                                <div class="p-2  bg-opacity-10">
                                     <i class="bi bi-exclamation-triangle fs-3 text-warning"></i>
                                 </div>
                                 <div class="ms-3">
@@ -128,28 +128,52 @@ try {
             
             <!-- Acesso Rápido -->
             <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold">Acesso Rápido</h6>
+                <div class="card-header py-3 d-flex justify-content-between align-items-center bg-light">
+                    <h6 class="m-0 font-weight-bold text-primary"><i class="bi bi-lightning-fill me-2"></i>Acesso Rápido</h6>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row g-4">
                         <div class="col-md-4 mb-3">
-                            <a href="consultar_tickets.php" class="btn btn-primary d-flex align-items-center justify-content-center w-100 p-3">
-                                <i class="bi bi-ticket fs-4 me-2"></i>
-                                <span>Tickets por Atribuir</span>
-                            </a>
+                            <div class="card h-100 border-start border-primary border-3">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="bi bi-ticket-fill fs-1 text-primary"></i>
+                                    </div>
+                                    <h5 class="card-title">Tickets por Atribuir</h5>
+                                    <p class="card-text small text-muted">Visualize e atribua novos tickets</p>
+                                    <a href="consultar_tickets.php" class="btn btn-outline-primary mt-2 w-100">
+                                        <i class="bi bi-arrow-right me-1"></i> Acessar
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <a href="tickets_atribuidos.php" class="btn btn-success d-flex align-items-center justify-content-center w-100 p-3">
-                                <i class="bi bi-ticket-detailed fs-4 me-2"></i>
-                                <span>Meus Tickets</span>
-                            </a>
+                            <div class="card h-100 border-start border-success border-3">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="bi bi-person-check-fill fs-1 text-success"></i>
+                                    </div>
+                                    <h5 class="card-title">Meus Tickets</h5>
+                                    <p class="card-text small text-muted">Gerencie tickets atribuídos a você</p>
+                                    <a href="tickets_atribuidos.php" class="btn btn-outline-success mt-2 w-100">
+                                        <i class="bi bi-arrow-right me-1"></i> Acessar
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <a href="tickets_fechados.php" class="btn btn-secondary d-flex align-items-center justify-content-center w-100 p-3">
-                                <i class="bi bi-list-check fs-4 me-2"></i>
-                                <span>Tickets Fechados</span>
-                            </a>
+                            <div class="card h-100 border-start border-secondary border-3">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="bi bi-archive-fill fs-1 text-secondary"></i>
+                                    </div>
+                                    <h5 class="card-title">Tickets Fechados</h5>
+                                    <p class="card-text small text-muted">Histórico de tickets concluídos</p>
+                                    <a href="tickets_fechados.php" class="btn btn-outline-secondary mt-2 w-100">
+                                        <i class="bi bi-arrow-right me-1"></i> Acessar
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

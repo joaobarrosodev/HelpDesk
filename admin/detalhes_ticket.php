@@ -460,17 +460,17 @@ function getStatusColor($status)
                 <p><strong>Criado em:</strong> <?php echo htmlspecialchars($ticket['CreationDate']); ?></p>
                 <?php if (!empty($ticket['image'])) { 
                     $imagePath = $ticket['image'];
-                    // Fix the image path - ensure it has the correct format
-                    // Remove /HelpDesk if it's in the path to prevent double path issues
-                    $imagePath = str_replace('/HelpDesk', '', $imagePath);
-                    // Ensure the path starts with a slash
-                    if (!str_starts_with($imagePath, '/')) {
-                        $imagePath = '/' . $imagePath;
+                    // Fix the image path for admin side - ensure proper relative path
+                    if (!str_starts_with($imagePath, '/') && !str_starts_with($imagePath, 'http')) {
+                        $imagePath = '/' . ltrim($imagePath, '/');
+                    }
+                    // Since we're in admin folder, we need to go up one level
+                    if (!str_starts_with($imagePath, '../') && !str_starts_with($imagePath, 'http')) {
+                        $imagePath = '..' . $imagePath;
                     }
                 ?>
                     <p><strong>Imagem:</strong>
                         <img src="<?php echo htmlspecialchars($imagePath); ?>" alt="Imagem do Ticket" class="message-image" 
-                             style="max-width: 300px; max-height: 300px; cursor: pointer;" 
                              onclick="showImage('<?php echo htmlspecialchars($imagePath); ?>')">
                     </p>
                 <?php } ?>
@@ -1183,7 +1183,7 @@ function getStatusColor($status)
             const openLink = document.getElementById('openImageLink');
 
             if (modalImage) {
-                // Fix image URL path
+                // Fix image URL path for admin side
                 let fixedImageUrl = imageUrl;
                 
                 // Make sure the image URL has the correct base path

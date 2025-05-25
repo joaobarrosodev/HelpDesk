@@ -15,10 +15,11 @@ $usuario_id = $_SESSION['usuario_id'];
 $data_filtro = isset($_GET['data']) ? $_GET['data'] : '';
 $prioridade_filtro = isset($_GET['prioridade']) ? $_GET['prioridade'] : '';
 $status_filtro = isset($_GET['status']) ? $_GET['status'] : '';
+$assunto_filtro = isset($_GET['assunto']) ? $_GET['assunto'] : ''; // Novo filtro de assunto
 
 $params = [];
 
-// Cria a consulta SQL base
+// Cria a consulta SQL base - corrigindo o erro de coluna não encontrada
 $sql = "SELECT 
             t.id, 
             t.KeyId,
@@ -28,14 +29,20 @@ $sql = "SELECT
             DATE_FORMAT(i.CreationDate, '%d/%m/%Y') as criado,
             i.Status as status,
             i.Priority as prioridade,
-            u.Name as atribuido_a,
-            (SELECT oee.Name FROM comments_xdfree01_extrafields c JOIN online_entity_extrafields oee ON c.user = oee.email WHERE c.XDFree01_KeyID = t.KeyId ORDER BY c.Date DESC LIMIT 1) as LastCommentUser
+            (SELECT 
+                CASE
+                    WHEN c.user = 'admin' THEN 'Administrador'
+                    WHEN oee.Name IS NOT NULL THEN oee.Name
+                    ELSE SUBSTRING_INDEX(c.user, '@', 1)
+                END
+             FROM comments_xdfree01_extrafields c 
+             LEFT JOIN online_entity_extrafields oee ON c.user = oee.email 
+             WHERE c.XDFree01_KeyID = t.KeyId 
+             ORDER BY c.Date DESC LIMIT 1) as LastCommentUser
         FROM 
             xdfree01 t
         LEFT JOIN 
             info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
-        LEFT JOIN 
-            users u ON i.Atribuido = u.id
         WHERE 
             i.Entity = :usuario_id";
 
@@ -57,11 +64,23 @@ if (!empty($status_filtro)) {
     $params[':processed_status_filtro'] = strtolower(trim($status_filtro));
 }
 
+if (!empty($assunto_filtro)) {
+    $sql .= " AND i.User LIKE :assunto_filtro";
+    $params[':assunto_filtro'] = "%$assunto_filtro%";
+}
+
 $sql .= " ORDER BY i.dateu DESC";
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Obter lista de assuntos únicos para o dropdown
+$sql_assuntos = "SELECT DISTINCT User FROM info_xdfree01_extrafields WHERE Entity = :usuario_id AND User IS NOT NULL ORDER BY User";
+$stmt_assuntos = $pdo->prepare($sql_assuntos);
+$stmt_assuntos->bindParam(':usuario_id', $usuario_id);
+$stmt_assuntos->execute();
+$assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
 ?>
 
 <!DOCTYPE html>
@@ -81,17 +100,28 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </a>
             </div>
             
-            <div class="card shadow-sm mb-4">                <div class="card-body">
-                      <!-- Filters -->
-                    <form method="get" action="" class="row g-3 mb-4">
-                        <div class="col-md-3">
+            <div class="card shadow-sm mb-4">                
+                <div class="card-body">
+                    <!-- Filters -->
+                    <form id="filterForm" method="get" action="" class="row g-3 mb-4">
+                        <div class="col-md-2">
                             <label for="data" class="form-label">Data</label>
-                            <input type="date" class="form-control" id="data" name="data" value="<?php echo $data_filtro; ?>">
+                            <input type="date" class="form-control filter-control" id="data" name="data" value="<?php echo $data_filtro; ?>">
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="assunto" class="form-label">Assunto</label>
+                            <select class="form-select filter-control" id="assunto" name="assunto">
+                                <option value="">Todos</option>
+                                <?php foreach($assuntos as $assunto): ?>
+                                <option value="<?php echo htmlspecialchars($assunto); ?>" <?php echo $assunto_filtro == $assunto ? 'selected' : ''; ?>><?php echo htmlspecialchars($assunto); ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                        
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="status" class="form-label">Estado</label>
-                            <select class="form-select" id="status" name="status">
+                            <select class="form-select filter-control" id="status" name="status">
                                 <option value="">Todos</option>
                                 <option value="Em Análise" <?php echo $status_filtro == 'Em Análise' ? 'selected' : ''; ?>>Em Análise</option>
                                 <option value="Em Resolução" <?php echo $status_filtro == 'Em Resolução' ? 'selected' : ''; ?>>Em Resolução</option>
@@ -99,21 +129,33 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <option value="Concluído" <?php echo $status_filtro == 'Concluído' ? 'selected' : ''; ?>>Concluído</option>
                             </select>
                         </div>
-                         <div class="col-md-3">
-                            <label for="prioridade" class="form-label">Prioridade</label>                            <select class="form-select" id="prioridade" name="prioridade">
+                        
+                        <div class="col-md-2">
+                            <label for="prioridade" class="form-label">Prioridade</label>
+                            <select class="form-select filter-control" id="prioridade" name="prioridade">
                                 <option value="">Todas</option>
                                 <option value="Baixa" <?php echo $prioridade_filtro == 'Baixa' ? 'selected' : ''; ?>>Baixa</option>
                                 <option value="Normal" <?php echo $prioridade_filtro == 'Normal' ? 'selected' : ''; ?>>Normal</option>
                                 <option value="Alta" <?php echo $prioridade_filtro == 'Alta' ? 'selected' : ''; ?>>Alta</option>
                             </select>
                         </div>
-                        <div class="col-md-1 d-flex align-items-end">
-                            <button type="submit" class="btn btn-dark w-100">Filtrar</button>
+                        
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="button" id="clearFilters" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-x-circle"></i> Limpar Filtros
+                            </button>
+                        </div>
+                        
+                        <div class="col-12 mt-2">
+                            <div class="alert alert-info p-2 d-flex align-items-center" id="filter-results">
+                                <i class="bi bi-funnel-fill me-2"></i>
+                                <span>Mostrando <strong><?php echo count($tickets); ?></strong> tickets</span>
+                            </div>
                         </div>
                     </form>
                         
-                    
-                    <!-- Table -->                    <div class="table-responsive">
+                    <!-- Table -->
+                    <div class="table-responsive">
                         <table class="table align-middle">                            
                             <thead class="table-dark">                
                                 <tr>
@@ -123,14 +165,14 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <th scope="col" class="sortable text-nowrap">Criado</th>
                                     <th scope="col" class="sortable text-nowrap">Estado</th>
                                     <th scope="col" class="sortable text-nowrap">Prioridade</th>
-                                    <th scope="col" class="sortable text-nowrap">Atribuído a</th>
                                     <th scope="col" class="sortable text-nowrap">Última Mensagem Por</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (count($tickets) > 0): ?>                                    
                                     <?php foreach ($tickets as $ticket): ?>                                     
-                                           <tr>                                            <td>
+                                           <tr>                                            
+                                            <td>
                                                 <a href="detalhes_ticket.php?keyid=<?php echo urlencode($ticket['KeyId']); ?>" class="text-decoration-none text-dark d-flex align-items-center text-nowrap">
                                                     <i class="bi bi-arrow-right-circle me-2"></i> 
                                                     <?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?>
@@ -156,7 +198,8 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                 }
                                                 ?>
                                                 <span class="<?php echo $statusClass; ?>"><?php echo $status; ?></span>
-                                            </td>                                            <td>
+                                            </td>
+                                            <td>
                                                 <?php 
                                                 $badgeClass = 'w-100 bg-success';
                                                 if ($ticket['prioridade'] == 'Normal') {
@@ -167,11 +210,14 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                 ?>
                                                 <span class="badge <?php echo $badgeClass; ?>"><?php echo $ticket['prioridade']; ?></span>
                                             </td>
-                                            <td><?php echo !empty($ticket['atribuido_a']) ? htmlspecialchars($ticket['atribuido_a']) : '-'; ?></td>
                                             <td><?php echo !empty($ticket['LastCommentUser']) ? htmlspecialchars($ticket['LastCommentUser']) : '-'; ?></td>
                                         </tr>
-                                    <?php endforeach; ?>                                <?php else: ?>                                    <tr>                                        <td colspan="8" class="text-center py-4">
-                                            <div class="alert alert-info mb-0">                                                <i class="bi bi-info-circle me-2"></i> Não há tickets para exibir.
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4">
+                                            <div class="alert alert-info mb-0">
+                                                <i class="bi bi-info-circle me-2"></i> Não há tickets para exibir.
                                             </div>
                                         </td>
                                     </tr>
@@ -186,6 +232,24 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Auto-filtering
+        const filterControls = document.querySelectorAll('.filter-control');
+        filterControls.forEach(control => {
+            control.addEventListener('change', () => {
+                document.getElementById('filterForm').submit();
+            });
+        });
+        
+        // Clear filters button
+        document.getElementById('clearFilters').addEventListener('click', function() {
+            // Limpa os campos do formulário e submete
+            const filterControls = document.querySelectorAll('.filter-control');
+            filterControls.forEach(control => {
+                control.value = '';
+            });
+            document.getElementById('filterForm').submit();
+        });
+        
         // Sorting functionality
         const table = document.querySelector('table');
         const headers = table.querySelectorAll('th.sortable');
