@@ -11,7 +11,7 @@ try {
     $stmt_abertos->execute();
     $total_abertos = $stmt_abertos->fetch(PDO::FETCH_ASSOC)['total'];
 
-    // Tickets atribuídos ao admin atual
+    // Tickets atribuídos ao administrador atual
     $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status <> 'Concluído' AND Atribuido = :admin_id";
     $stmt_atribuidos = $pdo->prepare($sql_atribuidos);
     $stmt_atribuidos->bindParam(':admin_id', $_SESSION['admin_id']);
@@ -30,7 +30,7 @@ try {
     $stmt_alta->execute();
     $total_alta = $stmt_alta->fetch(PDO::FETCH_ASSOC)['total'];
 } catch (PDOException $e) {
-    // Em caso de erro, definir valores padrão
+    // Em caso de erro, definir valores predefinidos
     $total_abertos = 0;
     $total_atribuidos = 0;
     $total_fechados = 0;
@@ -55,7 +55,7 @@ try {
             <?php if(isset($erro_db)): ?>
             <div class="alert alert-warning alert-dismissible fade show" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i> <?php echo $erro_db; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
             </div>
             <?php endif; ?>
             
@@ -140,9 +140,9 @@ try {
                                         <i class="bi bi-ticket-fill fs-1 text-primary"></i>
                                     </div>
                                     <h5 class="card-title">Tickets por Atribuir</h5>
-                                    <p class="card-text small text-muted">Visualize e atribua novos tickets</p>
+                                    <p class="card-text small text-muted">Visualizar e atribuir novos tickets</p>
                                     <a href="consultar_tickets.php" class="btn btn-outline-primary mt-2 w-100">
-                                        <i class="bi bi-arrow-right me-1"></i> Acessar
+                                        <i class="bi bi-arrow-right me-1"></i> Aceder
                                     </a>
                                 </div>
                             </div>
@@ -153,10 +153,10 @@ try {
                                     <div class="mb-3">
                                         <i class="bi bi-person-check-fill fs-1 text-success"></i>
                                     </div>
-                                    <h5 class="card-title">Meus Tickets</h5>
-                                    <p class="card-text small text-muted">Gerencie tickets atribuídos a você</p>
+                                    <h5 class="card-title">Os Meus Tickets</h5>
+                                    <p class="card-text small text-muted">Gerir tickets atribuídos a si</p>
                                     <a href="tickets_atribuidos.php" class="btn btn-outline-success mt-2 w-100">
-                                        <i class="bi bi-arrow-right me-1"></i> Acessar
+                                        <i class="bi bi-arrow-right me-1"></i> Aceder
                                     </a>
                                 </div>
                             </div>
@@ -167,10 +167,10 @@ try {
                                     <div class="mb-3">
                                         <i class="bi bi-archive-fill fs-1 text-secondary"></i>
                                     </div>
-                                    <h5 class="card-title">Tickets Fechados</h5>
+                                    <h5 class="card-title">Tickets Encerrados</h5>
                                     <p class="card-text small text-muted">Histórico de tickets concluídos</p>
                                     <a href="tickets_fechados.php" class="btn btn-outline-secondary mt-2 w-100">
-                                        <i class="bi bi-arrow-right me-1"></i> Acessar
+                                        <i class="bi bi-arrow-right me-1"></i> Aceder
                                     </a>
                                 </div>
                             </div>

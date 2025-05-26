@@ -1,15 +1,15 @@
 <?php
-// Start session first
+// Iniciar sessão primeiro
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Debug session information
-error_log("admin/detalhes_ticket.php - Session ID: " . session_id());
-error_log("admin/detalhes_ticket.php - Session data: " . print_r($_SESSION, true));
-error_log("admin/detalhes_ticket.php - GET parameters: " . print_r($_GET, true));
+// Informações de depuração da sessão
+error_log("admin/detalhes_ticket.php - ID da Sessão: " . session_id());
+error_log("admin/detalhes_ticket.php - Dados da sessão: " . print_r($_SESSION, true));
+error_log("admin/detalhes_ticket.php - Parâmetros GET: " . print_r($_GET, true));
 
-// Try to auto-start the WebSocket server if needed
+// Tentar auto-iniciar o servidor WebSocket se necessário
 include('../auto-start.php');
 
 include('conflogin.php');
@@ -22,7 +22,7 @@ $ticket_id = isset($_GET['keyid']) ? urldecode($_GET['keyid']) : '';
 if (isset($_GET['keyid'])) {
     $keyid = $_GET['keyid'];
     
-    // Remover o símbolo '#' caso ele exista (se o banco não usa o '#')
+    // Remover o símbolo '#' caso ele exista (se a base de dados não usa o '#')
     $keyid_sem_hash = str_replace('#', '', $keyid);
     
     // Consultar os detalhes do ticket
@@ -42,8 +42,8 @@ if (isset($_GET['keyid'])) {
 
     if (!$ticket) {
         echo '<div class="alert alert-danger" role="alert">';
-        echo 'Ticket ' . htmlspecialchars($keyid) . ' não encontrado. Verifique se o ID do ticket está correto.';
-        echo '<br><a href="index.php" class="btn btn-primary mt-3">Voltar para Dashboard</a>';
+        echo 'Ticket ' . htmlspecialchars($keyid) . ' não encontrado. Verificar se o ID do ticket está correto.';
+        echo '<br><a href="index.php" class="btn btn-primary mt-3">Voltar ao Painel</a>';
         echo '</div>';
         exit;
     }
@@ -61,7 +61,7 @@ if (isset($_GET['keyid'])) {
     $stmt_messages->execute();
     $messages = $stmt_messages->fetchAll(PDO::FETCH_ASSOC);
     
-    // Consultar todos os usuários para o dropdown de atribuição
+    // Consultar todos os utilizadores para o dropdown de atribuição
     $sql_users = "SELECT id, Name FROM users ORDER BY Name ASC";
     $stmt_users = $pdo->prepare($sql_users);
     $stmt_users->execute();
@@ -69,7 +69,7 @@ if (isset($_GET['keyid'])) {
 } else {
     echo '<div class="alert alert-danger" role="alert">';
     echo 'Ticket não especificado.';
-    echo '<br><a href="index.php" class="btn btn-primary mt-3">Voltar para Dashboard</a>';
+    echo '<br><a href="index.php" class="btn btn-primary mt-3">Voltar ao Painel</a>';
     echo '</div>';
     exit;
 }
@@ -351,13 +351,13 @@ function getStatusColor($status)
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="imageModalLabel">Imagem do Ticket</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body text-center">
                 <img id="modalImage" src="" class="img-fluid" alt="Imagem do Ticket">
             </div>
             <div class="modal-footer">
-                <a id="downloadImageLink" href="#" class="btn btn-primary" download>Download</a>
+                <a id="downloadImageLink" href="#" class="btn btn-primary" download>Descarregar</a>
                 <a id="openImageLink" href="#" target="_blank" class="btn btn-secondary">Abrir em Nova Aba</a>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
             </div>
@@ -384,7 +384,7 @@ function getStatusColor($status)
             </div>
         </div>
 
-        <!-- Admin controls section -->
+        <!-- Secção de controlos de administrador -->
         <div class="admin-controls">
             <a href="javascript:void(0);" class="d-flex align-items-center justify-content-between admin-controls-header collapsed" 
                 data-bs-toggle="collapse" 
@@ -399,7 +399,7 @@ function getStatusColor($status)
                     <input type="hidden" name="keyid" value="<?php echo htmlspecialchars($ticket_id); ?>">
                     <div class="row mt-3">
                         <div class="col-md-6">
-                            <!-- Status Update Form -->
+                            <!-- Formulário de Atualização de Estado -->
                             <div class="form-group mb-3">
                                 <label for="status" class="form-label">Estado</label>
                                 <select id="status" name="status" class="form-select" data-original-value="<?php echo htmlspecialchars($ticket['Status']); ?>">
@@ -410,11 +410,11 @@ function getStatusColor($status)
                                 </select>
                             </div>
 
-                            <!-- Assigned User Update Form -->
+                            <!-- Formulário de Atualização de Utilizador Atribuído -->
                             <div class="form-group mb-3">
                                 <label for="assigned_user" class="form-label">Atribuído a:</label>
                                 <select id="assigned_user" name="assigned_user" class="form-select" data-original-value="<?php echo htmlspecialchars($ticket['User']); ?>">
-                                    <option value="">Selecione um responsável</option>
+                                    <option value="">Selecionar um responsável</option>
                                     <?php foreach ($users as $user): ?>
                                         <option value="<?php echo $user['id']; ?>" <?php echo ($ticket['User'] == $user['id']) ? 'selected' : ''; ?>>
                                             <?php echo htmlspecialchars($user['Name']); ?>
@@ -423,7 +423,7 @@ function getStatusColor($status)
                                 </select>
                             </div>
 
-                            <!-- Resolution Time Update Form -->
+                            <!-- Formulário de Atualização de Tempo de Resolução -->
                             <div class="form-group mb-3">
                                 <label for="resolution_time" class="form-label">Tempo de Resolução</label>
                                 <input type="hidden" id="resolution_time" name="resolution_time" 
@@ -463,19 +463,19 @@ function getStatusColor($status)
                                     </div>
                                 </div>
                                 
-                                <small class="text-muted mt-2 d-block">Tempo mínimo: 15 minutos. Use os botões para ajustar.</small>
+                                <small class="text-muted mt-2 d-block">Tempo mínimo: 15 minutos. Usar os botões para ajustar.</small>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <!-- Resolution Description Update Form -->
+                            <!-- Formulário de Atualização de Descrição de Resolução -->
                             <div class="form-group mb-3">
                                 <label for="resolution_description" class="form-label">Descrição da Resolução</label>
                                 <textarea id="resolution_description" name="resolution_description" class="form-control" rows="3" 
                                           data-original-value="<?php echo htmlspecialchars($ticket['Descr'] ?? ''); ?>"><?php echo !empty($ticket['Descr']) ? htmlspecialchars($ticket['Descr']) : ''; ?></textarea>
-                                <small class="text-muted">Descreva a solução aplicada para resolver o problema (visível ao cliente)</small>
+                                <small class="text-muted">Descrever a solução aplicada para resolver o problema (visível ao cliente)</small>
                             </div>
 
-                            <!-- Extra Info Update Form -->
+                            <!-- Formulário de Atualização de Informação Extra -->
                             <div class="form-group mb-3">
                                 <label for="extra_info" class="form-label">Informação Extra (Interna)</label>
                                 <textarea id="extra_info" name="extra_info" class="form-control" rows="3" 
@@ -485,11 +485,11 @@ function getStatusColor($status)
                         </div>
                     </div>
                     
-                    <!-- Action Buttons -->
+                    <!-- Botões de Ação -->
                     <div class="d-flex justify-content-between mt-3 pt-3 border-top">
                         <?php if ($ticket['Status'] !== 'Concluído') { ?>
                             <button type="button" class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
-                                <i class="bi bi-x-circle"></i> Fechar Ticket
+                                <i class="bi bi-x-circle"></i> Encerrar Ticket
                             </button>
                         <?php } else { ?>
                             <div></div>
@@ -509,23 +509,13 @@ function getStatusColor($status)
         </div>
 
         <div class="chat-body" id="chatBody">
-            <!-- Ticket information message at the top -->
+            <!-- Mensagem de informação do ticket no topo -->
             <div class="ticket-info">
                 <h5><?php echo htmlspecialchars($ticket['Name']); ?></h5>
                 <p><strong>Descrição:</strong> <?php echo htmlspecialchars($ticket['Description']); ?></p>
                 <p><strong>Criado por:</strong> <?php echo htmlspecialchars($ticket['CreationUser']); ?></p>
                 <p><strong>Criado em:</strong> <?php echo htmlspecialchars($ticket['CreationDate']); ?></p>
-                <?php if (!empty($ticket['image'])) { 
-                    $imagePath = $ticket['image'];
-                    // Fix the image path for admin side - ensure proper relative path
-                    if (!str_starts_with($imagePath, '/') && !str_starts_with($imagePath, 'http')) {
-                        $imagePath = '/' . ltrim($imagePath, '/');
-                    }
-                    // Since we're in admin folder, we need to go up one level
-                    if (!str_starts_with($imagePath, '../') && !str_starts_with($imagePath, 'http')) {
-                        $imagePath = '..' . $imagePath;
-                    }
-                ?>
+                <?php if (!empty($ticket['image'])) { ?>
                     <p><strong>Imagem:</strong>
                         <img src="<?php echo htmlspecialchars($imagePath); ?>" alt="Imagem do Ticket" class="message-image" 
                              onclick="showImage('<?php echo htmlspecialchars($imagePath); ?>')">
@@ -533,7 +523,7 @@ function getStatusColor($status)
                 <?php } ?>
             </div>
 
-            <!-- Messages -->
+            <!-- Mensagens -->
             <?php
             if ($messages) {
                 foreach ($messages as $message) {
@@ -561,7 +551,7 @@ function getStatusColor($status)
                 <input type="hidden" name="keyid" value="<?php echo htmlspecialchars($ticket['KeyId']); ?>">
                 <input type="hidden" name="id" value="<?php echo htmlspecialchars($ticket['id']); ?>">
                 <div class="chat-input-container">
-                    <textarea name="message" class="chat-input" id="messageInput" placeholder="Escreva aqui a sua mensagem..." required></textarea>
+                    <textarea name="message" class="chat-input" id="messageInput" placeholder="Escrever aqui a sua mensagem..." required></textarea>
                     <button type="submit" class="send-button" id="sendButton" disabled>
                         <i class="bi bi-send-fill"></i>
                     </button>
@@ -570,7 +560,7 @@ function getStatusColor($status)
         <?php } else { ?>
             <div class="ticket-closed-info">
                 <div class="d-flex justify-content-center align-items-center py-3 mb-3">
-                    <p class="text-muted m-0"><i class="bi bi-lock-fill me-2"></i>Ticket fechado. Não é possível enviar novas mensagens.</p>
+                    <p class="text-muted m-0"><i class="bi bi-lock-fill me-2"></i>Ticket encerrado. Não é possível enviar novas mensagens.</p>
                 </div>
                 
                 <?php if (!empty($ticket['Descr'])) { ?>
@@ -1310,17 +1300,17 @@ function getStatusColor($status)
                 const currentAssignedUser = document.getElementById('assigned_user').value;
                 
                 if (!currentResolutionTime || isNaN(currentResolutionTime) || currentResolutionTime <= 0) {
-                    showNotification('Para fechar um ticket, é necessário informar o tempo de resolução.', 'error');
+                    showNotification('Para encerrar um ticket, é necessário informar o tempo de resolução.', 'error');
                     return;
                 }
                 
                 if (!currentDescription.trim()) {
-                    showNotification('Para fechar um ticket, é necessário fornecer uma descrição da resolução.', 'error');
+                    showNotification('Para encerrar um ticket, é necessário fornecer uma descrição da resolução.', 'error');
                     return;
                 }
                 
                 if (!currentAssignedUser) {
-                    showNotification('Para fechar um ticket, é necessário atribuí-lo a um responsável.', 'error');
+                    showNotification('Para encerrar um ticket, é necessário atribuí-lo a um responsável.', 'error');
                     return;
                 }
             }
@@ -1328,7 +1318,7 @@ function getStatusColor($status)
             // Show loading state
             const saveButton = document.getElementById('saveChangesBtn');
             const originalButtonHtml = saveButton.innerHTML;
-            saveButton.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Guardando...';
+            saveButton.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> A guardar...';
             saveButton.disabled = true;
             
             // Send update request - use the existing form submission logic
@@ -1434,7 +1424,7 @@ function getStatusColor($status)
             }, 5000);
         }
         function fecharTicket(id) {
-            if (confirm('Tem certeza que deseja fechar este ticket?')) {
+            if (confirm('Tem a certeza de que deseja encerrar este ticket?')) {
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = 'processar_alteracao.php';
@@ -1443,7 +1433,7 @@ function getStatusColor($status)
                 const assignedUser = document.getElementById('assigned_user')?.value || '';
                 const resolutionTime = document.getElementById('resolution_time').value;
 
-                // Validate time
+                // Validar tempo
                 if (isNaN(resolutionTime) || resolutionTime <= 0) {
                     alert('O tempo de resolução deve ser um número positivo!');
                     return;
@@ -1454,7 +1444,7 @@ function getStatusColor($status)
                     'status': 'Concluído',
                     'assigned_user': assignedUser,
                     'resolution_time': resolutionTime,
-                    'resolution_description': document.getElementById('resolution_description').value || 'Ticket fechado pelo administrador',
+                    'resolution_description': document.getElementById('resolution_description').value || 'Ticket encerrado pelo administrador',
                     'extra_info': document.getElementById('extra_info').value || ''
                 };
 

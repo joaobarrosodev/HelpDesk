@@ -54,7 +54,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } catch (PDOException $e) {
         echo "<div class='alert alert-danger alert-dismissible fade show' role='alert'>
                 Erro ao criar ticket: " . $e->getMessage() . "
-                <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
+                <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button>
               </div>";
     }
 }
@@ -69,7 +69,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <body>
     <?php include('menu.php'); ?>    <div class="content p-5">
             <h2 class="mb-3 display-5">Criar Ticket de Suporte</h2>
-            <p class="text-muted">Preencha os campos abaixo para solicitar suporte técnico</p>
+            <p class="text-muted">Preencher os campos abaixo para solicitar suporte técnico</p>
              
         <div class="card mt-4">
             <div class="p-4">
@@ -83,7 +83,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                     Assunto:
                                 </label>
                                 <select class="form-select" id="nome_computador" name="nome_computador" required>
-                                    <option value="" disabled selected>Selecione um assunto</option>
+                                    <option value="" disabled selected>Selecionar um assunto</option>
                                     <option value="XD">XD</option>
                                     <option value="Sage">Sage</option>
                                     <option value="Office">Office</option>
@@ -93,17 +93,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                     <option value="Impressoras">Impressoras</option>
                                     <option value="Outros">Outros</option>
                                 </select>
-                                <div class="form-text">Selecione o assunto principal do seu problema</div>
+                                <div class="form-text">Selecionar o assunto principal do seu problema</div>
                             </div>
 
                             <!-- Descrição do problema -->
                             <div class="mb-4">
                                 <label for="descricao_problema" class="form-label fw-bold">
                                   Descrição do Problema:
-                                </label>                                
+                                </label>
                                 <textarea class="form-control" id="descricao_problema" name="descricao_problema" 
-                                          rows="10" placeholder="Forneça detalhes sobre o problema..." required></textarea>
-                                <div class="form-text">Quanto mais detalhes fornecer, mais rápido poderemos ajudar</div>
+                                          rows="10" placeholder="Fornecer detalhes sobre o problema..." required></textarea>
+                                <div class="form-text">Quanto mais detalhes fornecer, mais rapidamente poderemos ajudar</div>
                             </div>
                         </div>
                         
@@ -140,7 +140,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             <i class="bi bi-image me-1"></i> Anexar Imagem do Problema:
                         </label>
                         <div id="dropzone" class="dropzone"></div>
-                        <div class="form-text">Arraste uma imagem ou clique para selecionar (opcional)</div>
+                        <div class="form-text">Arrastar uma imagem ou clicar para selecionar (opcional)</div>
                         <input type="hidden" name="imagem" id="imagem_path">                    </div>
 
                     <!-- Botão de envio -->
@@ -160,13 +160,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title" id="successModalLabel">Ticket Criado com Sucesso!</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
                 <div class="modal-body text-center py-4">
                     <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
-                    <h4 class="mt-3">Ticket registrado com sucesso!</h4>
+                    <h4 class="mt-3">Ticket registado com sucesso!</h4>
                     <p class="lead">O seu número de ticket é: <strong id="ticketId"></strong></p>
-                    <p>Um técnico irá analisar sua solicitação em breve.</p>
+                    <p>Um técnico irá analisar a sua solicitação em breve.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-success" data-bs-dismiss="modal">Fechar</button>
@@ -188,7 +188,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             maxFiles: 1,
             acceptedFiles: "image/*",
             addRemoveLinks: true,
-            dictDefaultMessage: "<i class='bi bi-cloud-arrow-up' style='font-size: 2rem;'></i><br>Arraste uma imagem ou clique aqui",
+            dictDefaultMessage: "<i class='bi bi-cloud-arrow-up' style='font-size: 2rem;'></i><br>Arrastar uma imagem ou clicar aqui",
             dictRemoveFile: "Remover",
             success: function(file, response) {
                 // Parse the JSON response if needed

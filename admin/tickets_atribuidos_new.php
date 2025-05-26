@@ -54,7 +54,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
                     <h1 class="mb-3 display-5">Tickets Atribuídos</h1>
-                    <p class="">Lista de tickets em andamento que já possuem um responsável designado.</p>
+                    <p class="">Gerir bilhetes que foram atribuídos a técnicos específicos.</p>
                 </div>
             </div>
             
@@ -167,7 +167,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Sorting functionality
+        // Funcionalidade de ordenação
         const table = document.querySelector('table');
         const headers = table.querySelectorAll('th.sortable');
         const priorityMap = {
@@ -178,51 +178,11 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         headers.forEach(function(header, index) {
             header.addEventListener('click', function() {
-                const isAscending = !this.classList.contains('asc');
-                
-                // Reset all headers
-                headers.forEach(h => {
-                    h.classList.remove('asc', 'desc');
-                });
-                
-                // Set current header
-                this.classList.add(isAscending ? 'asc' : 'desc');
-                
-                const rows = Array.from(table.querySelectorAll('tbody tr'));
-                
-                // Sort the rows
-                rows.sort(function(rowA, rowB) {
-                    const cellAContent = rowA.cells[index].textContent.trim();
-                    const cellBContent = rowB.cells[index].textContent.trim();
-                    
-                    // Special sorting for "Prioridade" column (index 4)
-                    if (index === 4) {
-                        const priorityA = priorityMap[cellAContent] || 0;
-                        const priorityB = priorityMap[cellBContent] || 0;
-                        return isAscending ? priorityA - priorityB : priorityB - priorityA;
-                    }
-                    
-                    // Try to sort as dates if possible
-                    const dateA = parseDate(cellAContent);
-                    const dateB = parseDate(cellBContent);
-                    
-                    if (dateA && dateB) {
-                        return isAscending ? dateA - dateB : dateB - dateA;
-                    }
-                    
-                    // Otherwise sort as strings
-                    return isAscending ? 
-                        cellAContent.localeCompare(cellBContent) : 
-                        cellBContent.localeCompare(cellAContent);
-                });
-                
-                // Reorder the rows
-                const tbody = table.querySelector('tbody');
                 rows.forEach(row => tbody.appendChild(row));
             });
         });
         
-        // Helper function to try to parse dates (DD/MM/YYYY format)
+        // Função auxiliar para tentar analisar datas (formato DD/MM/AAAA)
         function parseDate(dateStr) {
             const parts = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})/);
             if (parts) {
