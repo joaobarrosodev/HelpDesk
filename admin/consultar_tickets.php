@@ -151,7 +151,6 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                                     <th scope="col" class="sortable text-nowrap">Prioridade</th>
                                     <th scope="col" class="sortable text-nowrap">Criador</th>
                                     <th scope="col" class="sortable text-nowrap">Última Mensagem Por</th>
-                                    <th scope="col" class="text-nowrap">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -198,19 +197,6 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                                             </td>
                                             <td><?php echo $ticket['CreationUser']; ?></td>
                                             <td><?php echo !empty($ticket['LastCommentUser']) ? htmlspecialchars($ticket['LastCommentUser']) : '-'; ?></td>
-                                            <td>
-                                                <div class="dropdown">
-                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton<?php echo $ticket['id']; ?>" data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <i class="bi bi-gear"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton<?php echo $ticket['id']; ?>">
-                                                        <li><a class="dropdown-item" href="detalhes_ticket.php?keyid=<?php echo htmlspecialchars($ticket['id']); ?>"><i class="bi bi-eye me-2"></i> Ver detalhes</a></li>
-                                                        <?php if ($ticket['status'] !== 'Concluído'): ?>
-                                                            <li><a class="dropdown-item text-danger fechar-ticket" href="#" data-id="<?php echo htmlspecialchars($ticket['id']); ?>"><i class="bi bi-x-circle me-2"></i> Fechar ticket</a></li>
-                                                        <?php endif; ?>
-                                                    </ul>
-                                                </div>
-                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
