@@ -214,6 +214,176 @@ function getStatusColor($status) {
         line-height: 1.6;
         margin-bottom: 0;
     }
+
+    /* AnyDesk styles */
+    .anydesk-logo {
+        width: 32px;
+        height: 32px;
+        background-color: transparent;
+        color: white;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-right: 8px;
+        text-decoration: none;
+        border: none;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .anydesk-logo::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 32px;
+        height: 32px;
+        background-image: url('img/anydesk.svg');
+        background-size: contain;
+        background-repeat: no-repeat;
+    }
+
+
+    .anydesk-modal .modal-body {
+        padding: 2rem;
+    }
+
+    .anydesk-steps {
+        counter-reset: step-counter;
+    }
+
+    .anydesk-step {
+        counter-increment: step-counter;
+        margin-bottom: 1.5rem;
+        padding-left: 3rem;
+        position: relative;
+    }
+
+    .anydesk-step::before {
+        content: counter(step-counter);
+        position: absolute;
+        left: 0;
+        top: 0;
+        background-color: #d32f2f;
+        color: white;
+        border-radius: 50%;
+        width: 2rem;
+        height: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .anydesk-step h6 {
+        color: #d32f2f;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .anydesk-download-btn {
+        background-color: #d32f2f;
+        border-color: #d32f2f;
+        color: white;
+        font-weight: 600;
+        padding: 12px 30px;
+        border-radius: 6px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+    }
+
+    .anydesk-download-btn:hover {
+        background-color: #b71c1c;
+        border-color: #b71c1c;
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+
+    /* Review modal styles */
+    .review-modal .modal-body {
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .review-options {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin: 2rem 0;
+    }
+
+    .review-option {
+        cursor: pointer;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+        min-width: 120px;
+        background: white;
+    }
+
+    .review-option:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .review-option.positive {
+        border-color: #28a745;
+        color: #28a745;
+    }
+
+    .review-option.positive.selected {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .review-option.neutral {
+        border-color: #ffc107;
+        color: #856404;
+    }
+
+    .review-option.neutral.selected {
+        background-color: #ffc107;
+        color: #856404;
+    }
+
+    .review-option.negative {
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+
+    .review-option.negative.selected {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .review-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .review-text {
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .review-comment {
+        margin-top: 1.5rem;
+    }
+
+    .review-comment textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
 </style>
 
 <!-- Modal para Exibir Imagem -->
@@ -236,6 +406,100 @@ function getStatusColor($status) {
     </div>
 </div>
 
+<!-- AnyDesk Installation Modal -->
+<div class="modal fade anydesk-modal" id="anydeskModal" tabindex="-1" aria-labelledby="anydeskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <div class="d-flex align-items-center">
+                    <div class="anydesk-logo me-3">AD</div>
+                    <div>
+                        <h5 class="modal-title mb-0" id="anydeskModalLabel">Instalar AnyDesk para Suporte Remoto</h5>
+                        <small class="text-muted">Permitir acesso remoto para resolução mais rápida</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Por que instalar o AnyDesk?</strong><br>
+                    Com o AnyDesk, nossa equipa pode aceder ao seu computador remotamente para resolver problemas de forma mais rápida e eficiente.
+                </div>
+
+                <div class="anydesk-steps">
+                    <div class="anydesk-step">
+                        <h6>Descarregar e Instalar o AnyDesk</h6>
+                        <p>Clique no botão abaixo para descarregar o AnyDesk para Windows. Após o download concluir, execute o ficheiro e siga as instruções de instalação.</p>
+                        <a href="https://anydesk.com/en/downloads/thank-you?dv=win_exe" target="_blank" class="anydesk-download-btn">
+                            <i class="bi bi-download me-2"></i>Descarregar AnyDesk
+                        </a>
+                    </div>
+
+                    <div class="anydesk-step">
+                        <h6>Obter o Código de Acesso</h6>
+                        <p>Abra o AnyDesk após a instalação. Verá um código de 9 dígitos (ex: 123 456 789). Este é o seu código de acesso.</p>
+                    </div>
+
+                    <div class="anydesk-step">
+                        <h6>Partilhar o Código</h6>
+                        <p>Envie o código através do chat deste ticket. Nossa equipa usará este código para se conectar ao seu computador quando necessário.</p>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning mt-4">
+                    <i class="bi bi-shield-check me-2"></i>
+                    <strong>Segurança:</strong> Apenas partilhe o seu código AnyDesk com técnicos autorizados da nossa equipa através deste sistema de tickets.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" onclick="markAnydeskSeen()" data-bs-dismiss="modal">
+                    <i class="bi bi-check me-2"></i>Entendi
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Review Modal -->
+<div class="modal fade review-modal" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <div class="text-center w-100">
+                    <h5 class="modal-title mb-0" id="reviewModalLabel">Avaliação do Atendimento</h5>
+                    <small class="text-muted">Como foi a sua experiência com o nosso suporte?</small>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">O seu feedback é muito importante para melhorarmos os nossos serviços.</p>
+                
+                <div class="review-options">
+                    <div class="review-option positive" onclick="selectReview('positive')">
+                        <div class="review-icon">👍</div>
+                        <div class="review-text">Positivo</div>
+                    </div>
+                    <div class="review-option neutral" onclick="selectReview('neutral')">
+                        <div class="review-icon">🤷</div>
+                        <div class="review-text">Neutro</div>
+                    </div>
+                    <div class="review-option negative" onclick="selectReview('negative')">
+                        <div class="review-icon">👎</div>
+                        <div class="review-text">Negativo</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-outline-secondary" onclick="skipReview()">Pular</button>
+                <button type="button" class="btn btn-primary" id="submitReviewBtn" onclick="submitReview()" disabled>
+                    <i class="bi bi-check me-2"></i>Enviar Avaliação
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <body>
     <?php include('menu.php'); ?>
 
@@ -246,6 +510,10 @@ function getStatusColor($status) {
                 <p class="text-muted mb-0"><?php echo htmlspecialchars($ticket['Name']); ?></p>
             </div>
             <div class="d-flex align-items-center gap-2">
+                <!-- AnyDesk logo (always visible, click to open modal) -->
+                <button class="anydesk-logo" id="anydeskLogo" onclick="showAnydeskModal()" title="AnyDesk - Acesso Remoto">
+                    <span class="anydesk-logo-text">AD</span>
+                </button>
                 <span class="badge bg-<?php echo getStatusColor($ticket['Status']); ?>">
                     <?php echo htmlspecialchars($ticket['Status']); ?>
                 </span>
@@ -377,6 +645,98 @@ function getStatusColor($status) {
     <!-- Inclusão do JS do Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Review functionality
+        let selectedReview = null;
+
+        function checkTicketReview() {
+            const ticketStatus = '<?php echo $ticket['Status']; ?>';
+            const ticketKeyId = '<?php echo $ticket['KeyId']; ?>';
+            const hasReviewed = localStorage.getItem('ticket_reviewed_' + ticketKeyId);
+            
+            if (ticketStatus === 'Concluído' && !hasReviewed) {
+                // Show review modal after a short delay
+                setTimeout(() => {
+                    showReviewModal();
+                }, 2000);
+            }
+        }
+
+        function showReviewModal() {
+            const modal = new bootstrap.Modal(document.getElementById('reviewModal'));
+            modal.show();
+        }
+
+        function selectReview(type) {
+            selectedReview = type;
+            
+            // Remove selected class from all options
+            document.querySelectorAll('.review-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked option
+            document.querySelector('.review-option.' + type).classList.add('selected');
+            
+            // Enable submit button
+            document.getElementById('submitReviewBtn').disabled = false;
+        }
+
+        function submitReview() {
+            if (!selectedReview) return;
+            
+            const ticketKeyId = '<?php echo $ticket['KeyId']; ?>';
+            
+            // Send review to server
+            fetch('save_review.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'ticket_id=' + encodeURIComponent(ticketKeyId) + '&rating=' + encodeURIComponent(selectedReview)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Store locally that review was submitted
+                    localStorage.setItem('ticket_reviewed_' + ticketKeyId, 'true');
+                    
+                    // Close modal and show thank you message
+                    bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+                    
+                    // Show success message
+                    setTimeout(() => {
+                        alert('Obrigado pelo seu feedback! A sua avaliação foi registada.');
+                    }, 300);
+                } else {
+                    alert('Erro ao guardar a avaliação: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Erro ao enviar a avaliação. Tente novamente.');
+            });
+        }
+
+        function skipReview() {
+            const ticketKeyId = '<?php echo $ticket['KeyId']; ?>';
+            localStorage.setItem('ticket_reviewed_' + ticketKeyId, 'true');
+            bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+        }
+
+        // AnyDesk functionality
+        function showAnydeskModal() {
+            const modal = new bootstrap.Modal(document.getElementById('anydeskModal'));
+            modal.show();
+        }
+
+        function markAnydeskSeen() {
+            localStorage.setItem('anydesk_seen', 'true');
+            const anydeskLogo = document.getElementById('anydeskLogo');
+            if (anydeskLogo) {
+                anydeskLogo.classList.remove('d-none');
+            }
+        }
+
         // Function to show image in modal with proper path handling
         function showImage(imageUrl) {
             const modalImage = document.getElementById('modalImage');
@@ -437,6 +797,9 @@ function getStatusColor($status) {
             if (chatBody) {
                 chatBody.scrollTop = chatBody.scrollHeight;
             }
+
+            // Check if ticket is closed and review not given yet
+            checkTicketReview();
         });
     </script>
 </body>
