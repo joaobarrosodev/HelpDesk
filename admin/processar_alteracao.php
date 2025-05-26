@@ -52,7 +52,7 @@ if (empty($updateFields)) {
 }
 
 try {
-    // Atualizar o bilhete diretamente usando KeyId
+    // Atualizar o ticket diretamente usando KeyId
     $sql = "UPDATE info_xdfree01_extrafields SET " . implode(', ', $updateFields) . ", dateu = NOW() WHERE XDFree01_KeyID = :keyid";
     
     $stmt = $pdo->prepare($sql);
@@ -69,7 +69,7 @@ try {
         
         header('Location: detalhes_ticket.php?keyid=' . urlencode($ticketId) . '&success=updated');
     } else {
-        $response = ['success' => false, 'message' => 'Falha ao atualizar bilhete'];
+        $response = ['success' => false, 'message' => 'Falha ao atualizar ticket'];
         
         if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
             header('Content-Type: application/json');

@@ -48,6 +48,6 @@ if (move_uploaded_file($file['tmp_name'], $filePath)) {
         'nome_original' => $file['name']
     ]);
 } else {
-    echo json_encode(['success' => false, 'erro' => 'Erro ao salvar o arquivo']);
+    echo json_encode(['success' => false, 'erro' => 'Erro ao guardar o ficheiro']);
 }
 ?>

@@ -1,11 +1,11 @@
 <?php
-// test_closing_ticket.php - Script de teste para verificar a funcionalidade de encerramento de bilhetes
+// test_closing_ticket.php - Script de teste para verificar a funcionalidade de encerramento de tickets
 include('db.php');
 
 echo "===== TESTE DE VALIDAÇÃO DE ENCERRAMENTO DE BILHETES =====\n\n";
 
-// 1. Verificar bilhetes com campos obrigatórios são devidamente reconhecidos
-echo "1. Consulta SQL para bilhetes que necessitam de campos de encerramento:\n";
+// 1. Verificar tickets com campos obrigatórios são devidamente reconhecidos
+echo "1. Consulta SQL para tickets que necessitam de campos de encerramento:\n";
 $sql = "SELECT 
             xdfree01.KeyId, 
             xdfree01.Name as ticket_title,
@@ -18,13 +18,13 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-echo "Encontrados " . count($tickets) . " bilhetes encerrados sem tempo de resolução.\n";
+echo "Encontrados " . count($tickets) . " tickets encerrados sem tempo de resolução.\n";
 foreach($tickets as $ticket) {
     echo "- Ticket " . $ticket['KeyId'] . ": " . $ticket['ticket_title'] . " (Estado: " . $ticket['status'] . ")\n";
 }
 echo "\n";
 
-// 2. Verificar bilhetes sem descrição são devidamente reconhecidos
+// 2. Verificar tickets sem descrição são devidamente reconhecidos
 $sql = "SELECT 
             xdfree01.KeyId, 
             xdfree01.Name as ticket_title,
@@ -37,13 +37,13 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-echo "2. Encontrados " . count($tickets) . " bilhetes encerrados sem descrição de resolução.\n";
+echo "2. Encontrados " . count($tickets) . " tickets encerrados sem descrição de resolução.\n";
 foreach($tickets as $ticket) {
     echo "- Ticket " . $ticket['KeyId'] . ": " . $ticket['ticket_title'] . " (Estado: " . $ticket['status'] . ")\n";
 }
 echo "\n";
 
-// 3. Verificar bilhetes sem utilizador atribuído são devidamente reconhecidos
+// 3. Verificar tickets sem utilizador atribuído são devidamente reconhecidos
 $sql = "SELECT 
             xdfree01.KeyId, 
             xdfree01.Name as ticket_title,
@@ -56,13 +56,13 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-echo "3. Encontrados " . count($tickets) . " bilhetes encerrados sem utilizador atribuído.\n";
+echo "3. Encontrados " . count($tickets) . " tickets encerrados sem utilizador atribuído.\n";
 foreach($tickets as $ticket) {
     echo "- Ticket " . $ticket['KeyId'] . ": " . $ticket['ticket_title'] . " (Estado: " . $ticket['status'] . ")\n";
 }
 echo "\n";
 
-// 4. Contar bilhetes por estado
+// 4. Contar tickets por estado
 $sql = "SELECT 
             info_xdfree01_extrafields.Status as status,
             COUNT(*) as count
@@ -73,13 +73,13 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $statusCounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-echo "4. Contagem de bilhetes por estado:\n";
+echo "4. Contagem de tickets por estado:\n";
 foreach($statusCounts as $status) {
-    echo "- " . $status['status'] . ": " . $status['count'] . " bilhetes\n";
+    echo "- " . $status['status'] . ": " . $status['count'] . " tickets\n";
 }
 echo "\n";
 
-// 5. Contar bilhetes por responsável
+// 5. Contar tickets por responsável
 $sql = "SELECT 
             info_xdfree01_extrafields.Atribuido as user_id,
             users.Name as user_name,
@@ -93,10 +93,10 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $userCounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-echo "5. Contagem de bilhetes por responsável:\n";
+echo "5. Contagem de tickets por responsável:\n";
 foreach($userCounts as $user) {
     $userName = !empty($user['user_name']) ? $user['user_name'] : 'Ninguém';
-    echo "- " . $userName . " (ID: " . $user['user_id'] . "): " . $user['count'] . " bilhetes\n";
+    echo "- " . $userName . " (ID: " . $user['user_id'] . "): " . $user['count'] . " tickets\n";
 }
 
 echo "\n===== TESTE CONCLUÍDO =====\n";

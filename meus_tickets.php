@@ -96,7 +96,7 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
                     <p class="">Lista de todos os seus tickets, incluindo tickets em aberto e resolvidos. Utilize os filtros abaixo para refinar a visualização.</p>
                 </div>
                 <a href="abrir_ticket.php" class="btn btn-primary d-flex align-items-center">
-                    Abrir Novo Ticket
+                    Abrir Novo Bilhete
                 </a>
             </div>
             

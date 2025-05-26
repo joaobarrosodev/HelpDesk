@@ -90,7 +90,7 @@ try {
     $messageId = $pdo->lastInsertId();
     error_log("Administrador inserir_mensagem - Mensagem guardada com ID: $messageId");
     
-    // Atualizar hora da última atualização do bilhete
+    // Atualizar hora da última atualização do ticket
     $updateSql = "UPDATE info_xdfree01_extrafields 
                   SET dateu = NOW() 
                   WHERE XDFree01_KeyID = :keyid";

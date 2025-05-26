@@ -11,11 +11,11 @@ while($row = $stmt->fetch(PDO::FETCH_ASSOC)){
     echo "Campo: " . $row['Field'] . ", Tipo: " . $row['Type'] . "\n";
 }
 
-// Verificar alguns bilhetes de exemplo
+// Verificar alguns tickets de exemplo
 echo "\n===== BILHETES DE EXEMPLO =====\n";
 $sql = "SELECT 
             xdfree01.KeyId, 
-            xdfree01.Name as titulo_bilhete, 
+            xdfree01.Name as titulo_ticket, 
             info_xdfree01_extrafields.Atribuido as atribuido_a, 
             info_xdfree01_extrafields.Priority as prioridade,
             info_xdfree01_extrafields.Status as estado,
@@ -30,7 +30,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 foreach($tickets as $ticket) {
     echo "-----------------------------------\n";
     echo "ID do Ticket: " . $ticket['KeyId'] . "\n";
-    echo "Título: " . $ticket['titulo_bilhete'] . "\n";
+    echo "Título: " . $ticket['titulo_ticket'] . "\n";
     echo "Atribuído a: " . $ticket['atribuido_a'] . "\n";
     echo "Prioridade: " . $ticket['prioridade'] . "\n";
     echo "Estado: " . $ticket['estado'] . "\n";

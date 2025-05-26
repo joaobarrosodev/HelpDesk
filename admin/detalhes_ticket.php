@@ -515,9 +515,15 @@ function getStatusColor($status)
                 <p><strong>Descrição:</strong> <?php echo htmlspecialchars($ticket['Description']); ?></p>
                 <p><strong>Criado por:</strong> <?php echo htmlspecialchars($ticket['CreationUser']); ?></p>
                 <p><strong>Criado em:</strong> <?php echo htmlspecialchars($ticket['CreationDate']); ?></p>
-                <?php if (!empty($ticket['image'])) { ?>
+                <?php if (!empty($ticket['image'])) { 
+                    // Fix image path for admin side
+                    $imagePath = $ticket['image'];
+                    if (!str_starts_with($imagePath, '../') && !str_starts_with($imagePath, 'http') && !str_starts_with($imagePath, '/')) {
+                        $imagePath = '../' . $imagePath;
+                    }
+                ?>
                     <p><strong>Imagem:</strong>
-                        <img src="<?php echo htmlspecialchars($imagePath); ?>" alt="Imagem do Ticket" class="message-image" 
+                        <img src="<?php echo htmlspecialchars($imagePath); ?>" alt="Imagem do Bilhete" class="message-image" 
                              onclick="showImage('<?php echo htmlspecialchars($imagePath); ?>')">
                     </p>
                 <?php } ?>

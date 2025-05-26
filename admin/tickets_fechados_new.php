@@ -114,7 +114,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                             </div>
                                                             <div class="modal-body">
                                                                 <div class="mb-3">
-                                                                    <h6>Título do Ticket</h6>
+                                                                    <h6>Título do Bilhete</h6>
                                                                     <p><?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?></p>
                                                                 </div>
                                                                 <div class="mb-3">
@@ -136,7 +136,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                             </div>
                                                             <div class="modal-footer">
                                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                                                                <a href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>" class="btn btn-primary">Ver Ticket Completo</a>
+                                                                <a href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>" class="btn btn-primary">Ver Bilhete Completo</a>
                                                             </div>
                                                         </div>
                                                     </div>
