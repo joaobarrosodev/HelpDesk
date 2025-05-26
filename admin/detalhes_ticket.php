@@ -430,7 +430,7 @@ function getStatusColor($status)
                                        value="<?php echo !empty($ticket['Time']) && $ticket['Time'] >= 15 ? htmlspecialchars($ticket['Time']) : '15'; ?>"
                                        data-original-value="<?php echo !empty($ticket['Time']) && $ticket['Time'] >= 15 ? htmlspecialchars($ticket['Time']) : '15'; ?>">
                                 
-                                <div class="time-control-container bg-white">
+                                <div class="time-control-container bg-whie">
                                     <div class="time-display">
                                         <span class="badge bg-primary" id="timeDisplay">
                                             <?php 
@@ -1243,18 +1243,10 @@ function getStatusColor($status)
                 // Fix image URL path for admin side
                 let fixedImageUrl = imageUrl;
                 
-                // Make sure the image URL has the correct base path
-                if (!fixedImageUrl.startsWith('http') && !fixedImageUrl.startsWith('/')) {
-                    fixedImageUrl = '/' + fixedImageUrl;
-                }
-                
-                // If we're in the admin folder, we need to go up one level
-                if (window.location.pathname.includes('/admin/')) {
-                    if (fixedImageUrl.startsWith('/')) {
-                        fixedImageUrl = '..' + fixedImageUrl;
-                    } else if (!fixedImageUrl.startsWith('../')) {
-                        fixedImageUrl = '../' + fixedImageUrl;
-                    }
+                // Only adjust if the URL is clearly not already adjusted
+                if (!fixedImageUrl.includes('../') && !fixedImageUrl.startsWith('http') && !fixedImageUrl.startsWith('/')) {
+                    // Simple case: just add ../ prefix
+                    fixedImageUrl = '../' + fixedImageUrl;
                 }
 
                 modalImage.src = fixedImageUrl;
