@@ -53,7 +53,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="container-fluid p-4">
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
-                    <h1 class="mb-3 display-5">Bilhetes Atribuídos</h1>
+                    <h1 class="mb-3 display-5">Tickets Atribuídos</h1>
                     <p class="">Gerir tickets que foram atribuídos a técnicos específicos.</p>
                 </div>
             </div>

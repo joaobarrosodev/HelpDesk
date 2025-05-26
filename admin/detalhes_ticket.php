@@ -523,7 +523,7 @@ function getStatusColor($status)
                     }
                 ?>
                     <p><strong>Imagem:</strong>
-                        <img src="<?php echo htmlspecialchars($imagePath); ?>" alt="Imagem do Bilhete" class="message-image" 
+                        <img src="<?php echo htmlspecialchars($imagePath); ?>" alt="Imagem do Ticket" class="message-image" 
                              onclick="showImage('<?php echo htmlspecialchars($imagePath); ?>')">
                     </p>
                 <?php } ?>

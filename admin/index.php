@@ -139,7 +139,7 @@ try {
                                     <div class="mb-3">
                                         <i class="bi bi-ticket-fill fs-1 text-primary"></i>
                                     </div>
-                                    <h5 class="card-title">Bilhetes por Atribuir</h5>
+                                    <h5 class="card-title">Tickets por Atribuir</h5>
                                     <p class="card-text small text-muted">Visualizar e atribuir novos tickets</p>
                                     <a href="consultar_tickets.php" class="btn btn-outline-primary mt-2 w-100">
                                         <i class="bi bi-arrow-right me-1"></i> Aceder
@@ -153,7 +153,7 @@ try {
                                     <div class="mb-3">
                                         <i class="bi bi-person-check-fill fs-1 text-success"></i>
                                     </div>
-                                    <h5 class="card-title">Os Meus Bilhetes</h5>
+                                    <h5 class="card-title">Os Meus Tickets</h5>
                                     <p class="card-text small text-muted">Gerir tickets atribuídos a si</p>
                                     <a href="tickets_atribuidos.php" class="btn btn-outline-success mt-2 w-100">
                                         <i class="bi bi-arrow-right me-1"></i> Aceder
@@ -167,7 +167,7 @@ try {
                                     <div class="mb-3">
                                         <i class="bi bi-archive-fill fs-1 text-secondary"></i>
                                     </div>
-                                    <h5 class="card-title">Bilhetes Encerrados</h5>
+                                    <h5 class="card-title">Tickets Encerrados</h5>
                                     <p class="card-text small text-muted">Histórico de tickets concluídos</p>
                                     <a href="tickets_fechados.php" class="btn btn-outline-secondary mt-2 w-100">
                                         <i class="bi bi-arrow-right me-1"></i> Aceder

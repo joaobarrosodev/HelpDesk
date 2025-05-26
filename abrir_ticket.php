@@ -68,7 +68,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
     <?php include('menu.php'); ?>    <div class="content p-5">
-            <h2 class="mb-3 display-5">Criar Bilhete de Suporte</h2>
+            <h2 class="mb-3 display-5">Criar Ticket de Suporte</h2>
             <p class="text-muted">Preencher os campos abaixo para solicitar suporte técnico</p>
              
         <div class="card mt-4">
@@ -146,7 +146,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <!-- Botão de envio -->
                     <div class="text-end mt-4">
                         <button type="submit" class="btn btn-success submit-btn">
-                            <i class="bi bi-send me-2"></i>Criar Bilhete
+                            <i class="bi bi-send me-2"></i>Criar Ticket
                         </button>
                     </div>
                 </form>
@@ -159,12 +159,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title" id="successModalLabel">Bilhete Criado com Sucesso!</h5>
+                    <h5 class="modal-title" id="successModalLabel">Ticket Criado com Sucesso!</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
                 <div class="modal-body text-center py-4">
                     <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
-                    <h4 class="mt-3">Bilhete registado com sucesso!</h4>
+                    <h4 class="mt-3">Ticket registado com sucesso!</h4>
                     <p class="lead">O seu número de ticket é: <strong id="ticketId"></strong></p>
                     <p>Um técnico irá analisar a sua solicitação em breve.</p>
                 </div>
