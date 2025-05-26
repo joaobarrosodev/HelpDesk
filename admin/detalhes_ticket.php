@@ -318,6 +318,31 @@ function getStatusColor($status)
             transform: translateY(0);
         }
     }
+
+    .time-control-container {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        background-color: #f8f9fa;
+    }
+
+    .time-display {
+        text-align: center;
+        margin-bottom: 15px;
+    }
+
+    .time-display .badge {
+        font-size: 1.1rem;
+        padding: 8px 16px;
+    }
+
+    .time-buttons {
+        justify-content: center;
+    }
+
+    .time-buttons .btn {
+        min-width: 80px;
+    }
 </style>
 
 <!-- Modal para Exibir Imagem -->
@@ -368,7 +393,6 @@ function getStatusColor($status)
                 aria-controls="adminInfo"
                 style="cursor: pointer; text-decoration: none; color: inherit;">
                 <h5 class="m-0">Informações Administrativas</h5>
-                <i class="bi bi-chevron-down toggle-icon"></i>
             </a>
             <div class="collapse" id="adminInfo">
                 <form id="adminUpdateForm">
@@ -401,12 +425,45 @@ function getStatusColor($status)
 
                             <!-- Resolution Time Update Form -->
                             <div class="form-group mb-3">
-                                <label for="resolution_time" class="form-label">Tempo de Resolução (minutos)</label>
-                                <input type="number" id="resolution_time" name="resolution_time" class="form-control" 
-                                       min="1" step="1" placeholder="Ex: 90" 
-                                       value="<?php echo !empty($ticket['Time']) ? htmlspecialchars($ticket['Time']) : ''; ?>"
-                                       data-original-value="<?php echo !empty($ticket['Time']) ? htmlspecialchars($ticket['Time']) : ''; ?>">
-                                <small class="text-muted">Insira o tempo total em minutos (ex: 90 para 1 hora e 30 minutos)</small>
+                                <label for="resolution_time" class="form-label">Tempo de Resolução</label>
+                                <input type="hidden" id="resolution_time" name="resolution_time" 
+                                       value="<?php echo !empty($ticket['Time']) && $ticket['Time'] >= 15 ? htmlspecialchars($ticket['Time']) : '15'; ?>"
+                                       data-original-value="<?php echo !empty($ticket['Time']) && $ticket['Time'] >= 15 ? htmlspecialchars($ticket['Time']) : '15'; ?>">
+                                
+                                <div class="time-control-container bg-white">
+                                    <div class="time-display">
+                                        <span class="badge bg-primary" id="timeDisplay">
+                                            <?php 
+                                            $currentTime = !empty($ticket['Time']) && $ticket['Time'] >= 15 ? intval($ticket['Time']) : 15;
+                                            $hours = floor($currentTime / 60);
+                                            $minutes = $currentTime % 60;
+                                            if ($hours > 0) {
+                                                echo $hours . 'h';
+                                                if ($minutes > 0) echo ' ' . $minutes . 'min';
+                                            } else {
+                                                echo $minutes . ' minuto' . ($minutes != 1 ? 's' : '');
+                                            }
+                                            ?>
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="time-buttons d-flex gap-2 flex-wrap">
+                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="adjustTime(-15)" id="removeTimeBtn">
+                                            - 15min
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="adjustTime(15)">
+                                            + 15min
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="adjustTime(30)">
+                                            + 30min
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="adjustTime(60)">
+                                            + 1h
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <small class="text-muted mt-2 d-block">Tempo mínimo: 15 minutos. Use os botões para ajustar.</small>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -1426,6 +1483,72 @@ function getStatusColor($status)
 
         // Initialize when page loads
         window.addEventListener('DOMContentLoaded', function() {
+            // Time adjustment functionality
+            window.adjustTime = function(minutesToAdd) {
+                const timeInput = document.getElementById('resolution_time');
+                const timeDisplay = document.getElementById('timeDisplay');
+                const removeBtn = document.getElementById('removeTimeBtn');
+                
+                let currentTime = parseInt(timeInput.value) || 15;
+                let newTime = currentTime + minutesToAdd;
+                
+                // Ensure minimum time is 15 minutes
+                if (newTime < 15) {
+                    newTime = 15;
+                }
+                
+                // Update hidden input
+                timeInput.value = newTime;
+                
+                // Update display
+                updateTimeDisplay(newTime);
+                
+                // Enable/disable remove button based on minimum
+                if (removeBtn) {
+                    removeBtn.disabled = (newTime <= 15);
+                    if (newTime <= 15) {
+                        removeBtn.classList.add('disabled');
+                    } else {
+                        removeBtn.classList.remove('disabled');
+                    }
+                }
+            };
+            
+            window.updateTimeDisplay = function(timeInMinutes) {
+                const timeDisplay = document.getElementById('timeDisplay');
+                if (!timeDisplay) return;
+                
+                const hours = Math.floor(timeInMinutes / 60);
+                const minutes = timeInMinutes % 60;
+                
+                let displayText = '';
+                if (hours > 0) {
+                    displayText = hours + 'h';
+                    if (minutes > 0) {
+                        displayText += ' ' + minutes + 'min';
+                    }
+                } else {
+                    displayText = minutes + ' minuto' + (minutes !== 1 ? 's' : '');
+                }
+                
+                timeDisplay.textContent = displayText;
+            };
+            
+            // Initialize remove button state
+            const initialTime = parseInt(document.getElementById('resolution_time').value) || 15;
+            const removeBtn = document.getElementById('removeTimeBtn');
+            if (removeBtn) {
+                removeBtn.disabled = (initialTime <= 15);
+                if (initialTime <= 15) {
+                    removeBtn.classList.add('disabled');
+                } else {
+                    removeBtn.classList.remove('disabled');
+                }
+            }
+
+            // Make sure the functions are globally available
+            console.log("Time adjustment functions initialized");
+
             // Create temp directory if it doesn't exist
             fetch('../create_temp_dir.php')
                 .then(response => response.json())
