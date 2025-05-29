@@ -1,0 +1,33 @@
+/* 
+ * CSS for filter highlights and animations
+ */
+
+/* Highlighted row when filtered */
+.filtered-row {
+    transition: background-color 0.3s ease;
+}
+
+.filtered-row:hover {
+    background-color: rgba(13, 110, 253, 0.05) !important;
+}
+
+/* Filter results alert */
+#filter-results {
+    transition: opacity 0.3s ease;
+}
+
+/* Highlight inputs when they have filter values */
+.form-control:not(:placeholder-shown),
+.form-select:not([value="all"]) {
+    border-color: #0d6efd;
+}
+
+/* Subtle animation for filter activation */
+@keyframes filterActivate {
+    0% { opacity: 0; transform: translateY(-5px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+#filter-results.show {
+    animation: filterActivate 0.3s ease;
+}

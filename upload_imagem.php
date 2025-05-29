@@ -1,26 +1,53 @@
 <?php
-$targetDir = "uploads/";
+session_start();
+header('Content-Type: application/json');
 
-if (!is_dir($targetDir)) {
-    mkdir($targetDir, 0777, true);  // Cria a pasta se não existir
+// Check if file was uploaded
+if (!isset($_FILES['file'])) {
+    echo json_encode(['success' => false, 'erro' => 'Nenhum arquivo foi enviado']);
+    exit;
 }
 
-if (!empty($_FILES["file"]["name"])) {
-    $fileName = time() . "_" . basename($_FILES["file"]["name"]);
-    $targetFilePath = $targetDir . $fileName;
-    $fileType = pathinfo($targetFilePath, PATHINFO_EXTENSION);
+$file = $_FILES['file'];
 
-    // Extensões permitidas
-    $allowTypes = array('jpg', 'png', 'jpeg', 'gif', 'webp');
-    if (in_array($fileType, $allowTypes)) {
-        if (move_uploaded_file($_FILES["file"]["tmp_name"], $targetFilePath)) {
-            header('Content-Type: application/json');
-            echo json_encode(["caminho" => $targetFilePath]);
-        } else {
-            echo json_encode(["erro" => "Erro ao mover o arquivo."]);
-        }
-    } else {
-        echo json_encode(["erro" => "Formato de arquivo não permitido."]);
-    }
+// Validate file
+if ($file['error'] !== UPLOAD_ERR_OK) {
+    echo json_encode(['success' => false, 'erro' => 'Erro no upload do arquivo']);
+    exit;
+}
+
+// Check if it's an image
+$imageInfo = getimagesize($file['tmp_name']);
+if (!$imageInfo) {
+    echo json_encode(['success' => false, 'erro' => 'O arquivo deve ser uma imagem válida']);
+    exit;
+}
+
+// Check file size (max 5MB)
+if ($file['size'] > 5 * 1024 * 1024) {
+    echo json_encode(['success' => false, 'erro' => 'O arquivo é muito grande. Máximo 5MB permitido']);
+    exit;
+}
+
+// Create uploads directory if it doesn't exist
+$uploadDir = 'uploads/';
+if (!file_exists($uploadDir)) {
+    mkdir($uploadDir, 0755, true);
+}
+
+// Generate unique filename
+$extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+$fileName = uniqid('ticket_') . '.' . $extension;
+$filePath = $uploadDir . $fileName;
+
+// Move uploaded file
+if (move_uploaded_file($file['tmp_name'], $filePath)) {
+    echo json_encode([
+        'success' => true,
+        'caminho' => $filePath,
+        'nome_original' => $file['name']
+    ]);
+} else {
+    echo json_encode(['success' => false, 'erro' => 'Erro ao guardar o ficheiro']);
 }
 ?>

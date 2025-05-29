@@ -1,1 +1,48 @@
+# Vendor directory (Composer dependencies)
+vendor/*
+composer.lock
+
+# Temporary files
+/temp/*
+!/temp/.gitkeep
+
+# Logs
+*.log
+log_messages.txt
+ws-server.log
+
+# IDE and editor folders
+.idea/
+.vscode/
+*.sublime-*
+
+# Configuration files with sensitive info
+config.php
+conflogin.php
+db.php
+
+# Uploaded files
+/uploads/
+docs/
+
+# Cache and session files
+/cache/
+/sessions/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node modules (if any)
+node_modules/
+
+# Build files
+dist/
+build/
+
 db.php

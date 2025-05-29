@@ -4,112 +4,317 @@ session_start();  // Inicia a sessão
 include('conflogin.php');
 include('db.php');
 
-// Recupera o filtro de estado, se existir
-$estado_filtro = isset($_GET['status']) ? $_GET['status'] : '';
+// Verifica se existem filtros
+$data_filtro = isset($_GET['data']) ? $_GET['data'] : '';
+$prioridade_filtro = isset($_GET['prioridade']) ? $_GET['prioridade'] : '';
+$status_filtro = isset($_GET['status']) ? $_GET['status'] : '';
+$usuario_filtro = isset($_GET['usuario']) ? $_GET['usuario'] : '';
+
+$params = [];
+
 // Prepara a SQL para admin
-$sql = "SELECT xdfree01.KeyId, xdfree01.id, xdfree01.Name, info_xdfree01_extrafields.User, 
-        info_xdfree01_extrafields.Description, info_xdfree01_extrafields.Priority, 
-        info_xdfree01_extrafields.Status, info_xdfree01_extrafields.CreationDate, 
-        info_xdfree01_extrafields.dateu, online.name as CreationUser,
-        (SELECT user FROM comments_xdfree01_extrafields WHERE XDFree01_KeyID = xdfree01.KeyId 
-        ORDER BY Date DESC LIMIT 1) as LastCommentUser
+$sql = "SELECT 
+            xdfree01.KeyId, 
+            xdfree01.id, 
+            xdfree01.Name as titulo_do_ticket, 
+            info_xdfree01_extrafields.Atribuido as User, 
+            u.Name as atribuido_a,
+            info_xdfree01_extrafields.Relatorio as Description, 
+            info_xdfree01_extrafields.User as assunto_do_ticket, 
+            info_xdfree01_extrafields.Priority as prioridade, 
+            info_xdfree01_extrafields.Status as status, 
+            DATE_FORMAT(info_xdfree01_extrafields.CreationDate, '%d/%m/%Y') as criado, 
+            DATE_FORMAT(info_xdfree01_extrafields.dateu, '%d/%m/%Y') as atualizado, 
+            online.name as CreationUser,
+            (SELECT oee.Name 
+             FROM comments_xdfree01_extrafields c 
+             JOIN online_entity_extrafields oee ON c.user = oee.email 
+             WHERE c.XDFree01_KeyID = xdfree01.KeyId 
+             ORDER BY c.Date DESC LIMIT 1) as LastCommentUser
         FROM xdfree01 
         JOIN info_xdfree01_extrafields ON xdfree01.KeyId = info_xdfree01_extrafields.XDFree01_KeyID
-        LEFT JOIN online_entity_extrafields online on info_xdfree01_extrafields.CreationUser = online.email
-        WHERE info_xdfree01_extrafields.AttUser is NULL AND info_xdfree01_extrafields.Status <> 'Concluído'";
+        LEFT JOIN users u ON info_xdfree01_extrafields.Atribuido = u.id
+        LEFT JOIN online_entity_extrafields online on info_xdfree01_extrafields.CreationUser = online.email";
 
-if (!empty($estado_filtro)) {
-    $sql .= " AND info_xdfree01_extrafields.Status = :estado_filtro";
-    $params[':estado_filtro'] = $estado_filtro;
+// Adiciona condição apenas se não for incluir os fechados
+if (empty($status_filtro) || $status_filtro != 'Concluído') {
+    $sql .= " WHERE (info_xdfree01_extrafields.Status <> 'Concluído' OR info_xdfree01_extrafields.Status IS NULL)";
+} else {
+    $sql .= " WHERE 1=1"; // Condição que sempre é verdadeira para manter a estrutura do SQL
 }
 
-$sql .= " ORDER BY xdfree01.KeyId ASC";
+// Adiciona filtros se existirem
+if (!empty($data_filtro)) {
+    $sql .= " AND DATE(info_xdfree01_extrafields.dateu) = :data_filtro";
+    $params[':data_filtro'] = $data_filtro;
+}
+
+if (!empty($prioridade_filtro)) {
+    $sql .= " AND info_xdfree01_extrafields.Priority = :prioridade_filtro";
+    $params[':prioridade_filtro'] = $prioridade_filtro;
+}
+
+if (!empty($status_filtro)) {
+    $sql .= " AND LOWER(TRIM(info_xdfree01_extrafields.Status)) = :processed_status_filtro";
+    $params[':processed_status_filtro'] = strtolower(trim($status_filtro));
+}
+
+if (!empty($usuario_filtro)) {
+    $sql .= " AND info_xdfree01_extrafields.Atribuido = :usuario_filtro";
+    $params[':usuario_filtro'] = $usuario_filtro;
+}
+
+$sql .= " ORDER BY info_xdfree01_extrafields.dateu DESC";
+
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Consultar todos os usuários para o dropdown de filtro
+$sql_users = "SELECT id, Name FROM users ORDER BY Name ASC";
+$stmt_users = $pdo->prepare($sql_users);
+$stmt_users->execute();
+$users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
 <html lang="pt-pt">
 <?php include('head.php'); ?>
 <body>
-    <?php include('header.php'); ?>
+    <?php include('menu.php'); ?>
     <div class="content">
-        <h2>Meus Tickets</h2>
-
-        <form method="get" action="">
-            <div class="mb-3">
-                <label for="status" class="form-label">Filtrar por Estado</label>
-                <select id="status" name="status" class="form-select">
-                    <option value="">Todos</option>
-                    <option value="Em Análise" <?php echo ($estado_filtro == 'Em Análise') ? 'selected' : ''; ?>>Em Análise</option>
-                    <option value="Em Resolução" <?php echo ($estado_filtro == 'Em Resolução') ? 'selected' : ''; ?>>Em Resolução</option>
-                    <option value="Aguarda Resposta Cliente" <?php echo ($estado_filtro == 'Aguarda Resposta Cliente') ? 'selected' : ''; ?>>Aguarda Resposta Cliente</option>
-                    <option value="Concluído" <?php echo ($estado_filtro == 'Concluído') ? 'selected' : ''; ?>>Concluído</option>
-                </select>
+        <div class="container-fluid p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
+                <div class="flex-grow-1">
+                    <h1 class="mb-3 display-5">Consultar Tickets</h1>
+                    <p class="">Visualizar e gerir todos os tickets do sistema. Utilizar os filtros abaixo para refinar a visualização.</p>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary mb-3">Filtrar</button>
-        </form>
-
-        <?php if (count($tickets) > 0): ?>
-            <table class="table table-striped" id="tabelaTickets">
-                <thead>
-                    <tr>
-                        <th scope="col" class="sortable" data-column="KeyId">Código</th>
-                        <th scope="col">Título</th>
-                        <th scope="col">Assunto</th>
-                        <th scope="col">Prioridade</th>
-                        <th scope="col">Estado</th>
-                        <th scope="col">Criador Ticket</th>
-                        <th scope="col">Data Criação</th>
-                        <th scope="col">Última Atualização</th>
-                        <th scope="col">Último Comentário</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($tickets as $ticket): ?>
-                        <tr>
-                            <td><a href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>"> <?php echo $ticket['KeyId']; ?> </a></td>
-                            <td><?php echo $ticket['Name']; ?></td>
-                            <td><?php echo $ticket['User']; ?></td>
-                            <td><span class="badge bg-<?php echo ($ticket['Priority'] == 'Alta') ? 'danger' : (($ticket['Priority'] == 'Normal') ? 'warning' : 'success'); ?>"> <?php echo $ticket['Priority']; ?> </span></td>
-                            <td><span class="badge bg-<?php echo ($ticket['Status'] == 'Em Análise') ? 'info' : (($ticket['Status'] == 'Em Resolução') ? 'warning' : (($ticket['Status'] == 'Aguarda Resposta Cliente') ? 'secondary' : 'success')); ?>"> <?php echo $ticket['Status']; ?> </span></td>
-                            <td><?php echo $ticket['CreationUser']; ?></td>
-                            <td><?php echo $ticket['CreationDate']; ?></td>
-                            <td><?php echo $ticket['dateu']; ?></td>
-                            <td><?php echo $ticket['LastCommentUser'] ?? 'Nenhum comentário'; ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php else: ?>
-            <p class="alert alert-warning">Você não tem tickets registrados.</p>
-        <?php endif; ?>
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <!-- Filtros -->
+                    <form method="get" action="" class="row g-3 mb-4">
+                        <div class="col-md-2">
+                            <label for="data" class="form-label">Data</label>
+                            <input type="date" class="form-control" id="data" name="data" value="<?php echo $data_filtro; ?>">
+                        </div>
+                       
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Estado</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">Todos</option>
+                                <option value="Em Análise" <?php echo $status_filtro == 'Em Análise' ? 'selected' : ''; ?>>Em Análise</option>
+                                <option value="Em Resolução" <?php echo $status_filtro == 'Em Resolução' ? 'selected' : ''; ?>>Em Resolução</option>
+                                <option value="Aguarda Resposta" <?php echo $status_filtro == 'Aguarda Resposta' ? 'selected' : ''; ?>>Aguarda Resposta</option>
+                                <option value="Concluído" <?php echo $status_filtro == 'Concluído' ? 'selected' : ''; ?>>Concluído</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label for="prioridade" class="form-label">Prioridade</label>
+                            <select class="form-select" id="prioridade" name="prioridade">
+                                <option value="">Todas</option>
+                                <option value="Baixa" <?php echo $prioridade_filtro == 'Baixa' ? 'selected' : ''; ?>>Baixa</option>
+                                <option value="Normal" <?php echo $prioridade_filtro == 'Normal' ? 'selected' : ''; ?>>Normal</option>
+                                <option value="Alta" <?php echo $prioridade_filtro == 'Alta' ? 'selected' : ''; ?>>Alta</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="usuario" class="form-label">Atribuído a</label>
+                            <select class="form-select" id="usuario" name="usuario">
+                                <option value="">Todos</option>
+                                <?php foreach ($users as $user): ?>
+                                    <option value="<?php echo $user['id']; ?>" <?php echo $usuario_filtro == $user['id'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($user['Name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-dark w-100">Filtrar</button>
+                        </div>
+                    </form>
+                        
+                    <!-- Tabela -->
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th scope="col" class="sortable text-nowrap">Título</th>                                    
+                                    <th scope="col" class="sortable text-nowrap">Assunto</th>
+                                    <th scope="col" class="sortable text-nowrap">Atualizado</th>
+                                    <th scope="col" class="sortable text-nowrap">Criado</th>
+                                    <th scope="col" class="sortable text-nowrap">Estado</th>
+                                    <th scope="col" class="sortable text-nowrap">Prioridade</th>
+                                    <th scope="col" class="sortable text-nowrap">Criador</th>
+                                    <th scope="col" class="sortable text-nowrap">Última Mensagem Por</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (count($tickets) > 0): ?>
+                                    <?php foreach ($tickets as $ticket): ?>
+                                        <tr>
+                                            <td>
+                                                <a href="detalhes_ticket.php?keyid=<?php echo htmlspecialchars($ticket['id']); ?>" class="text-decoration-none text-dark d-flex align-items-center text-nowrap">
+                                                    <i class="bi bi-arrow-right-circle me-2"></i> 
+                                                    <?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?>
+                                                </a>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($ticket['assunto_do_ticket'] ?? ''); ?></td>
+                                            <td><?php echo $ticket['atualizado']; ?></td>
+                                            <td><?php echo $ticket['criado']; ?></td>
+                                            <td>
+                                                <?php 
+                                                $status = $ticket['status'];
+                                                $statusClass = '';
+                                                if ($status == 'Em Análise') {
+                                                    $statusClass = 'badge w-100 bg-info';
+                                                } elseif ($status == 'Em Resolução') {
+                                                    $statusClass = 'badge w-100 bg-warning';
+                                                } elseif ($status == 'Aguarda Resposta') {
+                                                    $statusClass = 'badge w-100 bg-secondary';
+                                                } elseif ($status == 'Concluído') {
+                                                    $statusClass = 'badge w-100 bg-success';
+                                                } else {
+                                                    $statusClass = 'badge w-100 bg-dark';
+                                                }
+                                                ?>
+                                                <span class="<?php echo $statusClass; ?>"><?php echo $status; ?></span>
+                                            </td>
+                                            <td>
+                                                <?php 
+                                                $badgeClass = 'w-100 bg-success';
+                                                if ($ticket['prioridade'] == 'Normal') {
+                                                    $badgeClass = 'w-100 bg-warning';
+                                                } else if ($ticket['prioridade'] == 'Alta') {
+                                                    $badgeClass = 'w-100 bg-danger';
+                                                }
+                                                ?>
+                                                <span class="badge <?php echo $badgeClass; ?>"><?php echo $ticket['prioridade']; ?></span>
+                                            </td>
+                                            <td><?php echo $ticket['CreationUser']; ?></td>
+                                            <td><?php echo !empty($ticket['LastCommentUser']) ? htmlspecialchars($ticket['LastCommentUser']) : '-'; ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="10" class="text-center py-4">
+                                            <div class="alert alert-info mb-0">
+                                                <i class="bi bi-info-circle me-2"></i> Não há tickets correspondentes aos filtros aplicados.
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- Modal de confirmação para fechar ticket -->
+    <div class="modal fade" id="fecharTicketModal" tabindex="-1" aria-labelledby="fecharTicketModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="fecharTicketModalLabel">Confirmar encerramento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Tem a certeza de que deseja fechar este ticket? Esta ação não pode ser desfeita.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <a href="#" id="confirmarFecharTicket" class="btn btn-danger">Confirmar encerramento</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const table = document.getElementById('tabelaTickets');
-            const headers = table.querySelectorAll('.sortable');
-            headers.forEach(header => {
-                header.addEventListener('click', function() {
-                    const column = header.getAttribute('data-column');
-                    const rows = Array.from(table.querySelectorAll('tbody tr'));
-                    const index = Array.from(header.parentNode.children).indexOf(header);
-                    const isAscending = header.classList.contains('asc');
-
-                    rows.sort((rowA, rowB) => {
-                        const cellA = rowA.cells[index].textContent.trim();
-                        const cellB = rowB.cells[index].textContent.trim();
-                        return isAscending ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
-                    });
-
-                    rows.forEach(row => table.querySelector('tbody').appendChild(row));
-                    headers.forEach(header => header.classList.remove('asc', 'desc'));
-                    header.classList.toggle(isAscending ? 'desc' : 'asc');
+    document.addEventListener('DOMContentLoaded', function() {
+        // Funcionalidade de ordenação
+        const table = document.querySelector('table');
+        const headers = table.querySelectorAll('th.sortable');
+        const priorityMap = {
+            'Baixa': 1,
+            'Normal': 2,
+            'Alta': 3
+        };
+        
+        headers.forEach(function(header, index) {
+            header.addEventListener('click', function() {
+                const isAscending = !this.classList.contains('asc');
+                
+                // Reset all headers
+                headers.forEach(h => {
+                    h.classList.remove('asc', 'desc');
                 });
+                
+                // Set current header
+                this.classList.add(isAscending ? 'asc' : 'desc');
+                
+                const rows = Array.from(table.querySelectorAll('tbody tr'));
+                
+                // Sort the rows
+                rows.sort(function(rowA, rowB) {
+                    const cellAContent = rowA.cells[index].textContent.trim();
+                    const cellBContent = rowB.cells[index].textContent.trim();
+                    
+                    // Special sorting for "Prioridade" column (index 5)
+                    if (index === 5) {
+                        const priorityA = priorityMap[cellAContent] || 0;
+                        const priorityB = priorityMap[cellBContent] || 0;
+                        return isAscending ? priorityA - priorityB : priorityB - priorityA;
+                    }
+                    
+                    // Try to sort as dates if possible
+                    const dateA = parseDate(cellAContent);
+                    const dateB = parseDate(cellBContent);
+                    
+                    if (dateA && dateB) {
+                        return isAscending ? dateA - dateB : dateB - dateA;
+                    }
+                    
+                    // Otherwise sort as strings
+                    return isAscending ? 
+                        cellAContent.localeCompare(cellBContent) : 
+                        cellBContent.localeCompare(cellAContent);
+                });
+                
+                // Reorder the rows
+                const tbody = table.querySelector('tbody');
+                rows.forEach(row => tbody.appendChild(row));
             });
         });
+        
+        // Helper function to try to parse dates (DD/MM/YYYY format)
+        function parseDate(dateStr) {
+            const parts = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+            if (parts) {
+                return new Date(parts[3], parts[2] - 1, parts[1]);
+            }
+            return null;
+        }
+        
+        // Funcionalidade de fechar ticket
+        const fecharBtns = document.querySelectorAll('.fechar-ticket');
+        const modal = new bootstrap.Modal(document.getElementById('fecharTicketModal'));
+        const confirmarBtn = document.getElementById('confirmarFecharTicket');
+        
+        fecharBtns.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const ticketId = this.getAttribute('data-id');
+                confirmarBtn.setAttribute('href', `processar_alteracao.php?action=close&keyid=${ticketId}`);
+                modal.show();
+            });
+        });
+    });
     </script>
 </body>
 </html>

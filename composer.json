@@ -1,0 +1,28 @@
+{
+    "name": "helpdesk/chat-system",
+    "description": "HelpDesk Chat System with WebSocket support",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "cboden/ratchet": "^0.4",
+        "react/event-loop": "^1.3",
+        "react/socket": "^1.12",
+        "react/http": "^1.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "HelpDesk\\": "src/"
+        }
+    },
+    "scripts": {
+        "start-ws": "php ws-server.php",
+        "post-install-cmd": [
+            "@php -r \"if (!file_exists('temp')) { mkdir('temp', 0777, true); }\""
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "prefer-stable": true
+    },
+    "minimum-stability": "stable"
+}

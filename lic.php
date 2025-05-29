@@ -8,7 +8,7 @@ include('conflogin.php');
 <html lang="pt-pt">
 <?php include('head.php'); ?>
 <body>
-    <?php include('header.php'); ?>
+    <?php include('menu.php'); ?>
     <div class="content">
 <h2>Licenças Existentes</h2>
 <?php
@@ -68,7 +68,7 @@ echo "<table class='table table-striped'>
             <th>Tipo de Licença</th>
             <th>Versão/Registo</th>
             <th>Data de Renovação</th>
-            <th>Obs</th>
+            <th>Observações</th>
         </tr>";
 
 foreach ($tickets as $ticket) {

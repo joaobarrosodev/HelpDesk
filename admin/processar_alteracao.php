@@ -1,68 +1,96 @@
 <?php
 session_start();
-include('db.php'); // Conexão com o banco de dados
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $keyid = $_POST['keyid'];
-    $status = $_POST['status'];
-    $user = $_SESSION['admin_id'];
-    $description = $_POST['resolution_description'];
-    $extra_info = $_POST['extra_info'];
-    $resolution_time = $_POST['resolution_time'];
+include('conflogin.php');
+include('db.php');
 
-     // Validar e converter o tempo para formato DATETIME
-    if (preg_match('/^([0-9]{1,2}):([0-5][0-9])$/', $resolution_time, $matches)) {
-        $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
-        $minutes = str_pad($matches[2], 2, '0', STR_PAD_LEFT);
-        $time_formatted = date('Y-m-d') . " $hours:$minutes:00";  // Adiciona a data de hoje
-    } else {
-        echo "<script>alert('Formato de tempo inválido! Use HH:MM'); window.history.back();</script>";
+if (!isset($_GET['keyid']) && !isset($_POST['keyid'])) {
+    header('Location: consultar_tickets.php?error=missing_id');
+    exit;
+}
+
+$ticketId = isset($_GET['keyid']) ? $_GET['keyid'] : $_POST['keyid'];
+$updateFields = [];
+$params = [':keyid' => $ticketId];
+
+// Verificar que campos precisam de ser atualizados
+if (isset($_GET['Status']) || isset($_POST['status'])) {
+    $updateFields[] = "Status = :status";
+    $params[':status'] = isset($_GET['Status']) ? $_GET['Status'] : $_POST['status'];
+}
+
+if (isset($_GET['Atribuido']) || isset($_POST['assigned_user'])) {
+    $updateFields[] = "Atribuido = :atribuido";
+    $params[':atribuido'] = isset($_GET['Atribuido']) ? ($_GET['Atribuido'] ?: null) : ($_POST['assigned_user'] ?: null);
+}
+
+if (isset($_POST['resolution_time'])) {
+    $updateFields[] = "Tempo = :resolution_time";
+    $params[':resolution_time'] = $_POST['resolution_time'];
+}
+
+if (isset($_POST['resolution_description'])) {
+    $updateFields[] = "Relatorio = :resolution_description";
+    $params[':resolution_description'] = $_POST['resolution_description'];
+}
+
+if (isset($_POST['extra_info'])) {
+    $updateFields[] = "MensagensInternas = :extra_info";
+    $params[':extra_info'] = $_POST['extra_info'];
+}
+
+if (empty($updateFields)) {
+    $response = ['success' => false, 'message' => 'Nenhuma alteração fornecida'];
+    
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+        header('Content-Type: application/json');
+        echo json_encode($response);
         exit;
     }
+    
+    header('Location: consultar_tickets.php?error=no_changes');
+    exit;
+}
 
 try {
-        // Iniciar transação
-        $pdo->beginTransaction();
-
-        // Atualizar a tabela `internal_xdfree01_extrafields`
-        $sql1 = "UPDATE internal_xdfree01_extrafields 
-                 SET User = :user, Description = :description, 
-                     Info = :extra_info, Time = :time, 
-                 XDFree01_KeyID = :keyid";
-        $stmt1 = $pdo->prepare($sql1);
-        $stmt1->bindParam(':user', $user);
-        $stmt1->bindParam(':description', $description);
-        $stmt1->bindParam(':extra_info', $extra_info);
-        $stmt1->bindParam(':time', $time_formatted);
-        $stmt1->bindParam(':keyid', $keyid, PDO::PARAM_INT);
-        $stmt1->execute();
-        echo $sql1;
-        // Atualizar a tabela `info_xdfree01_extrafields`
-        $sql2 = "UPDATE info_xdfree01_extrafields 
-                 SET Status = :status, dateu = NOW() 
-                 WHERE XDFree01_KeyID = :keyid";
-        $stmt2 = $pdo->prepare($sql2);
-        $stmt2->bindParam(':status', $status);
-        $stmt2->bindParam(':keyid', $keyid, PDO::PARAM_INT);
-        $stmt2->execute();
-
-        // Confirmar as alterações no banco de dados
-        $pdo->commit();
-
-        echo "<script>alert('Ticket atualizado com sucesso!'); window.location.href='meus_tickets.php';</script>";
-    } catch (Exception $e) {
-        // Reverter transação em caso de erro
-        $pdo->rollBack();
-        $sql1_final = str_replace(
-    [':user', ':description', ':extra_info', ':time', ':keyid'],
-    [$user, $description, $extra_info, $time_formatted, $keyid],
-    $sql1
-);
-echo "Final SQL1: " . $sql1_final . "<br>";
-        echo "<script>alert('Erro ao atualizar o ticket: " . $e->getMessage() . "'); window.history.back();</script>";
+    // Atualizar o ticket diretamente usando KeyId
+    $sql = "UPDATE info_xdfree01_extrafields SET " . implode(', ', $updateFields) . ", dateu = NOW() WHERE XDFree01_KeyID = :keyid";
+    
+    $stmt = $pdo->prepare($sql);
+    $result = $stmt->execute($params);
+    
+    if ($result) {
+        $response = ['success' => true, 'message' => 'Alterações guardadas com sucesso'];
+        
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+            header('Content-Type: application/json');
+            echo json_encode($response);
+            exit;
+        }
+        
+        header('Location: detalhes_ticket.php?keyid=' . urlencode($ticketId) . '&success=updated');
+    } else {
+        $response = ['success' => false, 'message' => 'Falha ao atualizar ticket'];
+        
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+            header('Content-Type: application/json');
+            echo json_encode($response);
+            exit;
+        }
+        
+        header('Location: consultar_tickets.php?error=update_failed');
     }
-} else {
-    echo "<script>alert('Acesso inválido!'); window.location.href='meus_tickets.php';</script>";
+} catch (Exception $e) {
+    error_log('Erro em processar_alteracao.php: ' . $e->getMessage());
+    
+    $response = ['success' => false, 'message' => 'Erro de base de dados: ' . $e->getMessage()];
+    
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+        header('Content-Type: application/json');
+        echo json_encode($response);
+        exit;
+    }
+    
+    header('Location: consultar_tickets.php?error=database_error');
 }
+exit;
 ?>

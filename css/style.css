@@ -1,106 +1,207 @@
- /* Garantir que a página não faça scroll */
-        html, body {
-            height: 100%;
-            margin: 0;
-            overflow: hidden;
-            font-family: 'Roboto', sans-serif;
+/* Garantir que a página não faça scroll */
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    font-family: 'DM Sans', sans-serif;
     font-weight: 400; /* Peso regular */
     line-height: 1.6;
-        }
+}
 
-        /* Configuração da Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 250px;
-            background-color: #343a40;
-            padding-top: 20px;
-            z-index: 2; /* Garantir que a sidebar fique por cima da barra superior */
-        }
+/* Layout base para corpo da página */
+body {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
 
-        .sidebar .logo {
-            text-align: center;
-            margin-bottom: 30px;
-        }
+/* Menu Sidebar Custom Styles */
+.sidebar-helpdesk {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 300px !important;
+    min-width: 300px !important;
+    max-width: 300px !important;
+    z-index: 1030;
+    overflow-y: auto;
+    box-sizing: border-box;
+    flex: 0 0 300px !important;
+}
 
-        .sidebar img {
-            width: 150px; /* Tamanho do logo */
-        }
+.sidebar-logo-area {
+    border-bottom: 1px solid rgba(0,0,0,.05);
+}
 
-        .sidebar a {
-            color: #fff;
-            padding: 10px 15px;
-            text-decoration: none;
-            font-size: 18px;
-            display: block;
-        }
+.nav-menu-item i {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-        .sidebar a:hover {
-            background-color: #575757;
-        }
+.dropdown-chevron {
+    transition: transform 0.3s ease;
+}
 
-        /* Configuração da Barra Superior */
-        .topbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 60px;
-            background-color: #343a40;
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            z-index: 1; /* A barra superior fica abaixo da sidebar */
-        }
+.collapsed .dropdown-chevron {
+    transform: rotate(-90deg);
+}
 
-        .topbar .brand-name {
-            font-weight: bold;
-            font-size: 20px;
-        }
+.menu-link:hover, 
+.menu-link:focus,
+.menu-link.active {
+    color: #4CB4E7 !important;
+    background-color: rgba(76, 180, 231, 0.1);
+}
 
-        .topbar .contact-info {
-            font-size: 16px;
-        }
+.menu-link.active {
+    background-color: rgba(76, 180, 231, 0.15);
+    font-weight: 500;
+}
 
-        /* Estilo do Conteúdo Central */
-        .content {
-            margin-left: 250px;
-            margin-top: 60px;
-            padding: 20px;
-            height: calc(100% - 60px);
-            overflow-y: auto;
-            background-color: #f8f9fa;
-        }
+/* User Profile */
+.user-profile-link {
+    transition: all 0.3s ease;
+}
 
-         .login-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: calc(100% - 60px);
-            background-color: #f8f9fa;
-        }
-        .login-form {
-            width: 100%;
-            max-width: 600px;
-            padding: 30px;
-            border-radius: 8px;
-            background-color: white;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .login-form h2 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+.user-profile-link:hover {
+    transform: translateY(-1px);
+}
+
+.user-avatar {
+    width: 42px;
+    height: 42px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.profile-icon {
+    transition: transform 0.3s ease;
+}
+
+.user-profile-link:hover .profile-icon {
+    transform: translateX(3px);
+}
+
+/* Logout Button */
+.btn-logout {
+    background-color: #BF5555;
+    transition: all 0.3s ease;
+}
+
+.btn-logout:hover,
+.btn-logout:focus {
+    background-color: #D65C5C;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(191, 85, 85, 0.25);
+}
+
+.btn-logout:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(191, 85, 85, 0.25);
+}
+
+.btn-logout i {
+    transition: transform 0.3s ease;
+}
+
+.btn-logout:hover i {
+    transform: translateX(3px);
+}
+
+/* Mobile Menu Toggle */
+@media (max-width: 991px) {
+    .sidebar-helpdesk {
+        width: 300px !important;
+        max-width: 300px !important;
+        min-width: 300px !important;
+        left: -300px;
+        transition: left 0.3s ease;
+    }
+    
+    .sidebar-helpdesk.active {
+        left: 0;
+    }
+    
+    .content-area, 
+    .content {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+    
+    body.sidebar-open::after {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.4);
+        z-index: 1029;
+    }
+}
+
+@media (max-width: 576px) {
+    .sidebar-helpdesk {
+        width: 300px !important;
+        max-width: 300px !important;
+        min-width: 300px !important;
+        left: -300px;
+    }
+}
+
+/* Estilo do Conteúdo Central */
+.content-area,
+.content {
+    margin-left: 300px !important;
+    padding: 20px;
+    transition: margin-left 0.3s ease;
+    height: 100%;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+    flex: 1;
+    width: calc(100% - 300px) !important;
+    box-sizing: border-box;
+}
+
+@media (max-width: 991px) {
+    .content-area,
+    .content {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+}
+
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    background-color: #f8f9fa;
+}
+
+.login-form {
+    width: 100%;
+    max-width: 600px;
+    padding: 30px;
+    border-radius: 8px;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.login-form h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
 
 .user-avatar {
     display: inline-block;
     width: 40px; /* Tamanho do círculo */
     height: 40px; /* Tamanho do círculo */
-    background-color: #007bff; /* Cor de fundo do círculo (pode alterar) */
+    background-color: #529ebe; /* Cor de fundo do círculo (pode alterar) */
     color: white; /* Cor da letra */
     text-align: center; /* Centraliza a letra */
     line-height: 40px; /* Alinha a letra verticalmente */
@@ -146,23 +247,434 @@ a {
 
 /* Efeito ao passar o mouse (hover) */
 a:hover {
-    color: #007bff; /* Cor azul para o efeito de hover */
+    color: #529ebe; /* Cor azul para o efeito de hover */
 }
 
 a:hover .bi {
-    color: #007bff; /* Altera a cor do ícone quando o mouse passar sobre o link */
+    color: #529ebe; /* Altera a cor do ícone quando o mouse passar sobre o link */
 }
 
 
 th.sortable {
-            cursor: pointer;
-            position: relative;
-        }
+    cursor: pointer;
+    position: relative;
+}
 
-        th.sortable.asc::after {
-            content: ' ↑'; /* Seta para cima */
-        }
+th.sortable::after {
+    content: '';
+    display: inline-block;
+    width: 0.7em;
+    height: 0.7em;
+    margin-left: 0.5em;
+    opacity: 0.4;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23fff' d='M8 4a.5.5 0 0 1 .5.5v5.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 10.293V4.5A.5.5 0 0 1 8 4z'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    transition: all 0.3s;
+}
 
-        th.sortable.desc::after {
-            content: ' ↓'; /* Seta para baixo */
-        }
+th.sortable.asc::after {
+    opacity: 1;
+    transform: rotate(180deg);
+}
+
+th.sortable.desc::after {
+    opacity: 1;
+}
+
+/* Dashboard Specific Styles */
+.dashboard-card {
+    border: 1px solid #e9ecef; /* Softer border */
+    border-radius: .75rem; /* Adjusted from 10px */
+    padding: .5rem; /* Adjusted from 20px */
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); /* Softer shadow */
+    transition: all 0.3s ease-in-out;
+    background-color: #fff; /* Ensure white background */
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
+}
+
+.dashboard-card .card-title {
+    font-weight: 600; /* Slightly bolder */
+    color: #343a40; /* Darker color */
+    margin-bottom: 1rem;
+    font-size: 1rem; /* Adjusted from 14px */
+}
+
+.dashboard-header {
+    color: #333;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.dashboard-subtext {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 30px;
+}
+
+#categoriaTicketsChart, #prioridadeTicketsChart {
+    max-height: 220px; /* Adjusted for new card padding */
+    width: 100% !important;
+}
+
+.chart-container {
+    position: relative;
+    height: 180px; /* Increased height for better doughnut display */
+}
+
+/* Custom Chart.js spacing tweaks */
+#prioridadeTicketsChart {
+    padding: 0;
+    margin: 0;
+}
+
+/* Force smaller chart height */
+canvas#prioridadeTicketsChart {
+    height: 100px !important;
+    max-height: 100px !important;
+}
+
+/* Fix for priority chart labels */
+.priority-label {
+    font-size: 12px;
+    line-height: 1;
+    margin: 0;
+    padding: 0;
+}
+
+/* Styling for client evaluation section */
+.rating-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.rating-icon {
+    font-size: 20px;
+    width: 30px;
+    text-align: center;
+    margin-right: 10px;
+}
+
+.rating-bar {
+    flex-grow: 1;
+}
+
+.rating-label {
+    min-width: 60px;
+    margin-right: 10px;
+}
+
+.rating-value {
+    min-width: 40px;
+    text-align: right;
+    font-weight: bold;
+}
+
+/* Progress bar styles */
+.progress {
+    height: 10px;
+    border-radius: 5px;
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    font-weight: bold;
+    font-size: 0;  /* Hide text inside progress bar */
+}
+
+.progress-bar.bg-success {
+    background-color: #28a745 !important;
+}
+
+.progress-bar.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+.progress-bar.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+/* Styling for client evaluation section */
+.evaluation-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem; /* Adjusted spacing */
+}
+
+.evaluation-item .icon {
+    font-size: 1.5rem; /* Larger icons */
+    margin-right: 1rem;
+    width: 30px; /* Fixed width for icon container */
+    text-align: center;
+}
+
+.evaluation-item .icon-positive {
+    color: #28a745;
+}
+
+.evaluation-item .icon-negative {
+    color: #dc3545;
+}
+
+.evaluation-item .icon-neutral {
+    color: #ffc107;
+}
+
+.evaluation-item .details {
+    flex-grow: 1;
+}
+
+.evaluation-item .label-percent {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.875rem; /* 14px */
+    color: #495057; /* Subtler text color */
+    margin-bottom: 0.25rem;
+}
+
+.evaluation-item .label-percent strong {
+    color: #212529; /* Darker percentage text */
+}
+
+/* Style for response time display */
+.tempo-resposta {
+    display: flex;
+    align-items: baseline;
+}
+
+.tempo-valor {
+    font-size: 18px;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.tempo-unidade {
+    font-size: 14px;
+    color: #666;
+}
+
+.tempo-medio-valor {
+    font-size: 2.5rem; /* Larger font for time */
+    font-weight: 700; /* Bolder */
+    color: #529ebe; /* Primary color for emphasis */
+}
+
+.tempo-medio-unidade {
+    font-size: 1rem;
+    color: #6c757d; /* Muted color for unit */
+    font-weight: 400;
+    margin-left: 0.25rem;
+}
+
+/* Button style */
+.btn-abrir-ticket {
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 15px;
+    font-size: 14px;
+}
+
+.btn-abrir-ticket:hover {
+    background-color: #0b5ed7;
+    color: white;
+}
+
+/* Button style for Abrir Novo Ticket */
+.btn-primary {
+    background-color: #e7f3ff; /* Light blue background */
+    color: #529ebe; /* Primary blue text */
+    border: 1px solid #529ebe; /* Primary blue border */
+    border-radius: .25rem;
+    padding: .5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    text-wrap: nowrap;
+}
+
+.btn-primary:hover {
+    background-color: #529ebe;
+    color: #fff;
+    border-color: #529ebe;
+}
+
+.btn-primary i {
+    transition: transform 0.2s ease-in-out;
+}
+
+.btn-primary:hover i {
+    transform: rotate(90deg);
+}
+
+/* Priority bar styles */
+.prioridade-container {
+    margin-bottom: 10px;
+}
+
+.prioridade-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.prioridade-nome {
+    font-size: 14px;
+}
+
+.prioridade-valor {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.prioridade-barra {
+    height: 20px;
+    background-color: #333;
+    border-radius: 4px;
+}
+
+.user-avatar-sm {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    color: white;
+    text-align: center;
+    line-height: 30px;
+    font-weight: bold;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.table th {
+    font-weight: 500; /* Ensure table headers are appropriately styled */
+}
+
+.table .badge {
+    font-size: 0.85em;
+    padding: 0.5em 0.75em;
+}
+
+.card-header h5 {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.progress {
+    height: 20px; /* Consistent height for progress bars */
+    border-radius: 5px;
+}
+
+.progress-bar {
+    font-weight: bold;
+}
+
+/* Client Evaluation Styles */
+.icon-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bg-success-light {
+    background-color: rgba(40, 167, 69, 0.15);
+}
+
+.bg-danger-light {
+    background-color: rgba(220, 53, 69, 0.15);
+}
+
+.bg-warning-light {
+    background-color: rgba(255, 193, 7, 0.15);
+}
+
+.client-rating-number {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* Progress bar custom widths */
+.progress {
+    background-color: #f5f5f5;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+
+/* Rating icons styling */
+.icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+}
+
+/* Tempo Medio styling */
+.tempo-medio-valor {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #529ebe;
+    line-height: 1;
+}
+
+.tempo-medio-unidade {
+    font-size: 1rem;
+    color: #6c757d;
+    font-weight: 400;
+}
+
+/* Dashboard layout improvements */
+.dashboard-card {
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    height: 100%;
+    background-color: #fff;
+    transition: transform 0.2s;
+    border: none;
+}
+
+.chart-container {
+    height: 180px;
+}
+
+/* Legend styling */
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 10px;
+    font-size: 0.8rem;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.bg-primary {
+    background-color: #529ebe !important;
+}
+
+.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+/* Fix padding on cards */
+.card-body {
+    padding: 0.75rem;
+}
