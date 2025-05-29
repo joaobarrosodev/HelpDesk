@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Erro:', error);
-                alert('Erro ao processar solicitação');
+                alert('Erro ao processar pedido');
             });
     });
     

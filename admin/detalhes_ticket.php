@@ -1,15 +1,15 @@
 <?php
-// Start session first
+// Iniciar sessão primeiro
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Debug session information
-error_log("admin/detalhes_ticket.php - Session ID: " . session_id());
-error_log("admin/detalhes_ticket.php - Session data: " . print_r($_SESSION, true));
-error_log("admin/detalhes_ticket.php - GET parameters: " . print_r($_GET, true));
+// Informações de depuração da sessão
+error_log("admin/detalhes_ticket.php - ID da Sessão: " . session_id());
+error_log("admin/detalhes_ticket.php - Dados da sessão: " . print_r($_SESSION, true));
+error_log("admin/detalhes_ticket.php - Parâmetros GET: " . print_r($_GET, true));
 
-// Try to auto-start the WebSocket server if needed
+// Tentar auto-iniciar o servidor WebSocket se necessário
 include('../auto-start.php');
 
 include('conflogin.php');
@@ -22,7 +22,7 @@ $ticket_id = isset($_GET['keyid']) ? urldecode($_GET['keyid']) : '';
 if (isset($_GET['keyid'])) {
     $keyid = $_GET['keyid'];
     
-    // Remover o símbolo '#' caso ele exista (se o banco não usa o '#')
+    // Remover o símbolo '#' caso ele exista (se a base de dados não usa o '#')
     $keyid_sem_hash = str_replace('#', '', $keyid);
     
     // Consultar os detalhes do ticket
@@ -42,8 +42,8 @@ if (isset($_GET['keyid'])) {
 
     if (!$ticket) {
         echo '<div class="alert alert-danger" role="alert">';
-        echo 'Ticket ' . htmlspecialchars($keyid) . ' não encontrado. Verifique se o ID do ticket está correto.';
-        echo '<br><a href="index.php" class="btn btn-primary mt-3">Voltar para Dashboard</a>';
+        echo 'Ticket ' . htmlspecialchars($keyid) . ' não encontrado. Verificar se o ID do ticket está correto.';
+        echo '<br><a href="index.php" class="btn btn-primary mt-3">Voltar ao Painel</a>';
         echo '</div>';
         exit;
     }
@@ -61,7 +61,7 @@ if (isset($_GET['keyid'])) {
     $stmt_messages->execute();
     $messages = $stmt_messages->fetchAll(PDO::FETCH_ASSOC);
     
-    // Consultar todos os usuários para o dropdown de atribuição
+    // Consultar todos os utilizadores para o dropdown de atribuição
     $sql_users = "SELECT id, Name FROM users ORDER BY Name ASC";
     $stmt_users = $pdo->prepare($sql_users);
     $stmt_users->execute();
@@ -69,7 +69,7 @@ if (isset($_GET['keyid'])) {
 } else {
     echo '<div class="alert alert-danger" role="alert">';
     echo 'Ticket não especificado.';
-    echo '<br><a href="index.php" class="btn btn-primary mt-3">Voltar para Dashboard</a>';
+    echo '<br><a href="index.php" class="btn btn-primary mt-3">Voltar ao Painel</a>';
     echo '</div>';
     exit;
 }
@@ -318,6 +318,31 @@ function getStatusColor($status)
             transform: translateY(0);
         }
     }
+
+    .time-control-container {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        background-color: #f8f9fa;
+    }
+
+    .time-display {
+        text-align: center;
+        margin-bottom: 15px;
+    }
+
+    .time-display .badge {
+        font-size: 1.1rem;
+        padding: 8px 16px;
+    }
+
+    .time-buttons {
+        justify-content: center;
+    }
+
+    .time-buttons .btn {
+        min-width: 80px;
+    }
 </style>
 
 <!-- Modal para Exibir Imagem -->
@@ -326,13 +351,13 @@ function getStatusColor($status)
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="imageModalLabel">Imagem do Ticket</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body text-center">
                 <img id="modalImage" src="" class="img-fluid" alt="Imagem do Ticket">
             </div>
             <div class="modal-footer">
-                <a id="downloadImageLink" href="#" class="btn btn-primary" download>Download</a>
+                <a id="downloadImageLink" href="#" class="btn btn-primary" download>Descarregar</a>
                 <a id="openImageLink" href="#" target="_blank" class="btn btn-secondary">Abrir em Nova Aba</a>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
             </div>
@@ -359,7 +384,7 @@ function getStatusColor($status)
             </div>
         </div>
 
-        <!-- Admin controls section -->
+        <!-- Secção de controlos de administrador -->
         <div class="admin-controls">
             <a href="javascript:void(0);" class="d-flex align-items-center justify-content-between admin-controls-header collapsed" 
                 data-bs-toggle="collapse" 
@@ -368,14 +393,13 @@ function getStatusColor($status)
                 aria-controls="adminInfo"
                 style="cursor: pointer; text-decoration: none; color: inherit;">
                 <h5 class="m-0">Informações Administrativas</h5>
-                <i class="bi bi-chevron-down toggle-icon"></i>
             </a>
             <div class="collapse" id="adminInfo">
                 <form id="adminUpdateForm">
                     <input type="hidden" name="keyid" value="<?php echo htmlspecialchars($ticket_id); ?>">
                     <div class="row mt-3">
                         <div class="col-md-6">
-                            <!-- Status Update Form -->
+                            <!-- Formulário de Atualização de Estado -->
                             <div class="form-group mb-3">
                                 <label for="status" class="form-label">Estado</label>
                                 <select id="status" name="status" class="form-select" data-original-value="<?php echo htmlspecialchars($ticket['Status']); ?>">
@@ -386,11 +410,11 @@ function getStatusColor($status)
                                 </select>
                             </div>
 
-                            <!-- Assigned User Update Form -->
+                            <!-- Formulário de Atualização de Utilizador Atribuído -->
                             <div class="form-group mb-3">
                                 <label for="assigned_user" class="form-label">Atribuído a:</label>
                                 <select id="assigned_user" name="assigned_user" class="form-select" data-original-value="<?php echo htmlspecialchars($ticket['User']); ?>">
-                                    <option value="">Selecione um responsável</option>
+                                    <option value="">Selecionar um responsável</option>
                                     <?php foreach ($users as $user): ?>
                                         <option value="<?php echo $user['id']; ?>" <?php echo ($ticket['User'] == $user['id']) ? 'selected' : ''; ?>>
                                             <?php echo htmlspecialchars($user['Name']); ?>
@@ -399,26 +423,59 @@ function getStatusColor($status)
                                 </select>
                             </div>
 
-                            <!-- Resolution Time Update Form -->
+                            <!-- Formulário de Atualização de Tempo de Resolução -->
                             <div class="form-group mb-3">
-                                <label for="resolution_time" class="form-label">Tempo de Resolução (minutos)</label>
-                                <input type="number" id="resolution_time" name="resolution_time" class="form-control" 
-                                       min="1" step="1" placeholder="Ex: 90" 
-                                       value="<?php echo !empty($ticket['Time']) ? htmlspecialchars($ticket['Time']) : ''; ?>"
-                                       data-original-value="<?php echo !empty($ticket['Time']) ? htmlspecialchars($ticket['Time']) : ''; ?>">
-                                <small class="text-muted">Insira o tempo total em minutos (ex: 90 para 1 hora e 30 minutos)</small>
+                                <label for="resolution_time" class="form-label">Tempo de Resolução</label>
+                                <input type="hidden" id="resolution_time" name="resolution_time" 
+                                       value="<?php echo !empty($ticket['Time']) && $ticket['Time'] >= 15 ? htmlspecialchars($ticket['Time']) : '15'; ?>"
+                                       data-original-value="<?php echo !empty($ticket['Time']) && $ticket['Time'] >= 15 ? htmlspecialchars($ticket['Time']) : '15'; ?>">
+                                
+                                <div class="time-control-container bg-whie">
+                                    <div class="time-display">
+                                        <span class="badge bg-primary" id="timeDisplay">
+                                            <?php 
+                                            $currentTime = !empty($ticket['Time']) && $ticket['Time'] >= 15 ? intval($ticket['Time']) : 15;
+                                            $hours = floor($currentTime / 60);
+                                            $minutes = $currentTime % 60;
+                                            if ($hours > 0) {
+                                                echo $hours . 'h';
+                                                if ($minutes > 0) echo ' ' . $minutes . 'min';
+                                            } else {
+                                                echo $minutes . ' minuto' . ($minutes != 1 ? 's' : '');
+                                            }
+                                            ?>
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="time-buttons d-flex gap-2 flex-wrap">
+                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="adjustTime(-15)" id="removeTimeBtn">
+                                            - 15min
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="adjustTime(15)">
+                                            + 15min
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="adjustTime(30)">
+                                            + 30min
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="adjustTime(60)">
+                                            + 1h
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <small class="text-muted mt-2 d-block">Tempo mínimo: 15 minutos. Usar os botões para ajustar.</small>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <!-- Resolution Description Update Form -->
+                            <!-- Formulário de Atualização de Descrição de Resolução -->
                             <div class="form-group mb-3">
                                 <label for="resolution_description" class="form-label">Descrição da Resolução</label>
                                 <textarea id="resolution_description" name="resolution_description" class="form-control" rows="3" 
                                           data-original-value="<?php echo htmlspecialchars($ticket['Descr'] ?? ''); ?>"><?php echo !empty($ticket['Descr']) ? htmlspecialchars($ticket['Descr']) : ''; ?></textarea>
-                                <small class="text-muted">Descreva a solução aplicada para resolver o problema (visível ao cliente)</small>
+                                <small class="text-muted">Descrever a solução aplicada para resolver o problema (visível ao cliente)</small>
                             </div>
 
-                            <!-- Extra Info Update Form -->
+                            <!-- Formulário de Atualização de Informação Extra -->
                             <div class="form-group mb-3">
                                 <label for="extra_info" class="form-label">Informação Extra (Interna)</label>
                                 <textarea id="extra_info" name="extra_info" class="form-control" rows="3" 
@@ -428,11 +485,11 @@ function getStatusColor($status)
                         </div>
                     </div>
                     
-                    <!-- Action Buttons -->
+                    <!-- Botões de Ação -->
                     <div class="d-flex justify-content-between mt-3 pt-3 border-top">
                         <?php if ($ticket['Status'] !== 'Concluído') { ?>
                             <button type="button" class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
-                                <i class="bi bi-x-circle"></i> Fechar Ticket
+                                <i class="bi bi-x-circle"></i> Encerrar Ticket
                             </button>
                         <?php } else { ?>
                             <div></div>
@@ -452,21 +509,17 @@ function getStatusColor($status)
         </div>
 
         <div class="chat-body" id="chatBody">
-            <!-- Ticket information message at the top -->
+            <!-- Mensagem de informação do ticket no topo -->
             <div class="ticket-info">
                 <h5><?php echo htmlspecialchars($ticket['Name']); ?></h5>
                 <p><strong>Descrição:</strong> <?php echo htmlspecialchars($ticket['Description']); ?></p>
                 <p><strong>Criado por:</strong> <?php echo htmlspecialchars($ticket['CreationUser']); ?></p>
                 <p><strong>Criado em:</strong> <?php echo htmlspecialchars($ticket['CreationDate']); ?></p>
                 <?php if (!empty($ticket['image'])) { 
+                    // Fix image path for admin side
                     $imagePath = $ticket['image'];
-                    // Fix the image path for admin side - ensure proper relative path
-                    if (!str_starts_with($imagePath, '/') && !str_starts_with($imagePath, 'http')) {
-                        $imagePath = '/' . ltrim($imagePath, '/');
-                    }
-                    // Since we're in admin folder, we need to go up one level
-                    if (!str_starts_with($imagePath, '../') && !str_starts_with($imagePath, 'http')) {
-                        $imagePath = '..' . $imagePath;
+                    if (!str_starts_with($imagePath, '../') && !str_starts_with($imagePath, 'http') && !str_starts_with($imagePath, '/')) {
+                        $imagePath = '../' . $imagePath;
                     }
                 ?>
                     <p><strong>Imagem:</strong>
@@ -476,7 +529,7 @@ function getStatusColor($status)
                 <?php } ?>
             </div>
 
-            <!-- Messages -->
+            <!-- Mensagens -->
             <?php
             if ($messages) {
                 foreach ($messages as $message) {
@@ -504,7 +557,7 @@ function getStatusColor($status)
                 <input type="hidden" name="keyid" value="<?php echo htmlspecialchars($ticket['KeyId']); ?>">
                 <input type="hidden" name="id" value="<?php echo htmlspecialchars($ticket['id']); ?>">
                 <div class="chat-input-container">
-                    <textarea name="message" class="chat-input" id="messageInput" placeholder="Escreva aqui a sua mensagem..." required></textarea>
+                    <textarea name="message" class="chat-input" id="messageInput" placeholder="Escrever aqui a sua mensagem..." required></textarea>
                     <button type="submit" class="send-button" id="sendButton" disabled>
                         <i class="bi bi-send-fill"></i>
                     </button>
@@ -513,7 +566,7 @@ function getStatusColor($status)
         <?php } else { ?>
             <div class="ticket-closed-info">
                 <div class="d-flex justify-content-center align-items-center py-3 mb-3">
-                    <p class="text-muted m-0"><i class="bi bi-lock-fill me-2"></i>Ticket fechado. Não é possível enviar novas mensagens.</p>
+                    <p class="text-muted m-0"><i class="bi bi-lock-fill me-2"></i>Ticket encerrado. Não é possível enviar novas mensagens.</p>
                 </div>
                 
                 <?php if (!empty($ticket['Descr'])) { ?>
@@ -1186,18 +1239,10 @@ function getStatusColor($status)
                 // Fix image URL path for admin side
                 let fixedImageUrl = imageUrl;
                 
-                // Make sure the image URL has the correct base path
-                if (!fixedImageUrl.startsWith('http') && !fixedImageUrl.startsWith('/')) {
-                    fixedImageUrl = '/' + fixedImageUrl;
-                }
-                
-                // If we're in the admin folder, we need to go up one level
-                if (window.location.pathname.includes('/admin/')) {
-                    if (fixedImageUrl.startsWith('/')) {
-                        fixedImageUrl = '..' + fixedImageUrl;
-                    } else if (!fixedImageUrl.startsWith('../')) {
-                        fixedImageUrl = '../' + fixedImageUrl;
-                    }
+                // Only adjust if the URL is clearly not already adjusted
+                if (!fixedImageUrl.includes('../') && !fixedImageUrl.startsWith('http') && !fixedImageUrl.startsWith('/')) {
+                    // Simple case: just add ../ prefix
+                    fixedImageUrl = '../' + fixedImageUrl;
                 }
 
                 modalImage.src = fixedImageUrl;
@@ -1261,17 +1306,17 @@ function getStatusColor($status)
                 const currentAssignedUser = document.getElementById('assigned_user').value;
                 
                 if (!currentResolutionTime || isNaN(currentResolutionTime) || currentResolutionTime <= 0) {
-                    showNotification('Para fechar um ticket, é necessário informar o tempo de resolução.', 'error');
+                    showNotification('Para encerrar um ticket, é necessário informar o tempo de resolução.', 'error');
                     return;
                 }
                 
                 if (!currentDescription.trim()) {
-                    showNotification('Para fechar um ticket, é necessário fornecer uma descrição da resolução.', 'error');
+                    showNotification('Para encerrar um ticket, é necessário fornecer uma descrição da resolução.', 'error');
                     return;
                 }
                 
                 if (!currentAssignedUser) {
-                    showNotification('Para fechar um ticket, é necessário atribuí-lo a um responsável.', 'error');
+                    showNotification('Para encerrar um ticket, é necessário atribuí-lo a um responsável.', 'error');
                     return;
                 }
             }
@@ -1279,7 +1324,7 @@ function getStatusColor($status)
             // Show loading state
             const saveButton = document.getElementById('saveChangesBtn');
             const originalButtonHtml = saveButton.innerHTML;
-            saveButton.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Guardando...';
+            saveButton.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> A guardar...';
             saveButton.disabled = true;
             
             // Send update request - use the existing form submission logic
@@ -1385,7 +1430,7 @@ function getStatusColor($status)
             }, 5000);
         }
         function fecharTicket(id) {
-            if (confirm('Tem certeza que deseja fechar este ticket?')) {
+            if (confirm('Tem a certeza de que deseja encerrar este ticket?')) {
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = 'processar_alteracao.php';
@@ -1394,7 +1439,7 @@ function getStatusColor($status)
                 const assignedUser = document.getElementById('assigned_user')?.value || '';
                 const resolutionTime = document.getElementById('resolution_time').value;
 
-                // Validate time
+                // Validar tempo
                 if (isNaN(resolutionTime) || resolutionTime <= 0) {
                     alert('O tempo de resolução deve ser um número positivo!');
                     return;
@@ -1405,7 +1450,7 @@ function getStatusColor($status)
                     'status': 'Concluído',
                     'assigned_user': assignedUser,
                     'resolution_time': resolutionTime,
-                    'resolution_description': document.getElementById('resolution_description').value || 'Ticket fechado pelo administrador',
+                    'resolution_description': document.getElementById('resolution_description').value || 'Ticket encerrado pelo administrador',
                     'extra_info': document.getElementById('extra_info').value || ''
                 };
 
@@ -1426,6 +1471,72 @@ function getStatusColor($status)
 
         // Initialize when page loads
         window.addEventListener('DOMContentLoaded', function() {
+            // Time adjustment functionality
+            window.adjustTime = function(minutesToAdd) {
+                const timeInput = document.getElementById('resolution_time');
+                const timeDisplay = document.getElementById('timeDisplay');
+                const removeBtn = document.getElementById('removeTimeBtn');
+                
+                let currentTime = parseInt(timeInput.value) || 15;
+                let newTime = currentTime + minutesToAdd;
+                
+                // Ensure minimum time is 15 minutes
+                if (newTime < 15) {
+                    newTime = 15;
+                }
+                
+                // Update hidden input
+                timeInput.value = newTime;
+                
+                // Update display
+                updateTimeDisplay(newTime);
+                
+                // Enable/disable remove button based on minimum
+                if (removeBtn) {
+                    removeBtn.disabled = (newTime <= 15);
+                    if (newTime <= 15) {
+                        removeBtn.classList.add('disabled');
+                    } else {
+                        removeBtn.classList.remove('disabled');
+                    }
+                }
+            };
+            
+            window.updateTimeDisplay = function(timeInMinutes) {
+                const timeDisplay = document.getElementById('timeDisplay');
+                if (!timeDisplay) return;
+                
+                const hours = Math.floor(timeInMinutes / 60);
+                const minutes = timeInMinutes % 60;
+                
+                let displayText = '';
+                if (hours > 0) {
+                    displayText = hours + 'h';
+                    if (minutes > 0) {
+                        displayText += ' ' + minutes + 'min';
+                    }
+                } else {
+                    displayText = minutes + ' minuto' + (minutes !== 1 ? 's' : '');
+                }
+                
+                timeDisplay.textContent = displayText;
+            };
+            
+            // Initialize remove button state
+            const initialTime = parseInt(document.getElementById('resolution_time').value) || 15;
+            const removeBtn = document.getElementById('removeTimeBtn');
+            if (removeBtn) {
+                removeBtn.disabled = (initialTime <= 15);
+                if (initialTime <= 15) {
+                    removeBtn.classList.add('disabled');
+                } else {
+                    removeBtn.classList.remove('disabled');
+                }
+            }
+
+            // Make sure the functions are globally available
+            console.log("Time adjustment functions initialized");
+
             // Create temp directory if it doesn't exist
             fetch('../create_temp_dir.php')
                 .then(response => response.json())

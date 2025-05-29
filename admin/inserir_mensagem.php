@@ -1,16 +1,16 @@
 <?php
 session_start();
 
-// Include database from parent directory
+// Incluir base de dados do diretório pai
 include_once('../db.php');
 
-// Set timezone to Portugal
+// Definir fuso horário para Portugal
 date_default_timezone_set('Europe/Lisbon');
 
-// Check if admin is logged in
+// Verificar se o administrador está ligado
 if (!isset($_SESSION['admin_email'])) {
     header('Content-Type: application/json');
-    echo json_encode(['status' => 'error', 'message' => 'Admin not logged in']);
+    echo json_encode(['status' => 'error', 'message' => 'Administrador não autenticado']);
     exit;
 }
 
@@ -18,11 +18,11 @@ $user = $_SESSION['admin_email'];
 $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 
           strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
-// Check for required parameters
+// Verificar parâmetros obrigatórios
 if (!isset($_POST['keyid']) || !isset($_POST['id']) || !isset($_POST['message'])) {
     if ($isAjax) {
         header('Content-Type: application/json');
-        echo json_encode(['status' => 'error', 'message' => 'Missing required parameters']);
+        echo json_encode(['status' => 'error', 'message' => 'Parâmetros obrigatórios em falta']);
     } else {
         header('Location: consultar_tickets.php?error=1');
     }
@@ -35,14 +35,14 @@ $message = trim($_POST['message']);
 $deviceId = isset($_POST['deviceId']) ? $_POST['deviceId'] : null;
 $ws_origin = isset($_POST['ws_origin']) ? $_POST['ws_origin'] : '0';
 
-// Log the received data for debugging
-error_log("Admin inserir_mensagem - KeyID: $keyid, Message: $message, User: $user");
+// Registar os dados recebidos para depuração
+error_log("Administrador inserir_mensagem - KeyID: $keyid, Mensagem: $message, Utilizador: $user");
 
 try {
-    // Start transaction
+    // Iniciar transação
     $pdo->beginTransaction();
     
-    // Check for duplicate messages
+    // Verificar mensagens duplicadas
     $checkSql = "SELECT id FROM comments_xdfree01_extrafields 
                 WHERE XDFree01_KeyID = :keyid 
                 AND Message = :message 
@@ -57,12 +57,12 @@ try {
     
     if ($checkStmt->rowCount() > 0) {
         $pdo->rollBack();
-        error_log("Admin inserir_mensagem - Duplicate message detected");
+        error_log("Administrador inserir_mensagem - Mensagem duplicada detetada");
         if ($isAjax) {
             header('Content-Type: application/json');
             echo json_encode([
                 'status' => 'success',
-                'message' => 'Message already saved',
+                'message' => 'Mensagem já guardada',
                 'duplicate' => true
             ]);
         } else {
@@ -71,7 +71,7 @@ try {
         exit;
     }
     
-    // Save message to database
+    // Guardar mensagem na base de dados
     $sql = "INSERT INTO comments_xdfree01_extrafields 
             (XDFree01_KeyID, Message, type, Date, user) 
             VALUES (:keyid, :message, :type, NOW(), :user)";
@@ -83,14 +83,14 @@ try {
     $stmt->bindParam(':user', $user);
     
     if (!$stmt->execute()) {
-        throw new Exception('Failed to insert message into database');
+        throw new Exception('Falha ao inserir mensagem na base de dados');
     }
     
-    // Get the inserted message ID
+    // Obter o ID da mensagem inserida
     $messageId = $pdo->lastInsertId();
-    error_log("Admin inserir_mensagem - Message saved with ID: $messageId");
+    error_log("Administrador inserir_mensagem - Mensagem guardada com ID: $messageId");
     
-    // Update ticket's last update time
+    // Atualizar hora da última atualização do ticket
     $updateSql = "UPDATE info_xdfree01_extrafields 
                   SET dateu = NOW() 
                   WHERE XDFree01_KeyID = :keyid";
@@ -98,12 +98,12 @@ try {
     $updateStmt->bindParam(':keyid', $keyid);
     $updateStmt->execute();
     
-    // Commit transaction
+    // Confirmar transação
     $pdo->commit();
     
-    // Only send to WebSocket if this message wasn't originated from WebSocket
+    // Apenas enviar para WebSocket se esta mensagem não foi originada do WebSocket
     if ($ws_origin !== '1') {
-        // Prepare message data for WebSocket/sync
+        // Preparar dados da mensagem para WebSocket/sincronização
         $messageData = [
             'action' => 'sendMessage',
             'ticketId' => $keyid,
@@ -117,9 +117,9 @@ try {
             'alreadySaved' => true
         ];
         
-        // Try to send to WebSocket server
+        // Tentar enviar para servidor WebSocket
         $wsSuccess = sendToWebSocketServer($messageData);
-        error_log("Admin inserir_mensagem - WebSocket send result: " . ($wsSuccess ? 'success' : 'failed'));
+        error_log("Administrador inserir_mensagem - Resultado do envio WebSocket: " . ($wsSuccess ? 'sucesso' : 'falhou'));
     } else {
         $wsSuccess = true;
     }
@@ -128,27 +128,27 @@ try {
         header('Content-Type: application/json');
         echo json_encode([
             'status' => 'success',
-            'message' => 'Message saved successfully',
+            'message' => 'Mensagem guardada com sucesso',
             'messageId' => $messageId,
             'websocketSent' => $wsSuccess
         ]);
     } else {
         header('Location: detalhes_ticket.php?keyid=' . urlencode($keyid));
     }
-    
+
 } catch (Exception $e) {
-    // Rollback transaction on error
+    // Reverter transação em caso de erro
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
     
-    error_log('Error in admin/inserir_mensagem.php: ' . $e->getMessage());
+    error_log('Erro em admin/inserir_mensagem.php: ' . $e->getMessage());
     
     if ($isAjax) {
         header('Content-Type: application/json');
         echo json_encode([
             'status' => 'error',
-            'message' => 'Failed to save message: ' . $e->getMessage()
+            'message' => 'Falha ao guardar mensagem: ' . $e->getMessage()
         ]);
     } else {
         header('Location: consultar_tickets.php?error=3');
@@ -156,10 +156,10 @@ try {
 }
 
 /**
- * Send message to WebSocket server via HTTP or temp file
+ * Enviar mensagem para servidor WebSocket via HTTP ou ficheiro temporário
  */
 function sendToWebSocketServer($messageData) {
-    // Try HTTP first
+    // Tentar HTTP primeiro
     $wsUrl = 'http://localhost:8080/send-message';
     
     if (function_exists('curl_init')) {
@@ -184,13 +184,13 @@ function sendToWebSocketServer($messageData) {
         }
     }
     
-    // Fallback: create a temp file for WebSocket to process
+    // Fallback: criar ficheiro temporário para o WebSocket processar
     $tempDir = dirname(__DIR__) . '/temp';
     if (!file_exists($tempDir)) {
         @mkdir($tempDir, 0777, true);
     }
     
-    // Create sync file for immediate synchronization
+    // Criar ficheiro de sincronização para sincronização imediata
     $syncId = uniqid();
     $cleanTicketId = str_replace('#', '', $messageData['ticketId']);
     $syncFile = $tempDir . "/sync_{$cleanTicketId}_{$syncId}.txt";

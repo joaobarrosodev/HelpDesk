@@ -12,7 +12,7 @@ $ticketId = isset($_GET['keyid']) ? $_GET['keyid'] : $_POST['keyid'];
 $updateFields = [];
 $params = [':keyid' => $ticketId];
 
-// Check what fields need to be updated
+// Verificar que campos precisam de ser atualizados
 if (isset($_GET['Status']) || isset($_POST['status'])) {
     $updateFields[] = "Status = :status";
     $params[':status'] = isset($_GET['Status']) ? $_GET['Status'] : $_POST['status'];
@@ -39,7 +39,7 @@ if (isset($_POST['extra_info'])) {
 }
 
 if (empty($updateFields)) {
-    $response = ['success' => false, 'message' => 'No changes provided'];
+    $response = ['success' => false, 'message' => 'Nenhuma alteração fornecida'];
     
     if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
         header('Content-Type: application/json');
@@ -52,14 +52,14 @@ if (empty($updateFields)) {
 }
 
 try {
-    // Update the ticket directly using KeyId
+    // Atualizar o ticket diretamente usando KeyId
     $sql = "UPDATE info_xdfree01_extrafields SET " . implode(', ', $updateFields) . ", dateu = NOW() WHERE XDFree01_KeyID = :keyid";
     
     $stmt = $pdo->prepare($sql);
     $result = $stmt->execute($params);
     
     if ($result) {
-        $response = ['success' => true, 'message' => 'Changes saved successfully'];
+        $response = ['success' => true, 'message' => 'Alterações guardadas com sucesso'];
         
         if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
             header('Content-Type: application/json');
@@ -69,7 +69,7 @@ try {
         
         header('Location: detalhes_ticket.php?keyid=' . urlencode($ticketId) . '&success=updated');
     } else {
-        $response = ['success' => false, 'message' => 'Failed to update ticket'];
+        $response = ['success' => false, 'message' => 'Falha ao atualizar ticket'];
         
         if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
             header('Content-Type: application/json');
@@ -80,9 +80,9 @@ try {
         header('Location: consultar_tickets.php?error=update_failed');
     }
 } catch (Exception $e) {
-    error_log('Error in processar_alteracao.php: ' . $e->getMessage());
+    error_log('Erro em processar_alteracao.php: ' . $e->getMessage());
     
-    $response = ['success' => false, 'message' => 'Database error: ' . $e->getMessage()];
+    $response = ['success' => false, 'message' => 'Erro de base de dados: ' . $e->getMessage()];
     
     if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
         header('Content-Type: application/json');

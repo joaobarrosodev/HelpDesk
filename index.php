@@ -113,12 +113,15 @@ include('conflogin.php');
             
             if ($horas > 0) {
                 $tempo_medio_resposta = $horas . ":" . str_pad($minutos, 2, '0', STR_PAD_LEFT);
+                $tempo_unidade = "h";
             } else {
                 $tempo_medio_resposta = $minutos;
+                $tempo_unidade = "min";
             }
         } else {
             // Valor padrão caso não haja dados
             $tempo_medio_resposta = "0";
+            $tempo_unidade = "min";
         }
         
         // Obter dados reais da avaliação dos clientes da tabela info_xdfree01_extrafields
@@ -198,7 +201,7 @@ include('conflogin.php');
                     <div class="card dashboard-card">
                         <div class="flex-row d-flex card-body" style="gap: 10px;">
                             <p class="m-0">Tempo Médio de Resposta</p>
-                            <p class="m-0 fw-bold text-primary"><?php echo $tempo_medio_resposta; ?> min</p>
+                            <p class="m-0 fw-bold text-primary"><?php echo $tempo_medio_resposta; ?> <?php echo $tempo_unidade; ?></p>
                         </div>
                     </div>
                 </div>

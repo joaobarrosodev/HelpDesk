@@ -2,16 +2,16 @@
 session_start();
 include('../db.php');
 
-// Set JSON header
+// Definir cabeçalho JSON
 header('Content-Type: application/json');
 
-// Disable any error output
+// Desativar qualquer saída de erro
 error_reporting(0);
 ini_set('display_errors', 0);
 
-// Check for required parameters
+// Verificar parâmetros obrigatórios
 if (!isset($_GET['ticketId']) || !isset($_GET['lastCheck'])) {
-    echo json_encode(['error' => 'Missing parameters']);
+    echo json_encode(['error' => 'Parâmetros em falta']);
     exit;
 }
 
@@ -20,7 +20,7 @@ $lastCheck = $_GET['lastCheck'];
 $deviceId = isset($_GET['deviceId']) ? $_GET['deviceId'] : null;
 
 try {
-    // Query for new messages since last check
+    // Consultar novas mensagens desde a última verificação
     $sql = "SELECT c.Message, c.type, c.Date as CommentTime, c.user, c.id as messageId
             FROM comments_xdfree01_extrafields c
             WHERE c.XDFree01_KeyID = :ticketId
@@ -34,9 +34,9 @@ try {
     
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Check if there are new messages
+    // Verificar se há novas mensagens
     if (count($messages) > 0) {
-        // Add unique message IDs for deduplication
+        // Adicionar IDs únicos de mensagem para desduplicação
         foreach ($messages as &$message) {
             $message['messageId'] = 'db_' . $message['messageId'];
         }
@@ -55,7 +55,7 @@ try {
     }
     
 } catch (Exception $e) {
-    error_log('Error in admin/silent_sync.php: ' . $e->getMessage());
-    echo json_encode(['error' => 'Database error']);
+    error_log('Erro em admin/silent_sync.php: ' . $e->getMessage());
+    echo json_encode(['error' => 'Erro de base de dados']);
 }
 ?>

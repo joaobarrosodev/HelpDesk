@@ -16,7 +16,7 @@
 <nav class="sidebar-helpdesk bg-white shadow-sm d-flex flex-column" id="sidebar" aria-label="Menu principal">   
     <header class="sidebar-logo-area p-3 d-flex justify-content-between align-items-center">
         <a href="index.php" title="Página inicial" class="text-decoration-none">
-            <img src="img/logo.png" alt="Info.exe - Logo" class="img-fluid" width="120" height="40">
+            <img src="img/logo.png" alt="Info.exe - Logótipo" class="img-fluid" width="120" height="40">
         </a>
         <button class="btn border-0 bg-transparent d-lg-none d-block p-0 " id="sidebarClose" aria-label="Fechar menu">
             <i class="bi bi-x text-muted" aria-hidden="true"></i>
@@ -30,7 +30,7 @@
                 <li class="nav-item px-2 py-1">
                     <a href="index.php" id="dashboard" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
                         <i class="bi bi-speedometer2 me-3 " aria-hidden="true"></i> 
-                        <span>Painel Principal</span>
+                        <span>Painel de Controlo</span>
                     </a>
                 </li>
                   <li class="nav-item px-2 py-1">
@@ -64,7 +64,7 @@
                 <li class="nav-item px-2 py-1">
                     <a href="login.php" id="login" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark">
                         <i class="bi bi-box-arrow-in-right me-3 " aria-hidden="true"></i>
-                        <span>Login</span>
+                        <span>Iniciar Sessão</span>
                     </a>
                 </li>
             <?php endif; ?>
@@ -74,7 +74,7 @@
     <!-- User Profile -->
 
     <?php if (isset($_SESSION['admin_id'])): ?>
-        <a class="mt-auto text-decoration-none user-profile-link p-3 d-flex align-items-center rounded-2 mx-2 mb-1 bg-light" title="Ver perfil de utilizador">
+        <a class="mt-auto text-decoration-none user-profile-link p-3 d-flex align-items-center rounded-2 mx-2 mb-1 bg-light" title="Ver perfil do utilizador">
             <div class="user-avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" aria-hidden="true">                <?php 
                 if (isset($_SESSION['Nome'])) {
                     $primeira_letra = strtoupper($_SESSION['Nome'][0]); // Pega a primeira letra do nome e coloca em maiúscula

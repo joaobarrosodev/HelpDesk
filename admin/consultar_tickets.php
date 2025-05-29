@@ -87,13 +87,13 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
                     <h1 class="mb-3 display-5">Consultar Tickets</h1>
-                    <p class="">Visualize e gerencie todos os tickets do sistema. Utilize os filtros abaixo para refinar a visualização.</p>
+                    <p class="">Visualizar e gerir todos os tickets do sistema. Utilizar os filtros abaixo para refinar a visualização.</p>
                 </div>
             </div>
             
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
-                    <!-- Filters -->
+                    <!-- Filtros -->
                     <form method="get" action="" class="row g-3 mb-4">
                         <div class="col-md-2">
                             <label for="data" class="form-label">Data</label>
@@ -138,12 +138,11 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                         </div>
                     </form>
                         
-                    <!-- Table -->
+                    <!-- Tabela -->
                     <div class="table-responsive">
                         <table class="table align-middle">
                             <thead class="table-dark">
                                 <tr>
-
                                     <th scope="col" class="sortable text-nowrap">Título</th>                                    
                                     <th scope="col" class="sortable text-nowrap">Assunto</th>
                                     <th scope="col" class="sortable text-nowrap">Atualizado</th>
@@ -152,7 +151,6 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                                     <th scope="col" class="sortable text-nowrap">Prioridade</th>
                                     <th scope="col" class="sortable text-nowrap">Criador</th>
                                     <th scope="col" class="sortable text-nowrap">Última Mensagem Por</th>
-                                    <th scope="col" class="text-nowrap">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -199,19 +197,6 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                                             </td>
                                             <td><?php echo $ticket['CreationUser']; ?></td>
                                             <td><?php echo !empty($ticket['LastCommentUser']) ? htmlspecialchars($ticket['LastCommentUser']) : '-'; ?></td>
-                                            <td>
-                                                <div class="dropdown">
-                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton<?php echo $ticket['id']; ?>" data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <i class="bi bi-gear"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton<?php echo $ticket['id']; ?>">
-                                                        <li><a class="dropdown-item" href="detalhes_ticket.php?keyid=<?php echo htmlspecialchars($ticket['id']); ?>"><i class="bi bi-eye me-2"></i> Ver detalhes</a></li>
-                                                        <?php if ($ticket['status'] !== 'Concluído'): ?>
-                                                            <li><a class="dropdown-item text-danger fechar-ticket" href="#" data-id="<?php echo htmlspecialchars($ticket['id']); ?>"><i class="bi bi-x-circle me-2"></i> Fechar ticket</a></li>
-                                                        <?php endif; ?>
-                                                    </ul>
-                                                </div>
-                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
@@ -236,21 +221,23 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="fecharTicketModalLabel">Confirmar fechamento</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="fecharTicketModalLabel">Confirmar encerramento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Tem certeza que deseja fechar este ticket? Esta ação não pode ser desfeita.</p>
+                    <p>Tem a certeza de que deseja fechar este ticket? Esta ação não pode ser desfeita.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <a href="#" id="confirmarFecharTicket" class="btn btn-danger">Confirmar fechamento</a>
+                    <a href="#" id="confirmarFecharTicket" class="btn btn-danger">Confirmar encerramento</a>
                 </div>
             </div>
         </div>
-    </div>    <script>
+    </div>
+    
+    <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Sorting functionality
+        // Funcionalidade de ordenação
         const table = document.querySelector('table');
         const headers = table.querySelectorAll('th.sortable');
         const priorityMap = {
@@ -314,7 +301,7 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
             return null;
         }
         
-        // Fechar ticket functionality
+        // Funcionalidade de fechar ticket
         const fecharBtns = document.querySelectorAll('.fechar-ticket');
         const modal = new bootstrap.Modal(document.getElementById('fecharTicketModal'));
         const confirmarBtn = document.getElementById('confirmarFecharTicket');

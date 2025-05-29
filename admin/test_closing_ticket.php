@@ -1,11 +1,11 @@
 <?php
-// test_closing_ticket.php - Test script to verify ticket closing functionality
+// test_closing_ticket.php - Script de teste para verificar a funcionalidade de encerramento de tickets
 include('db.php');
 
-echo "===== TESTING TICKET CLOSING VALIDATION =====\n\n";
+echo "===== TESTE DE VALIDAÇÃO DE ENCERRAMENTO DE BILHETES =====\n\n";
 
-// 1. Verify tickets with required fields are properly recognized
-echo "1. SQL Query for tickets requiring closure fields:\n";
+// 1. Verificar tickets com campos obrigatórios são devidamente reconhecidos
+echo "1. Consulta SQL para tickets que necessitam de campos de encerramento:\n";
 $sql = "SELECT 
             xdfree01.KeyId, 
             xdfree01.Name as ticket_title,
@@ -18,13 +18,13 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-echo "Found " . count($tickets) . " closed tickets without resolution time.\n";
+echo "Encontrados " . count($tickets) . " tickets encerrados sem tempo de resolução.\n";
 foreach($tickets as $ticket) {
-    echo "- Ticket " . $ticket['KeyId'] . ": " . $ticket['ticket_title'] . " (Status: " . $ticket['status'] . ")\n";
+    echo "- Ticket " . $ticket['KeyId'] . ": " . $ticket['ticket_title'] . " (Estado: " . $ticket['status'] . ")\n";
 }
 echo "\n";
 
-// 2. Verify tickets with No Description are properly recognized
+// 2. Verificar tickets sem descrição são devidamente reconhecidos
 $sql = "SELECT 
             xdfree01.KeyId, 
             xdfree01.Name as ticket_title,
@@ -37,13 +37,13 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-echo "2. Found " . count($tickets) . " closed tickets without resolution description.\n";
+echo "2. Encontrados " . count($tickets) . " tickets encerrados sem descrição de resolução.\n";
 foreach($tickets as $ticket) {
-    echo "- Ticket " . $ticket['KeyId'] . ": " . $ticket['ticket_title'] . " (Status: " . $ticket['status'] . ")\n";
+    echo "- Ticket " . $ticket['KeyId'] . ": " . $ticket['ticket_title'] . " (Estado: " . $ticket['status'] . ")\n";
 }
 echo "\n";
 
-// 3. Verify tickets with No Assigned User are properly recognized
+// 3. Verificar tickets sem utilizador atribuído são devidamente reconhecidos
 $sql = "SELECT 
             xdfree01.KeyId, 
             xdfree01.Name as ticket_title,
@@ -56,13 +56,13 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-echo "3. Found " . count($tickets) . " closed tickets without an assigned user.\n";
+echo "3. Encontrados " . count($tickets) . " tickets encerrados sem utilizador atribuído.\n";
 foreach($tickets as $ticket) {
-    echo "- Ticket " . $ticket['KeyId'] . ": " . $ticket['ticket_title'] . " (Status: " . $ticket['status'] . ")\n";
+    echo "- Ticket " . $ticket['KeyId'] . ": " . $ticket['ticket_title'] . " (Estado: " . $ticket['status'] . ")\n";
 }
 echo "\n";
 
-// 4. Count tickets by status
+// 4. Contar tickets por estado
 $sql = "SELECT 
             info_xdfree01_extrafields.Status as status,
             COUNT(*) as count
@@ -73,13 +73,13 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $statusCounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-echo "4. Ticket counts by status:\n";
+echo "4. Contagem de tickets por estado:\n";
 foreach($statusCounts as $status) {
     echo "- " . $status['status'] . ": " . $status['count'] . " tickets\n";
 }
 echo "\n";
 
-// 5. Count tickets by assignee
+// 5. Contar tickets por responsável
 $sql = "SELECT 
             info_xdfree01_extrafields.Atribuido as user_id,
             users.Name as user_name,
@@ -93,11 +93,11 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $userCounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-echo "5. Ticket counts by assignee:\n";
+echo "5. Contagem de tickets por responsável:\n";
 foreach($userCounts as $user) {
     $userName = !empty($user['user_name']) ? $user['user_name'] : 'Ninguém';
     echo "- " . $userName . " (ID: " . $user['user_id'] . "): " . $user['count'] . " tickets\n";
 }
 
-echo "\n===== TEST COMPLETE =====\n";
+echo "\n===== TESTE CONCLUÍDO =====\n";
 ?>

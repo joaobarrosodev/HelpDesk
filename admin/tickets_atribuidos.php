@@ -51,6 +51,20 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php include('menu.php'); ?>
     <div class="content">
         <div class="container-fluid p-4">
+            <?php if (isset($_SESSION['success'])): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle me-2"></i><?php echo $_SESSION['success']; unset($_SESSION['success']); ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+            
+            <?php if (isset($_SESSION['error'])): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i><?php echo $_SESSION['error']; unset($_SESSION['error']); ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+            
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
                     <h1 class="mb-3 display-5">Tickets Atribuídos</h1>
@@ -78,7 +92,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </form>
                         
                     <!-- Table -->
-                    <div class="table-responsive">
+                    <div class="table-responsive pb-5">
                         <table class="table align-middle">
                             <thead class="table-dark">
                                 <tr>
@@ -142,7 +156,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                     </button>
                                                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton<?php echo $ticket['id']; ?>">
                                                         <li><a class="dropdown-item" href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>"><i class="bi bi-eye me-2"></i> Ver detalhes</a></li>
-                                                        <li><a class="dropdown-item text-danger" href="processar_alteracao.php?action=close&keyid=<?php echo $ticket['id']; ?>"><i class="bi bi-x-circle me-2"></i> Fechar ticket</a></li>
+                                                        <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#closeTicketModal" data-ticket-id="<?php echo $ticket['KeyId']; ?>" data-ticket-title="<?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?>"><i class="bi bi-x-circle me-2"></i> Fechar ticket</a></li>
                                                     </ul>
                                                 </div>
                                             </td>
@@ -165,8 +179,176 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
+    <!-- Close Ticket Modal -->
+    <div class="modal fade" id="closeTicketModal" tabindex="-1" aria-labelledby="closeTicketModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="closeTicketModalLabel">
+                        <i class="bi bi-x-circle me-2"></i>Fechar Ticket
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="closeTicketForm" method="post" action="processar_fechar_ticket.php">
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Atenção:</strong> Esta ação irá marcar o ticket como concluído.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Ticket:</strong></label>
+                            <p id="ticketTitle" class="form-control-plaintext bg-light p-2 rounded"></p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="resolucao_descricao" class="form-label">
+                                Descrição da Resolução <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="resolucao_descricao" name="resolucao_descricao" rows="4" placeholder="Como foi resolvido..." required></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="tempo_resolucao" class="form-label">
+                                Tempo de Resolução <span class="text-danger">*</span>
+                            </label>
+                            <input type="hidden" id="tempo_resolucao" name="tempo_resolucao" value="15">
+                            
+                            <div class="time-control-container bg-light border rounded p-3">
+                                <div class="time-display text-center mb-3">
+                                    <span class="badge bg-primary fs-6 px-3 py-2" id="timeDisplayModal">15 minutos</span>
+                                </div>
+                                
+                                <div class="time-buttons d-flex gap-2 justify-content-center flex-wrap">
+                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="adjustTimeModal(-15)" id="removeTimeBtnModal" disabled>
+                                        - 15min
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success btn-sm" onclick="adjustTimeModal(15)">
+                                        + 15min
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success btn-sm" onclick="adjustTimeModal(30)">
+                                        + 30min
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success btn-sm" onclick="adjustTimeModal(60)">
+                                        + 1h
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <small class="text-muted mt-2 d-block">Tempo mínimo: 15 minutos. Use os botões para ajustar.</small>
+                        </div>
+                        
+                        <input type="hidden" id="ticket_id" name="ticket_id" value="">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x me-1"></i>Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-check-circle me-1"></i>Fechar Ticket
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Time adjustment functions for modal
+        window.adjustTimeModal = function(minutesToAdd) {
+            const timeInput = document.getElementById('tempo_resolucao');
+            const timeDisplay = document.getElementById('timeDisplayModal');
+            const removeBtn = document.getElementById('removeTimeBtnModal');
+            
+            let currentTime = parseInt(timeInput.value) || 15;
+            let newTime = currentTime + minutesToAdd;
+            
+            // Ensure minimum time is 15 minutes
+            if (newTime < 15) {
+                newTime = 15;
+            }
+            
+            // Update hidden input
+            timeInput.value = newTime;
+            
+            // Update display
+            updateTimeDisplayModal(newTime);
+            
+            // Enable/disable remove button based on minimum
+            if (removeBtn) {
+                removeBtn.disabled = (newTime <= 15);
+                if (newTime <= 15) {
+                    removeBtn.classList.add('disabled');
+                } else {
+                    removeBtn.classList.remove('disabled');
+                }
+            }
+        };
+        
+        window.updateTimeDisplayModal = function(timeInMinutes) {
+            const timeDisplay = document.getElementById('timeDisplayModal');
+            if (!timeDisplay) return;
+            
+            const hours = Math.floor(timeInMinutes / 60);
+            const minutes = timeInMinutes % 60;
+            
+            let displayText = '';
+            if (hours > 0) {
+                displayText = hours + 'h';
+                if (minutes > 0) {
+                    displayText += ' ' + minutes + 'min';
+                }
+            } else {
+                displayText = minutes + ' minuto' + (minutes !== 1 ? 's' : '');
+            }
+            
+            timeDisplay.textContent = displayText;
+        };
+
+        // Close ticket modal functionality
+        const closeTicketModal = document.getElementById('closeTicketModal');
+        closeTicketModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const ticketId = button.getAttribute('data-ticket-id');
+            const ticketTitle = button.getAttribute('data-ticket-title');
+            
+            document.getElementById('ticket_id').value = ticketId;
+            document.getElementById('ticketTitle').textContent = ticketTitle;
+            
+            // Reset time to 15 minutes when modal opens
+            document.getElementById('tempo_resolucao').value = 15;
+            updateTimeDisplayModal(15);
+            const removeBtn = document.getElementById('removeTimeBtnModal');
+            if (removeBtn) {
+                removeBtn.disabled = true;
+                removeBtn.classList.add('disabled');
+            }
+        });
+
+        // Form validation
+        document.getElementById('closeTicketForm').addEventListener('submit', function(e) {
+            const descricao = document.getElementById('resolucao_descricao').value.trim();
+            const tempo = document.getElementById('tempo_resolucao').value;
+            
+            if (descricao.length < 5) {
+                e.preventDefault();
+                alert('Insira uma descrição da resolução.');
+                return;
+            }
+            
+            if (!tempo || tempo < 15) {
+                e.preventDefault();
+                alert('O tempo mínimo de resolução é de 15 minutos.');
+                return;
+            }
+            
+            // Debug - log the values being sent
+            console.log('Ticket ID:', document.getElementById('ticket_id').value);
+            console.log('Descrição:', descricao);
+            console.log('Tempo:', tempo);
+        });
+
         // Sorting functionality
         const table = document.querySelector('table');
         const headers = table.querySelectorAll('th.sortable');

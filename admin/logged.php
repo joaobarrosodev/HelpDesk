@@ -41,7 +41,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $erro = "Erro ao executar a consulta: " . $e->getMessage();
         }
     } else {
-        $erro = "Não foi possível conectar ao servidor de banco de dados.";
+        $erro = "Não foi possível conectar ao servidor de base de dados.";
     }
 }
 ?>
@@ -55,14 +55,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="col-md-6">
                 <div class="login-form shadow p-4 mb-5 bg-white rounded">
                     <div class="text-center mb-4">
-                        <img src="../img/logo.png" alt="Logo" class="img-fluid" style="max-height: 80px;">
+                        <img src="../img/logo.png" alt="Logótipo" class="img-fluid" style="max-height: 80px;">
                         <h2 class="fw-bold mt-3">Acesso Administrativo</h2>
                     </div>
                     
                     <?php if (isset($erro)): ?>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <i class="bi bi-exclamation-triangle-fill me-2"></i> <?php echo $erro; ?>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
                         </div>
                     <?php endif; ?>
                     
@@ -70,13 +70,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <!-- Campo de E-mail -->
                         <div class="input-group mb-4">
                             <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
-                            <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($email ?? ''); ?>" placeholder="Digite o seu e-mail..." required style="background-color: #f0f0f0; border: none;">
+                            <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($email ?? ''); ?>" placeholder="Introduza o seu e-mail..." required style="background-color: #f0f0f0; border: none;">
                         </div>
                         
-                        <!-- Campo de Senha -->
+                        <!-- Campo de Palavra-passe -->
                         <div class="input-group mb-4">
                             <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
-                            <input type="password" class="form-control" id="password" name="password" placeholder="Digite a sua senha..." required style="background-color: #f0f0f0; border: none;">
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Introduza a sua palavra-passe..." required style="background-color: #f0f0f0; border: none;">
                         </div>
                         
                         <button type="submit" class="btn btn-primary w-100 py-2 mb-3">Entrar</button>

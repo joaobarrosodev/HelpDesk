@@ -48,6 +48,20 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php include('menu.php'); ?>
     <div class="content">
         <div class="container-fluid p-4">
+            <?php if (isset($_SESSION['success'])): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle me-2"></i><?php echo $_SESSION['success']; unset($_SESSION['success']); ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+            
+            <?php if (isset($_SESSION['error'])): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i><?php echo $_SESSION['error']; unset($_SESSION['error']); ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+            
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
                     <h1 class="mb-3 display-5">Tickets Sem Atribuição</h1>
@@ -75,7 +89,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </form>
                         
                     <!-- Table -->
-                    <div class="table-responsive">
+                    <div class="table-responsive pb-5">
                         <table class="table align-middle">
                             <thead class="table-dark">
                                 <tr>
@@ -137,7 +151,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                     </button>
                                                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton<?php echo $ticket['id']; ?>">
                                                         <li><a class="dropdown-item" href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>"><i class="bi bi-eye me-2"></i> Ver detalhes</a></li>
-                                                        <li><a class="dropdown-item text-primary" href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>&assign=1"><i class="bi bi-person-plus me-2"></i> Atribuir ticket</a></li>
+                                                        <li><a class="dropdown-item text-success" href="atribuir_a_mim.php?keyid=<?php echo urlencode($ticket['KeyId']); ?>"><i class="bi bi-person-check me-2"></i> Atribuir a mim</a></li>
                                                     </ul>
                                                 </div>
                                             </td>
