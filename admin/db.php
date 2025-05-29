@@ -5,10 +5,10 @@ if (file_exists(__DIR__ . '/db-log.php')) {
 }
 
 // Conexão com a base de dados
-$host = '127.0.0.1'; // Endereço do banco de dados
-$dbname = 'xd'; // Nome do banco de dados
-$username = 'root'; // Nome de usuário do MySQL
-$password = ''; // Senha do MySQL
+$host = '94.61.13.23'; // Endereço do banco de dados
+$dbname = 'infoxd'; // Nome do banco de dados
+$username = 'infoadmin'; // Nome de usuário do MySQL
+$password = '/*2025IE+'; // Senha do MySQL
 $port = '3306';  // Porta do MySQL
 
 try {
