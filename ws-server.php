@@ -1,5 +1,12 @@
 <?php
-require 'vendor/autoload.php';
+// Check if Composer autoloader exists
+if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
+    echo "Error: Composer dependencies not installed.\n";
+    echo "Please run: composer install\n";
+    exit(1);
+}
+
+require __DIR__ . '/vendor/autoload.php';
 
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
@@ -415,6 +422,12 @@ if (!CLI_MODE) {
 
 // CLI mode - run the WebSocket server
 try {
+    // Check if required extensions are loaded
+    if (!extension_loaded('sockets')) {
+        echo "Error: PHP sockets extension is required.\n";
+        exit(1);
+    }
+    
     // Write PID file
     file_put_contents($tempDir . '/ws-server.pid', getmypid());
     

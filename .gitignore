@@ -1,10 +1,15 @@
-# Ignore temporary files
+# Vendor directory (Composer dependencies)
+vendor/*
+composer.lock
+
+# Temporary files
 /temp/*
 !/temp/.gitkeep
 
 # Logs
 *.log
 log_messages.txt
+ws-server.log
 
 # IDE and editor folders
 .idea/
@@ -16,18 +21,26 @@ config.php
 conflogin.php
 db.php
 
-# Composer
-/vendor/
-composer.lock
-
 # Uploaded files
 /uploads/
-/docs/
+docs/
 
 # Cache and session files
 /cache/
 /sessions/
 
-/temp/*
-vendor/*
-ws-server.log
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node modules (if any)
+node_modules/
+
+# Build files
+dist/
+build/
