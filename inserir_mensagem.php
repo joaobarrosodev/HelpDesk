@@ -10,14 +10,15 @@ include_once('db.php');
 // Set timezone to Portugal
 date_default_timezone_set('Europe/Lisbon');
 
-// Check if user is logged in
-if (!isset($_SESSION['usuario_email'])) {
+// Check if user is logged in - use the same session variable as other client files
+if (!isset($_SESSION['user_email']) && !isset($_SESSION['usuario_email'])) {
     header('Content-Type: application/json');
     echo json_encode(['status' => 'error', 'message' => 'User not logged in']);
     exit;
 }
 
-$user = $_SESSION['usuario_email'];
+// Use the correct session variable
+$user = isset($_SESSION['user_email']) ? $_SESSION['user_email'] : $_SESSION['usuario_email'];
 $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 
           strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
@@ -38,6 +39,9 @@ $message = trim($_POST['message']);
 $deviceId = isset($_POST['deviceId']) ? $_POST['deviceId'] : null;
 $ws_origin = isset($_POST['ws_origin']) ? $_POST['ws_origin'] : '0';
 
+// Log the received data for debugging
+error_log("Client inserir_mensagem - KeyID: $keyid, Message: $message, User: $user");
+
 try {
     // Start transaction
     $pdo->beginTransaction();
@@ -57,6 +61,7 @@ try {
     
     if ($checkStmt->rowCount() > 0) {
         $pdo->rollBack();
+        error_log("Client inserir_mensagem - Duplicate message detected");
         if ($isAjax) {
             header('Content-Type: application/json');
             echo json_encode([
@@ -65,7 +70,7 @@ try {
                 'duplicate' => true
             ]);
         } else {
-            header('Location: detalhes_ticket.php?keyid=' . urlencode($id));
+            header('Location: detalhes_ticket.php?keyid=' . urlencode($keyid));
         }
         exit;
     }
@@ -87,6 +92,7 @@ try {
     
     // Get the inserted message ID
     $messageId = $pdo->lastInsertId();
+    error_log("Client inserir_mensagem - Message saved with ID: $messageId");
     
     // Update ticket's last update time
     $updateSql = "UPDATE info_xdfree01_extrafields 
@@ -117,6 +123,7 @@ try {
         
         // Try to send to WebSocket server
         $wsSuccess = sendToWebSocketServer($messageData);
+        error_log("Client inserir_mensagem - WebSocket send result: " . ($wsSuccess ? 'success' : 'failed'));
     } else {
         $wsSuccess = true;
     }
@@ -130,7 +137,7 @@ try {
             'websocketSent' => $wsSuccess
         ]);
     } else {
-        header('Location: detalhes_ticket.php?keyid=' . urlencode($id));
+        header('Location: detalhes_ticket.php?keyid=' . urlencode($keyid));
     }
     
 } catch (Exception $e) {

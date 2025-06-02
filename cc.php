@@ -2,6 +2,92 @@
 session_start();
 include('conflogin.php');
 include('db.php');
+
+// WebDAV Configuration - Updated to proper WebDAV endpoint
+$webdav_url = 'https://infocloud.ddns.net:5001/remote.php/webdav/docs/';
+$username = 'Nas';
+$password = '/*2025IE+';
+
+// Simple function to check if file exists
+function fileExists($filename) {
+    $url = 'https://infocloud.ddns.net:5001/docs/' . $filename;
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_NOBODY, true);
+    curl_setopt($ch, CURLOPT_USERPWD, "Nas:/*2025IE+");
+    curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    
+    curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    return $http_code === 200;
+}
+
+// Function to check if file exists on WebDAV with improved debugging
+function checkWebDAVFile($filename, $webdav_url, $username, $password) {
+    $file_url = $webdav_url . $filename;
+    
+    $ch = curl_init($file_url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_USERPWD, "$username:$password");
+    curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+    curl_setopt($ch, CURLOPT_NOBODY, true); // HEAD request only
+    curl_setopt($ch, CURLOPT_HEADER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // For self-signed certificates
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10); // 10 second timeout
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_VERBOSE, false); // Set to true for debugging
+    
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_error = curl_error($ch);
+    curl_close($ch);
+    
+    // Log for debugging (remove in production)
+    error_log("WebDAV Check - File: $filename, URL: $file_url, HTTP Code: $http_code, Error: $curl_error");
+    
+    // Return true if file exists (HTTP 200 or 204 for WebDAV)
+    return in_array($http_code, [200, 204]);
+}
+
+// Function to get WebDAV file URL
+function getWebDAVFileURL($filename, $webdav_url) {
+    return $webdav_url . $filename;
+}
+
+// Alternative function to list WebDAV directory (for debugging)
+function listWebDAVDirectory($webdav_url, $username, $password) {
+    $ch = curl_init($webdav_url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_USERPWD, "$username:$password");
+    curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PROPFIND');
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Depth: 1',
+        'Content-Type: application/xml'
+    ]);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    error_log("WebDAV Directory List - HTTP Code: $http_code, Response length: " . strlen($response));
+    
+    return $http_code === 207; // Multi-Status response for successful PROPFIND
+}
+
+// Test WebDAV connection (remove this in production)
+$webdav_connection_test = listWebDAVDirectory($webdav_url, $username, $password);
+error_log("WebDAV Connection Test Result: " . ($webdav_connection_test ? "SUCCESS" : "FAILED"));
 ?>
 <!DOCTYPE html>
 <html lang="pt-pt">
@@ -80,7 +166,7 @@ include('db.php');
                                 <div class="card-body py-3" id="pending-amount-section">
                                     <h6 class="fw-bold mb-3">Valor Pendente</h6>
                                     <p class="mb-1">Tem neste momento:</p>
-                                    <h3 class="text-danger mb-0" id="pending-amount">Calculando...</h3>
+                                    <h3 class="text-danger mb-0" id="pending-amount">A calcular...</h3>
                                     <p class="text-muted mb-0">pendentes de pagamento</p>
                                 </div>
                             </div>
@@ -128,7 +214,7 @@ include('db.php');
                         <div class="col-12 mt-2">
                             <div class="alert alert-info p-2 d-flex align-items-center" id="filter-results" style="display: none !important;">
                                 <i class="bi bi-funnel-fill me-2"></i>
-                                <span>Mostrando <strong id="filtered-count">0</strong> registros filtrados</span>
+                                <span>A mostrar <strong id="filtered-count">0</strong> registros filtrados</span>
                             </div>
                         </div>
                     </form>
@@ -283,13 +369,9 @@ include('db.php');
             // Construir nome do arquivo
             $nome_arquivo = "{$sigla}_{$transaction['SerieId']}-{$transaction['DocNumber']}_1.pdf";
 
-            // Caminho do arquivo
-            $pasta_arquivos = "docs/";
-            $caminho_completo = $pasta_arquivos . $nome_arquivo;
-            
-            // Verifica se o arquivo existe e gera o link para download
-            if (file_exists($caminho_completo)) {
-                echo "<td class='text-center'><a href='$caminho_completo' target='_blank' class='btn btn-light'><i class='bi bi-download'></i></a></td>";
+            // Only show download icon if file exists
+            if (fileExists($nome_arquivo)) {
+                echo "<td class='text-center'><a href='webdav_download.php?file=" . urlencode($nome_arquivo) . "' target='_blank' class='btn btn-light'><i class='bi bi-download'></i></a></td>";
             } else {
                 echo "<td class='text-center'>-</td>";
             }
@@ -568,7 +650,7 @@ include('db.php');
             // Atualiza o contador na UI
             const filterResultsDiv = document.getElementById('filter-results');
             
-            // Remove style attribute to clear any !important declarations
+            // Removes style attribute to clear any !important declarations
             filterResultsDiv.removeAttribute('style');
             
             if (activeFilter) {

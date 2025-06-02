@@ -512,7 +512,7 @@ function getStatusColor($status)
             <!-- Mensagem de informação do ticket no topo -->
             <div class="ticket-info">
                 <h5><?php echo htmlspecialchars($ticket['Name']); ?></h5>
-                <p><strong>Descrição:</strong> <?php echo htmlspecialchars($ticket['Description']); ?></p>
+                <p><strong>Descrição:</strong> <?php echo html_entity_decode(htmlspecialchars($ticket['Description']), ENT_QUOTES, 'UTF-8'); ?></p>
                 <p><strong>Criado por:</strong> <?php echo htmlspecialchars($ticket['CreationUser']); ?></p>
                 <p><strong>Criado em:</strong> <?php echo htmlspecialchars($ticket['CreationDate']); ?></p>
                 <?php if (!empty($ticket['image'])) { 
