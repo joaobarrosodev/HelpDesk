@@ -30,7 +30,7 @@ function filterTableByAll() {
     document.getElementById('date-range-text').textContent = dateRangeText;
   }
   
-  // Itera pelas linhas da tabela (começando em 1 para pular o cabeçalho)
+  // Itera pelas linhas da tabela (começando em 1 para saltar o cabeçalho)
   for (let i = 1; i < rows.length; i++) {
     let showRow = true; // Por padrão, mostra a linha
     

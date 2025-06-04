@@ -149,7 +149,7 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
                         <div class="col-12 mt-2">
                             <div class="alert alert-info p-2 d-flex align-items-center" id="filter-results">
                                 <i class="bi bi-funnel-fill me-2"></i>
-                                <span>Mostrando <strong><?php echo count($tickets); ?></strong> tickets</span>
+                                <span>A mostrar <strong><?php echo count($tickets); ?></strong> tickets</span>
                             </div>
                         </div>
                     </form>
@@ -157,7 +157,7 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
                     <!-- Table -->
                     <div class="table-responsive">
                         <table class="table align-middle">                            
-                            <thead class="table-dark">                
+                            <thead class="table-light">                
                                 <tr>
                                     <th scope="col" class="sortable text-nowrap">Título</th>
                                     <th scope="col" class="sortable text-nowrap">Assunto</th>

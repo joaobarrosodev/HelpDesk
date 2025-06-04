@@ -251,7 +251,7 @@ a:hover {
 }
 
 a:hover .bi {
-    color: #529ebe; /* Altera a cor do ícone quando o mouse passar sobre o link */
+    color: #000000; /* Altera a cor do ícone quando o mouse passar sobre o link */
 }
 
 

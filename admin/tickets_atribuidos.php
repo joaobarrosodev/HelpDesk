@@ -94,7 +94,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <!-- Table -->
                     <div class="table-responsive pb-5">
                         <table class="table align-middle">
-                            <thead class="table-dark">
+                            <thead class="table-light">
                                 <tr>
                                     <th scope="col" class="sortable text-nowrap">Título</th>
                                     <th scope="col" class="sortable text-nowrap">Atualizado</th>

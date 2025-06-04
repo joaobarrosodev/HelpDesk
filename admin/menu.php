@@ -60,6 +60,13 @@
                         <span>Tickets Fechados</span>
                     </a>
                 </li>
+
+                <li class="nav-item px-2 py-1">
+                    <a href="tickets_fechados.php" id="tickets-all" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'consultar_contratos.php' ? 'active' : ''; ?>">
+                        <i class="bi bi-list-check me-3 " aria-hidden="true"></i> 
+                        <span>Consultar Contratos</span>
+                    </a>
+                </li>
             <?php else: ?>
                 <li class="nav-item px-2 py-1">
                     <a href="login.php" id="login" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark">

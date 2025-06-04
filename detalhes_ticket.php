@@ -491,7 +491,7 @@ function getStatusColor($status) {
                 </div>
             </div>
             <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-outline-secondary" onclick="skipReview()">Pular</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="skipReview()">Saltar</button>
                 <button type="button" class="btn btn-primary" id="submitReviewBtn" onclick="submitReview()" disabled>
                     <i class="bi bi-check me-2"></i>Enviar Avaliação
                 </button>

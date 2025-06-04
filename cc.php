@@ -447,7 +447,7 @@ error_log("WebDAV Connection Test Result: " . ($webdav_connection_test ? "SUCCES
                 if (table) {
                     const totalRows = table.getElementsByTagName('tr').length - 1; // Subtract header row
                     document.querySelector('#filter-results span').innerHTML = 
-                        `Mostrando todos os <strong>${totalRows}</strong> registros`;
+                        `A mostrar todos os <strong>${totalRows}</strong> registros`;
                     
                     filterResults.removeAttribute('style');
                     filterResults.style.display = 'flex';
@@ -477,7 +477,7 @@ error_log("WebDAV Connection Test Result: " . ($webdav_connection_test ? "SUCCES
             const totalRows = rows.length - 1; // Subtract header row
             const filterResults = document.getElementById('filter-results');
             document.querySelector('#filter-results span').innerHTML = 
-                `Mostrando todos os <strong>${totalRows}</strong> registros`;
+                `A mostrar todos os <strong>${totalRows}</strong> registros`;
             
             filterResults.removeAttribute('style');
             filterResults.style.display = 'flex';
@@ -512,7 +512,7 @@ error_log("WebDAV Connection Test Result: " . ($webdav_connection_test ? "SUCCES
                 'NC': 'Nota de Crédito'
             };
             
-            // Itera pelas linhas da tabela (começando em 1 para pular o cabeçalho)
+            // Itera pelas linhas da tabela (começando em 1 para saltar o cabeçalho)
             for (let i = 1; i < rows.length; i++) {
                 let showRow = true; // Por padrão, mostra a linha
                 
@@ -639,7 +639,7 @@ error_log("WebDAV Connection Test Result: " . ($webdav_connection_test ? "SUCCES
             
             const activeFilter = (documentType !== 'all' || (startDate && endDate) || minValue || maxValue);
             
-            // Conta as linhas visíveis (começando em 1 para pular o cabeçalho)
+            // Conta as linhas visíveis (começando em 1 para saltar o cabeçalho)
             for (let i = 1; i < rows.length; i++) {
                 totalRows++;
                 if (rows[i].style.display !== 'none') {
@@ -654,15 +654,15 @@ error_log("WebDAV Connection Test Result: " . ($webdav_connection_test ? "SUCCES
             filterResultsDiv.removeAttribute('style');
             
             if (activeFilter) {
-                // Mostrando resultados filtrados 
+                // A mostrar resultados filtrados 
                 document.querySelector('#filter-results span').innerHTML = 
-                    `Mostrando <strong>${filteredCount}</strong> de ${totalRows} registros`;
+                    `A mostrar <strong>${filteredCount}</strong> de ${totalRows} registros`;
                 
                 filterResultsDiv.style.display = 'flex';
             } else {
                 // Nenhum filtro aplicado - mostra o total de registros
                 document.querySelector('#filter-results span').innerHTML = 
-                    `Mostrando todos os <strong>${totalRows}</strong> registros`;
+                    `A mostrar todos os <strong>${totalRows}</strong> registros`;
                 
                 filterResultsDiv.style.display = 'flex';
             }

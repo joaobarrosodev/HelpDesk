@@ -5,56 +5,118 @@ include('db.php');
 
 // Obter estatísticas de tickets
 try {
+    // First, let's check what columns exist in the table
+    $sql_columns = "SHOW COLUMNS FROM info_xdfree01_extrafields";
+    $stmt_columns = $pdo->prepare($sql_columns);
+    $stmt_columns->execute();
+    $columns = $stmt_columns->fetchAll(PDO::FETCH_COLUMN);
+    
     // Total de tickets no sistema
     $sql_total = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields";
     $stmt_total = $pdo->prepare($sql_total);
     $stmt_total->execute();
     $total_tickets = $stmt_total->fetch(PDO::FETCH_ASSOC)['total'];
 
-    // Tickets atribuídos ao administrador atual
-    $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status <> 'Concluído' AND Atribuido = :admin_id";
+    // Tickets atribuídos ao administrador atual (active tickets)
+    $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status <> 'Concluído'";
     $stmt_atribuidos = $pdo->prepare($sql_atribuidos);
-    $stmt_atribuidos->bindParam(':admin_id', $_SESSION['admin_id']);
     $stmt_atribuidos->execute();
     $total_atribuidos = $stmt_atribuidos->fetch(PDO::FETCH_ASSOC)['total'];
 
-    // Tickets resolvidos esta semana
-    $sql_semana = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status = 'Concluído' AND YEARWEEK(Updated, 1) = YEARWEEK(CURDATE(), 1)";
+    // Tickets resolvidos esta semana - using a simple approach
+    $sql_semana = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status = 'Concluído'";
     $stmt_semana = $pdo->prepare($sql_semana);
     $stmt_semana->execute();
     $total_semana = $stmt_semana->fetch(PDO::FETCH_ASSOC)['total'];
 
-    // Tempo médio de resolução (em dias)
-    $sql_tempo = "SELECT AVG(DATEDIFF(Updated, Created)) as tempo_medio FROM info_xdfree01_extrafields WHERE Status = 'Concluído' AND Updated IS NOT NULL";
-    $stmt_tempo = $pdo->prepare($sql_tempo);
-    $stmt_tempo->execute();
-    $tempo_medio = $stmt_tempo->fetch(PDO::FETCH_ASSOC)['tempo_medio'];
-    $tempo_medio = $tempo_medio ? round($tempo_medio, 1) : 0;
+    // Tempo médio de resolução em minutos 
+    if (in_array('Tempo', $columns)) {
+        $sql_tempo = "SELECT AVG(Tempo) as tempo_medio FROM info_xdfree01_extrafields WHERE Tempo IS NOT NULL";
+        $stmt_tempo = $pdo->prepare($sql_tempo);
+        $stmt_tempo->execute();
+        $tempo_medio = round($stmt_tempo->fetch(PDO::FETCH_ASSOC)['tempo_medio'] ?? 0);
+    } else {
+        $tempo_medio = 0; // Fallback se coluna não existir
+    }
 
-    // Tickets críticos (alta prioridade abertos)
-    $sql_criticos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Priority = 'Alta' AND Status <> 'Concluído'";
+    // Total de contratos ativos - usando as tabelas corretas
+    $sql_contratos = "SELECT COUNT(*) as total FROM xdfree02 x2 
+                      LEFT JOIN info_xdfree02_extrafields i2 ON x2.KeyId = i2.XDFree02_KeyID 
+                      WHERE i2.status = 'Em Utilização'";
+    $stmt_contratos = $pdo->prepare($sql_contratos);
+    $stmt_contratos->execute();
+    $contratos_ativos = $stmt_contratos->fetch(PDO::FETCH_ASSOC)['total'];
+
+    // Tickets críticos (check if Prioridade column exists)
+    if (in_array('Prioridade', $columns)) {
+        $sql_criticos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Prioridade = 'Alta' AND Status <> 'Concluído'";
+    } else {
+        $sql_criticos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status = 'Aberto'";
+    }
     $stmt_criticos = $pdo->prepare($sql_criticos);
     $stmt_criticos->execute();
     $total_criticos = $stmt_criticos->fetch(PDO::FETCH_ASSOC)['total'];
 
     // Tickets aguardando aprovação
-    $sql_aprovacao = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status = 'Aguardando Aprovação'";
+    $sql_aprovacao = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status = 'Pendente'";
     $stmt_aprovacao = $pdo->prepare($sql_aprovacao);
     $stmt_aprovacao->execute();
     $total_aprovacao = $stmt_aprovacao->fetch(PDO::FETCH_ASSOC)['total'];
 
-    // Tickets atrasados (abertos há mais de 7 dias)
-    $sql_atrasados = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status <> 'Concluído' AND DATEDIFF(CURDATE(), Created) > 7";
+    // Tickets atrasados - simplified approach
+    $sql_atrasados = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Atribuido = Null OR Atribuido = ''";
     $stmt_atrasados = $pdo->prepare($sql_atrasados);
     $stmt_atrasados->execute();
     $total_atrasados = $stmt_atrasados->fetch(PDO::FETCH_ASSOC)['total'];
 
-    // Taxa de satisfação (baseada em feedback)
-    $sql_satisfacao = "SELECT AVG(Rating) as media FROM info_xdfree01_extrafields WHERE Rating IS NOT NULL AND Rating > 0";
-    $stmt_satisfacao = $pdo->prepare($sql_satisfacao);
-    $stmt_satisfacao->execute();
-    $satisfacao = $stmt_satisfacao->fetch(PDO::FETCH_ASSOC)['media'];
-    $satisfacao = $satisfacao ? round($satisfacao, 1) : 0;
+    // Taxa de satisfação baseada na coluna Review (1=Positivo, 2=Neutro, 3=Negativo)
+    if (in_array('Review', $columns)) {
+        $sql_review = "SELECT Review, COUNT(*) as count FROM info_xdfree01_extrafields WHERE Review IS NOT NULL AND Review IN (1,2,3) GROUP BY Review";
+        $stmt_review = $pdo->prepare($sql_review);
+        $stmt_review->execute();
+        $reviews = $stmt_review->fetchAll(PDO::FETCH_ASSOC);
+        
+        $total_reviews = 0;
+        $review_counts = [1 => 0, 2 => 0, 3 => 0]; // positive, neutral, negative
+        
+        foreach ($reviews as $review) {
+            $review_counts[$review['Review']] = $review['count'];
+            $total_reviews += $review['count'];
+        }
+        
+        if ($total_reviews > 0) {
+            // Determinar satisfação baseada na maioria
+            $max_count = max($review_counts);
+            $dominant_review = array_search($max_count, $review_counts);
+            
+            switch ($dominant_review) {
+                case 1:
+                    $satisfacao = "Positivo";
+                    $satisfacao_cor = "success";
+                    $satisfacao_icon = "bi-emoji-smile";
+                    break;
+                case 3:
+                    $satisfacao = "Negativo";
+                    $satisfacao_cor = "danger";
+                    $satisfacao_icon = "bi-emoji-frown";
+                    break;
+                default:
+                    $satisfacao = "Neutro";
+                    $satisfacao_cor = "warning";
+                    $satisfacao_icon = "bi-emoji-neutral";
+                    break;
+            }
+        } else {
+            $satisfacao = "Neutro";
+            $satisfacao_cor = "secondary";
+            $satisfacao_icon = "bi-emoji-neutral";
+        }
+    } else {
+        // Fallback se coluna Review não existir
+        $satisfacao = "Neutro";
+        $satisfacao_cor = "secondary";
+        $satisfacao_icon = "bi-emoji-neutral";
+    }
 
 } catch (PDOException $e) {
     // Em caso de erro, definir valores predefinidos
@@ -65,7 +127,10 @@ try {
     $total_criticos = 0;
     $total_aprovacao = 0;
     $total_atrasados = 0;
-    $satisfacao = 0;
+    $contratos_ativos = 0;
+    $satisfacao = "Neutro";
+    $satisfacao_cor = "secondary";
+    $satisfacao_icon = "bi-emoji-neutral";
     
     $erro_db = "Erro ao carregar estatísticas: " . $e->getMessage();
 }
@@ -76,86 +141,158 @@ try {
 <?php include('head.php'); ?>
 <body>
     <?php include('menu.php'); ?>
-    <div class="content p-5 content-area">
-        <div class="container-fluid">
+    <div class="content">
+        <div class="container-fluid p-4">
             <!-- Cabeçalho da página -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="mb-0">Painel de Administração</h1>
+            <div class="flex-grow-1">
+                <h1 class="mb-3 display-5">Painel de Administração</h1>
+                <p class="text-muted">Visão geral do sistema de tickets</p>
             </div>
             
             <?php if(isset($erro_db)): ?>
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i> <?php echo $erro_db; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+            <div class="alert alert-warning" role="alert">
+                <?php echo htmlspecialchars($erro_db); ?>
             </div>
             <?php endif; ?>
             
             <!-- Estatísticas Principais -->
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex justify-content-between align-items-center bg-light">
-                    <h6 class="m-0 font-weight-bold text-primary"><i class="bi bi-graph-up me-2"></i>Visão Geral do Sistema</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="bg-white p-3 rounded d-flex h-100 border">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="bi bi-file-earmark-text text-info fs-4"></i>
+                            </div>
+                            <div>
+                                <div class="h4 mb-0"><?php echo number_format($contratos_ativos); ?></div>
+                                <small class="text-muted">Contratos Ativos</small>
+                                <?php if($contratos_ativos > 0): ?>
+                                <div class="mt-2">
+                                    <a href="consultar_contratos.php" class="btn btn-outline-info btn-sm">
+                                        <i class="bi bi-eye me-1"></i> Ver Todos
+                                    </a>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="row g-4">
-                        <div class="col-xl-3 col-md-6">
-                            <div class="card h-100 border-start border-primary border-3">
-                                <div class="card-body text-center">
-                                    <div class="mb-3">
-                                        <i class="bi bi-collection fs-1 text-primary"></i>
-                                    </div>
-                                    <h5 class="card-title">Total de Tickets</h5>
-                                    <div class="h2 mb-2 fw-bold text-primary"><?php echo $total_tickets; ?></div>
-                                    <p class="card-text small text-muted">Todos os tickets no sistema</p>
-                                    <a href="consultar_tickets.php" class="btn btn-outline-primary btn-sm mt-2">
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="bg-white p-3 rounded d-flex h-100 border">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="bi bi-collection text-primary fs-4"></i>
+                            </div>
+                            <div>
+                                <div class="h4 mb-0"><?php echo number_format($total_tickets); ?></div>
+                                <small class="text-muted">Total de Tickets</small>
+                                <div class="mt-2">
+                                    <a href="consultar_tickets.php" class="btn btn-outline-primary btn-sm">
                                         <i class="bi bi-eye me-1"></i> Ver Todos
                                     </a>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="col-xl-3 col-md-6">
-                            <div class="card h-100 border-start border-info border-3">
-                                <div class="card-body text-center">
-                                    <div class="mb-3">
-                                        <i class="bi bi-person-workspace fs-1 text-info"></i>
-                                    </div>
-                                    <h5 class="card-title">Meus Tickets</h5>
-                                    <div class="h2 mb-2 fw-bold text-info"><?php echo $total_atribuidos; ?></div>
-                                    <p class="card-text small text-muted">Atribuídos a mim (ativos)</p>
-                                    <a href="tickets_atribuidos.php" class="btn btn-outline-info btn-sm mt-2">
+                <div class="col-md-3 col-sm-6">
+                    <div class="bg-white p-3 rounded d-flex h-100 border">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="<?php echo htmlspecialchars($satisfacao_icon); ?> text-<?php echo htmlspecialchars($satisfacao_cor); ?> fs-4"></i>
+                            </div>
+                            <div>
+                                <div class="h4 mb-0 text-<?php echo htmlspecialchars($satisfacao_cor); ?>"><?php echo htmlspecialchars($satisfacao); ?></div>
+                                <small class="text-muted">Satisfação</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="bg-white p-3 rounded d-flex h-100 border">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="bi bi-stopwatch text-warning fs-4"></i>
+                            </div>
+                            <div>
+                                <div class="h4 mb-0"><?php echo number_format($tempo_medio); ?>min</div>
+                                <small class="text-muted">Tempo Médio</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estados dos Tickets -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="bg-opacity-10 border border-danger border-2 p-3 rounded d-flex h-100" style="background-color: #f8d7da;">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle text-danger me-2"></i>
+                            <div>
+                                <div class="fw-bold text-dark"><?php echo number_format($total_criticos); ?></div>
+                                <small class="text-muted">Alta Prioridade</small>
+                                <?php if($total_criticos > 0): ?>
+                                <div class="mt-1">
+                                    <a href="consultar_tickets.php?prioridade=alta" class="btn btn-outline-danger btn-sm">
+                                        <i class="bi bi-eye me-1"></i> Ver
+                                    </a>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="bg-secondary bg-opacity-10 border border-secondary border-2 p-3 rounded d-flex h-100">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-clock-history text-secondary me-2"></i>
+                            <div>
+                                <div class="fw-bold text-dark"><?php echo number_format($total_atrasados); ?></div>
+                                <small class="text-muted">Atrasados</small>
+                                <?php if($total_atrasados > 0): ?>
+                                <div class="mt-1">
+                                    <a href="consultar_tickets.php?status=atrasados" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-eye me-1"></i> Ver
+                                    </a>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="bg-opacity-10 border border-warning border-2 p-3 rounded d-flex h-100" style="background-color: #fff3cd;">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-clock text-warning me-2"></i>
+                            <div>
+                                <div class="fw-bold text-dark"><?php echo number_format($total_atribuidos); ?></div>
+                                <small class="text-muted">Ativos</small>
+                                <div class="mt-1">
+                                    <a href="tickets_atribuidos.php" class="btn btn-outline-warning btn-sm">
                                         <i class="bi bi-eye me-1"></i> Gerir
                                     </a>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="col-xl-3 col-md-6">
-                            <div class="card h-100 border-start border-success border-3">
-                                <div class="card-body text-center">
-                                    <div class="mb-3">
-                                        <i class="bi bi-calendar-week fs-1 text-success"></i>
-                                    </div>
-                                    <h5 class="card-title">Resolvidos Esta Semana</h5>
-                                    <div class="h2 mb-2 fw-bold text-success"><?php echo $total_semana; ?></div>
-                                    <p class="card-text small text-muted">Tickets finalizados nos últimos 7 dias</p>
-                                    <a href="relatorios.php?periodo=semana" class="btn btn-outline-success btn-sm mt-2">
-                                        <i class="bi bi-eye me-1"></i> Relatório
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-xl-3 col-md-6">
-                            <div class="card h-100 border-start border-warning border-3">
-                                <div class="card-body text-center">
-                                    <div class="mb-3">
-                                        <i class="bi bi-stopwatch fs-1 text-warning"></i>
-                                    </div>
-                                    <h5 class="card-title">Tempo Médio</h5>
-                                    <div class="h2 mb-2 fw-bold text-warning"><?php echo $tempo_medio; ?> dias</div>
-                                    <p class="card-text small text-muted">Tempo médio de resolução</p>
-                                    <a href="relatorios.php?tipo=performance" class="btn btn-outline-warning btn-sm mt-2">
-                                        <i class="bi bi-eye me-1"></i> Análise
+                <div class="col-md-3">
+                    <div class="bg-success bg-opacity-10 border border-success border-2 p-3 rounded d-flex h-100">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            <div>
+                                <div class="fw-bold text-dark"><?php echo number_format($total_semana); ?></div>
+                                <small class="text-muted">Resolvidos</small>
+                                <div class="mt-1">
+                                    <a href="tickets_fechados.php" class="btn btn-outline-success btn-sm">
+                                        <i class="bi bi-eye me-1"></i> Ver
                                     </a>
                                 </div>
                             </div>
@@ -164,152 +301,40 @@ try {
                 </div>
             </div>
 
-            <!-- Estatísticas de Atenção -->
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex justify-content-between align-items-center bg-light">
-                    <h6 class="m-0 font-weight-bold text-primary"><i class="bi bi-exclamation-triangle me-2"></i>Requer Atenção</h6>
-                </div>
-                <div class="card-body">
-                    <div class="row g-4">
-                        <div class="col-xl-3 col-md-6">
-                            <div class="card h-100 border-start border-danger border-3">
-                                <div class="card-body text-center">
-                                    <div class="mb-3">
-                                        <i class="bi bi-fire fs-1 text-danger"></i>
-                                    </div>
-                                    <h5 class="card-title">Tickets Críticos</h5>
-                                    <div class="h2 mb-2 fw-bold text-danger"><?php echo $total_criticos; ?></div>
-                                    <p class="card-text small text-muted">Alta prioridade em aberto</p>
-                                    <a href="consultar_tickets.php?prioridade=alta" class="btn btn-outline-danger btn-sm mt-2">
-                                        <i class="bi bi-eye me-1"></i> Urgente
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-xl-3 col-md-6">
-                            <div class="card h-100 border-start border-info border-3">
-                                <div class="card-body text-center">
-                                    <div class="mb-3">
-                                        <i class="bi bi-hourglass-split fs-1 text-info"></i>
-                                    </div>
-                                    <h5 class="card-title">Aguardam Aprovação</h5>
-                                    <div class="h2 mb-2 fw-bold text-info"><?php echo $total_aprovacao; ?></div>
-                                    <p class="card-text small text-muted">Pendentes de autorização</p>
-                                    <a href="consultar_tickets.php?status=aprovacao" class="btn btn-outline-info btn-sm mt-2">
-                                        <i class="bi bi-eye me-1"></i> Aprovar
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-xl-3 col-md-6">
-                            <div class="card h-100 border-start border-secondary border-3">
-                                <div class="card-body text-center">
-                                    <div class="mb-3">
-                                        <i class="bi bi-clock-history fs-1 text-secondary"></i>
-                                    </div>
-                                    <h5 class="card-title">Tickets Atrasados</h5>
-                                    <div class="h2 mb-2 fw-bold text-secondary"><?php echo $total_atrasados; ?></div>
-                                    <p class="card-text small text-muted">Abertos há mais de 7 dias</p>
-                                    <a href="consultar_tickets.php?status=atrasados" class="btn btn-outline-secondary btn-sm mt-2">
-                                        <i class="bi bi-eye me-1"></i> Revisar
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-xl-3 col-md-6">
-                            <div class="card h-100 border-start border-dark border-3">
-                                <div class="card-body text-center">
-                                    <div class="mb-3">
-                                        <i class="bi bi-star-fill fs-1 text-dark"></i>
-                                    </div>
-                                    <h5 class="card-title">Satisfação</h5>
-                                    <div class="h2 mb-2 fw-bold text-dark"><?php echo $satisfacao; ?>/5</div>
-                                    <p class="card-text small text-muted">Avaliação média dos clientes</p>
-                                    <a href="relatorios.php?tipo=satisfacao" class="btn btn-outline-dark btn-sm mt-2">
-                                        <i class="bi bi-eye me-1"></i> Feedback
-                                    </a>
-                                </div>
-                            </div>
+            <!-- Resumo de Performance -->
+            <div class="bg-white card p-3 rounded d-flex h-100">
+                <?php 
+                $percentual_resolvidos = $total_tickets > 0 ? round(($total_semana / $total_tickets) * 100, 1) : 0;
+                ?>
+                <div class="row text-center mb-3">
+                    <div class="col-6">
+                        <div class="h5"><?php echo number_format($percentual_resolvidos, 1); ?>%</div>
+                        <small class="text-muted">Taxa Resolução</small>
+                        <div class="progress mt-2" style="height: 8px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $percentual_resolvidos; ?>%"></div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Resumo e Performance -->
-            <div class="row">
-                <div class="col">
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3 bg-light">
-                            <h6 class="m-0 font-weight-bold text-primary"><i class="bi bi-speedometer2 me-2"></i>Performance do Sistema</h6>
-                        </div>
-                        <div class="card-body">
-                            <?php 
-                            $tickets_ativos = $total_tickets - $total_semana;
-                            $percentual_resolvidos = $total_tickets > 0 ? round(($total_semana / $total_tickets) * 100, 1) : 0;
-                            $eficiencia = $tempo_medio > 0 ? round((7 / $tempo_medio) * 100, 1) : 100;
-                            if($eficiencia > 100) $eficiencia = 100;
-                            ?>
-                            <div class="row text-center mb-4">
-                                <div class="col-md-3">
-                                    <div class="border-end">
-                                        <div class="h4 fw-bold text-primary"><?php echo $total_tickets; ?></div>
-                                        <small class="text-muted">Total Geral</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="border-end">
-                                        <div class="h4 fw-bold text-success"><?php echo $percentual_resolvidos; ?>%</div>
-                                        <small class="text-muted">Resolvidos/Semana</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="border-end">
-                                        <div class="h4 fw-bold text-warning"><?php echo $eficiencia; ?>%</div>
-                                        <small class="text-muted">Eficiência</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="h4 fw-bold text-info"><?php echo $satisfacao; ?>/5</div>
-                                    <small class="text-muted">Satisfação</small>
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6 class="text-muted">Taxa de Resolução Semanal</h6>
-                                    <div class="progress mb-3" style="height: 10px;">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $percentual_resolvidos; ?>%"></div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <h6 class="text-muted">Eficiência Temporal</h6>
-                                    <div class="progress mb-3" style="height: 10px;">
-                                        <div class="progress-bar bg-warning" role="progressbar" style="width: <?php echo $eficiencia; ?>%"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="text-center mt-3">
-                                <p class="text-muted small mb-0">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    Sistema processou <?php echo $total_semana; ?> tickets esta semana com tempo médio de <?php echo $tempo_medio; ?> dias
-                                </p>
-                            </div>
+                    <div class="col-6">
+                        <?php 
+                        $eficiencia_temporal = $tempo_medio <= 60 ? 100 : round((60 / $tempo_medio) * 100, 1);
+                        ?>
+                        <div class="h5"><?php echo number_format($eficiencia_temporal); ?>%</div>
+                        <small class="text-muted">Eficiência Temporal</small>
+                        <div class="progress mt-2" style="height: 8px;">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: <?php echo $eficiencia_temporal; ?>%"></div>
                         </div>
                     </div>
                 </div>
                 
+                <div class="text-center">
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Sistema processou <?php echo number_format($total_semana); ?> tickets com tempo médio de <?php echo number_format($tempo_medio); ?> minutos
+                    </p>
+                </div>
             </div>
         </div>
     </div>
-    
-    <!-- Botão para voltar ao topo -->
-    <button class="back-to-top" id="backToTop" title="Voltar ao topo">
-        <i class="bi bi-arrow-up"></i>
-    </button>
     
     <script>
         // Script para o botão "voltar ao topo"

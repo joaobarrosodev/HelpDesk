@@ -142,7 +142,7 @@ function filterTableByDateRange() {
   const dateRangeText = formatDateRange(startDateObj, endDateObj);
   document.getElementById('date-range-text').textContent = dateRangeText;
   
-  // Itera pelas linhas da tabela (começando em 1 para pular o cabeçalho)
+  // Itera pelas linhas da tabela (começando em 1 para saltar o cabeçalho)
   for (let i = 1; i < rows.length; i++) {
     const dateCell = rows[i].getElementsByTagName('td')[1]; // Coluna de data de criação
     if (dateCell) {
