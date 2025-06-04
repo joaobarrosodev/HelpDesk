@@ -16,7 +16,7 @@
 <nav class="sidebar-helpdesk bg-white shadow-sm d-flex flex-column" id="sidebar" aria-label="Menu principal">   
     <header class="sidebar-logo-area p-3 d-flex justify-content-between align-items-center">
         <a href="index.php" title="Página inicial" class="text-decoration-none">
-            <img src="img/logo.png" alt="Info.exe - Logótipo" class="img-fluid" width="120" height="40">
+            <img src="../img/logo.png" alt="Info.exe - Logótipo" class="img-fluid" width="120" height="40">
         </a>
         <button class="btn border-0 bg-transparent d-lg-none d-block p-0 " id="sidebarClose" aria-label="Fechar menu">
             <i class="bi bi-x text-muted" aria-hidden="true"></i>
@@ -62,7 +62,7 @@
                 </li>
 
                 <li class="nav-item px-2 py-1">
-                    <a href="tickets_fechados.php" id="tickets-all" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'consultar_contratos.php' ? 'active' : ''; ?>">
+                    <a href="consultar_contratos.php" id="tickets-all" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'consultar_contratos.php' ? 'active' : ''; ?>">
                         <i class="bi bi-list-check me-3 " aria-hidden="true"></i> 
                         <span>Consultar Contratos</span>
                     </a>
