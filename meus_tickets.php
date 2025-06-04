@@ -8,6 +8,9 @@ error_log("meus_tickets.php - Session data: " . print_r($_SESSION, true));
 include('conflogin.php');
 include('db.php');
 
+// Get user email for filtering
+$usuario_email = $_SESSION['usuario_email'];
+
 // Consultar os tickets do utilizador autenticado (abertos e resolvidos)
 $usuario_id = $_SESSION['usuario_id'];
 
@@ -19,34 +22,69 @@ $assunto_filtro = isset($_GET['assunto']) ? $_GET['assunto'] : ''; // Novo filtr
 
 $params = [];
 
-// Cria a consulta SQL base - corrigindo o erro de coluna não encontrada
-$sql = "SELECT 
-            t.id, 
-            t.KeyId,
-            t.Name as titulo_do_ticket,
-            i.User as assunto_do_ticket, 
-            DATE_FORMAT(i.dateu, '%d/%m/%Y') as atualizado, 
-            DATE_FORMAT(i.CreationDate, '%d/%m/%Y') as criado,
-            i.Status as status,
-            i.Priority as prioridade,
-            (SELECT 
-                CASE
-                    WHEN c.user = 'admin' THEN 'Administrador'
-                    WHEN oee.Name IS NOT NULL THEN oee.Name
-                    ELSE SUBSTRING_INDEX(c.user, '@', 1)
-                END
-             FROM comments_xdfree01_extrafields c 
-             LEFT JOIN online_entity_extrafields oee ON c.user = oee.email 
-             WHERE c.XDFree01_KeyID = t.KeyId 
-             ORDER BY c.Date DESC LIMIT 1) as LastCommentUser
-        FROM 
-            xdfree01 t
-        LEFT JOIN 
-            info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
-        WHERE 
-            i.Entity = :usuario_id";
-
-$params[':usuario_id'] = $usuario_id;
+// Modify the SQL query based on user role
+if (isAdmin()) {
+    // Admins see all tickets with entity information
+    $sql = "SELECT 
+                t.id, 
+                t.KeyId,
+                t.Name as titulo_do_ticket,
+                i.User as assunto_do_ticket, 
+                DATE_FORMAT(i.dateu, '%d/%m/%Y') as atualizado, 
+                DATE_FORMAT(i.CreationDate, '%d/%m/%Y') as criado,
+                i.Status as status,
+                i.Priority as prioridade,
+                i.CreationUser,
+                e.Name as entity_name,
+                (SELECT 
+                    CASE
+                        WHEN c.user = 'admin' THEN 'Administrador'
+                        WHEN oee.Name IS NOT NULL THEN oee.Name
+                        ELSE SUBSTRING_INDEX(c.user, '@', 1)
+                    END
+                 FROM comments_xdfree01_extrafields c 
+                 LEFT JOIN online_entity_extrafields oee ON c.user = oee.email 
+                 WHERE c.XDFree01_KeyID = t.KeyId 
+                 ORDER BY c.Date DESC LIMIT 1) as LastCommentUser
+            FROM 
+                xdfree01 t
+            LEFT JOIN 
+                info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
+            LEFT JOIN
+                entities e ON t.Entity = e.KeyId
+            WHERE 
+                i.XDFree01_KeyID IS NOT NULL";
+} else {
+    // Common users see only tickets they created (filtered by email)
+    $sql = "SELECT 
+                t.id, 
+                t.KeyId,
+                t.Name as titulo_do_ticket,
+                i.User as assunto_do_ticket, 
+                DATE_FORMAT(i.dateu, '%d/%m/%Y') as atualizado, 
+                DATE_FORMAT(i.CreationDate, '%d/%m/%Y') as criado,
+                i.Status as status,
+                i.Priority as prioridade,
+                i.CreationUser,
+                (SELECT 
+                    CASE
+                        WHEN c.user = 'admin' THEN 'Administrador'
+                        WHEN oee.Name IS NOT NULL THEN oee.Name
+                        ELSE SUBSTRING_INDEX(c.user, '@', 1)
+                    END
+                 FROM comments_xdfree01_extrafields c 
+                 LEFT JOIN online_entity_extrafields oee ON c.user = oee.email 
+                 WHERE c.XDFree01_KeyID = t.KeyId 
+                 ORDER BY c.Date DESC LIMIT 1) as LastCommentUser
+            FROM 
+                xdfree01 t
+            LEFT JOIN 
+                info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
+            WHERE 
+                i.CreationUser = :usuario_email";
+    
+    $params[':usuario_email'] = $usuario_email;
+}
 
 // Adiciona filtros se existirem
 if (!empty($data_filtro)) {
@@ -76,9 +114,21 @@ $stmt->execute($params);
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Obter lista de assuntos únicos para o dropdown
-$sql_assuntos = "SELECT DISTINCT User FROM info_xdfree01_extrafields WHERE Entity = :usuario_id AND User IS NOT NULL ORDER BY User";
-$stmt_assuntos = $pdo->prepare($sql_assuntos);
-$stmt_assuntos->bindParam(':usuario_id', $usuario_id);
+if (!isAdmin()) {
+    // Update the tickets query for common users to filter by email
+    $sql_assuntos = "SELECT DISTINCT i.User 
+                     FROM info_xdfree01_extrafields i 
+                     WHERE i.CreationUser = :usuario_email 
+                     AND i.User IS NOT NULL 
+                     ORDER BY i.User";
+    $stmt_assuntos = $pdo->prepare($sql_assuntos);
+    $stmt_assuntos->bindParam(':usuario_email', $usuario_email);
+} else {
+    // Admins see all subjects
+    $sql_assuntos = "SELECT DISTINCT User FROM info_xdfree01_extrafields WHERE User IS NOT NULL ORDER BY User";
+    $stmt_assuntos = $pdo->prepare($sql_assuntos);
+}
+
 $stmt_assuntos->execute();
 $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
 ?>
@@ -92,8 +142,12 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
         <div class="container-fluid p-4">
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
-                    <h1 class="mb-3 display-5">Os Meus Tickets</h1>
-                    <p class="">Lista de todos os seus tickets, incluindo tickets em aberto e resolvidos. Utilize os filtros abaixo para refinar a visualização.</p>
+                    <h1 class="mb-3 display-5">
+                        <?php echo isAdmin() ? 'Todos os Tickets' : 'Os Meus Tickets'; ?>
+                    </h1>
+                    <p class="">
+                        <?php echo isAdmin() ? 'Lista de todos os tickets do sistema. Utilize os filtros abaixo para refinar a visualização.' : 'Lista de todos os seus tickets, incluindo tickets em aberto e resolvidos. Utilize os filtros abaixo para refinar a visualização.'; ?>
+                    </p>
                 </div>
                 <a href="abrir_ticket.php" class="btn btn-primary d-flex align-items-center">
                     Abrir Novo Ticket
@@ -161,6 +215,10 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
                                 <tr>
                                     <th scope="col" class="sortable text-nowrap">Título</th>
                                     <th scope="col" class="sortable text-nowrap">Assunto</th>
+                                    <?php if (isAdmin()): ?>
+                                    <th scope="col" class="sortable text-nowrap">Cliente</th>
+                                    <th scope="col" class="sortable text-nowrap">Criado Por</th>
+                                    <?php endif; ?>
                                     <th scope="col" class="sortable text-nowrap">Atualizado</th>
                                     <th scope="col" class="sortable text-nowrap">Criado</th>
                                     <th scope="col" class="sortable text-nowrap">Estado</th>
@@ -179,6 +237,10 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
                                                 </a>
                                             </td>
                                             <td><?php echo htmlspecialchars($ticket['assunto_do_ticket'] ?? ''); ?></td>
+                                            <?php if (isAdmin()): ?>
+                                            <td><?php echo htmlspecialchars($ticket['entity_name'] ?? 'N/A'); ?></td>
+                                            <td><?php echo htmlspecialchars($ticket['CreationUser'] ?? 'N/A'); ?></td>
+                                            <?php endif; ?>
                                             <td><?php echo $ticket['atualizado']; ?></td>
                                             <td><?php echo $ticket['criado']; ?></td>
                                             <td>
@@ -215,7 +277,7 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="7" class="text-center py-4">
+                                        <td colspan="<?php echo isAdmin() ? '9' : '7'; ?>" class="text-center py-4">
                                             <div class="alert alert-info mb-0">
                                                 <i class="bi bi-info-circle me-2"></i> Não há tickets para exibir.
                                             </div>

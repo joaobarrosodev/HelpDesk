@@ -1,6 +1,10 @@
 <?php
 session_start();
 include('conflogin.php');
+
+// Restrict access to admin users only
+requireAdmin();
+
 include('db.php');
 
 // WebDAV Configuration - Updated to proper WebDAV endpoint

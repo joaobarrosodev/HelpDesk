@@ -27,11 +27,11 @@ Inner Join entities on online.Entity_KeyId = entities.KeyId where online.email =
         $_SESSION['usuario_id'] = $usuario['KeyId'];
         $_SESSION['usuario_email'] = $usuario['email'];
         $_SESSION['Nome'] = $usuario['Name'];
-        $_SESSION['Grupo'] = $usuario['Grupo'];
+        $_SESSION['Grupo'] = $usuario['Grupo']; // Make sure this is properly set
         $_SESSION['last_activity'] = time();
         
-        // Log successful login
-        error_log("User logged in successfully: " . $usuario['email'] . " (ID: " . $usuario['KeyId'] . ")");
+        // Log successful login with role information
+        error_log("User logged in successfully: " . $usuario['email'] . " (ID: " . $usuario['KeyId'] . ", Role: " . $usuario['Grupo'] . ")");
 
         // Check if there's a redirect parameter
         $redirect = isset($_GET['redirect']) ? $_GET['redirect'] : 'index.php';

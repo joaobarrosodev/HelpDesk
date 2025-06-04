@@ -36,7 +36,7 @@
                 </li>
                 
                 <li class="nav-item px-2 py-1">
-                    <a href="abrir_ticket.php" id="ticket" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'ticket.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'ticket.php' ? 'page' : 'false'; ?>">
+                    <a href="abrir_ticket.php" id="ticket" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'abrir_ticket.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'ticket.php' ? 'page' : 'false'; ?>">
                         <i class="bi bi-ticket me-3 nav-menu-item" aria-hidden="true"></i> 
                         <span>Abrir Ticket</span>
                     </a>

@@ -36,9 +36,19 @@ if (isset($_GET['keyid'])) {
     $stmt->execute();
     $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    // After fetching the ticket, add access control
     if (!$ticket) {
         echo "Ticket não encontrado.";
         exit;
+    }
+
+    // Check if common user is trying to access someone else's ticket
+    if (isCommonUser()) {
+        // Check by email instead of entity since that's more reliable
+        if ($ticket['CreationUser'] !== $_SESSION['usuario_email']) {
+            header("Location: meus_tickets.php?error=" . urlencode("Acesso negado. Não pode ver tickets de outros utilizadores."));
+            exit;
+        }
     }
 
     $ticket_id = $ticket['KeyId'];

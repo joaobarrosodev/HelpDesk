@@ -16,46 +16,88 @@ $usuario = $stmt->fetch(PDO::FETCH_ASSOC);    if (!$usuario) {
     exit;
 }
 
-// Consultar total de tickets do usuário
-$sql_tickets = "SELECT 
-    COUNT(*) as total_tickets,
-    SUM(CASE WHEN i.Status != 'Concluído' THEN 1 ELSE 0 END) as tickets_ativos,
-    SUM(CASE WHEN i.Status = 'Concluído' THEN 1 ELSE 0 END) as tickets_concluidos,
-    SUM(CASE WHEN i.Status = 'Em Análise' THEN 1 ELSE 0 END) as tickets_em_analise,
-    AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_resposta,
-    AVG(i.Tempo) as avg_tempo,
-    SUM(i.Tempo) as total_tempo
-FROM 
-    info_xdfree01_extrafields i
-WHERE 
-    i.Entity = :usuario_id";
+// Modify ticket statistics query based on user role
+if (isAdmin()) {
+    // Admins see all tickets statistics
+    $sql_tickets = "SELECT 
+        COUNT(*) as total_tickets,
+        SUM(CASE WHEN i.Status != 'Concluído' THEN 1 ELSE 0 END) as tickets_ativos,
+        SUM(CASE WHEN i.Status = 'Concluído' THEN 1 ELSE 0 END) as tickets_concluidos,
+        SUM(CASE WHEN i.Status = 'Em Análise' THEN 1 ELSE 0 END) as tickets_em_analise,
+        AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_resposta,
+        AVG(i.Tempo) as avg_tempo,
+        SUM(i.Tempo) as total_tempo
+    FROM 
+        info_xdfree01_extrafields i";
+    
+    $stmt_tickets = $pdo->prepare($sql_tickets);
+} else {
+    // Common users see only their statistics filtered by email
+    $sql_tickets = "SELECT 
+        COUNT(*) as total_tickets,
+        SUM(CASE WHEN i.Status != 'Concluído' THEN 1 ELSE 0 END) as tickets_ativos,
+        SUM(CASE WHEN i.Status = 'Concluído' THEN 1 ELSE 0 END) as tickets_concluidos,
+        SUM(CASE WHEN i.Status = 'Em Análise' THEN 1 ELSE 0 END) as tickets_em_analise,
+        AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_resposta,
+        AVG(i.Tempo) as avg_tempo,
+        SUM(i.Tempo) as total_tempo
+    FROM 
+        info_xdfree01_extrafields i
+    WHERE 
+        i.CreationUser = :usuario_email";
+    
+    $stmt_tickets = $pdo->prepare($sql_tickets);
+    $stmt_tickets->bindParam(':usuario_email', $_SESSION['usuario_email']);
+}
 
-$stmt_tickets = $pdo->prepare($sql_tickets);
-$stmt_tickets->bindParam(':usuario_id', $usuario['Entity_KeyId']);
 $stmt_tickets->execute();
 $estatisticas = $stmt_tickets->fetch(PDO::FETCH_ASSOC);
 
-// Consultar tickets atrasados (assumindo que tickets com mais de 48 horas sem resposta são overdue)
-$sql_overdue = "SELECT COUNT(*) as overdue_tickets
-FROM info_xdfree01_extrafields i
-WHERE i.Entity = :usuario_id 
-AND i.Status != 'Concluído'
-AND TIMESTAMPDIFF(HOUR, i.dateu, NOW()) > 48";
+// Update overdue tickets query based on user role
+if (isAdmin()) {
+    // Admins see all overdue tickets
+    $sql_overdue = "SELECT COUNT(*) as overdue_tickets
+    FROM info_xdfree01_extrafields i
+    WHERE i.Status != 'Concluído'
+    AND TIMESTAMPDIFF(HOUR, i.dateu, NOW()) > 48";
 
-$stmt_overdue = $pdo->prepare($sql_overdue);
-$stmt_overdue->bindParam(':usuario_id', $usuario['Entity_KeyId']);
+    $stmt_overdue = $pdo->prepare($sql_overdue);
+} else {
+    // Common users see only their overdue tickets filtered by email
+    $sql_overdue = "SELECT COUNT(*) as overdue_tickets
+    FROM info_xdfree01_extrafields i
+    WHERE i.CreationUser = :usuario_email 
+    AND i.Status != 'Concluído'
+    AND TIMESTAMPDIFF(HOUR, i.dateu, NOW()) > 48";
+
+    $stmt_overdue = $pdo->prepare($sql_overdue);
+    $stmt_overdue->bindParam(':usuario_email', $_SESSION['usuario_email']);
+}
+
 $stmt_overdue->execute();
 $overdue = $stmt_overdue->fetch(PDO::FETCH_ASSOC);
 
-// Consultar tempo médio de resposta para tickets fechados e respondidos
-$sql_avg = "SELECT AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_fechados
-FROM info_xdfree01_extrafields i
-WHERE i.Entity = :usuario_id 
-AND i.Status = 'Concluído'
-AND i.dateu IS NOT NULL";
+// Update average response time query based on user role
+if (isAdmin()) {
+    // Admins see global average response time
+    $sql_avg = "SELECT AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_fechados
+    FROM info_xdfree01_extrafields i
+    WHERE i.Status = 'Concluído'
+    AND i.dateu IS NOT NULL";
 
-$stmt_avg = $pdo->prepare($sql_avg);
-$stmt_avg->bindParam(':usuario_id', $usuario['Entity_KeyId']);
+    $stmt_avg = $pdo->prepare($sql_avg);
+} else {
+    // Common users see only their average response time filtered by email
+    $sql_avg = "SELECT AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_fechados
+    FROM info_xdfree01_extrafields i
+    WHERE i.CreationUser = :usuario_email 
+    AND i.Status = 'Concluído'
+    AND i.dateu IS NOT NULL";
+
+    $stmt_avg = $pdo->prepare($sql_avg);
+    $stmt_avg->bindParam(':usuario_email', $_SESSION['usuario_email']);
+}
+
 $stmt_avg->execute();
 $avg_response = $stmt_avg->fetch(PDO::FETCH_ASSOC);
 
@@ -170,6 +212,27 @@ try {
         'nif' => ''
     ];
 }
+
+// Get all users for admin
+$all_users = [];
+if (isAdmin()) {
+    $sql_all_users = "SELECT 
+        oee.Entity_KeyId,
+        oee.Name,
+        oee.email,
+        oee.Password,
+        oee.Grupo,
+        e.Name as entity_name
+    FROM 
+        online_entity_extrafields oee
+    INNER JOIN
+        entities e ON e.KeyId = oee.Entity_KeyId
+    ORDER BY oee.Name";
+    
+    $stmt_all_users = $pdo->prepare($sql_all_users);
+    $stmt_all_users->execute();
+    $all_users = $stmt_all_users->fetchAll(PDO::FETCH_ASSOC);
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-pt">
@@ -180,8 +243,12 @@ try {
         <div class="container-fluid">
             <div class="row mb-4">
                 <div class="col-12">                    
-                    <h1 class="display-5 mb-0">O Meu Perfil</h1>
-                    <p class="text-muted">Gira as suas informações pessoais e veja estatísticas de atendimento</p>
+                    <h1 class="display-5 mb-0">
+                        <?php echo isAdmin() ? 'Painel de Administração' : 'O Meu Perfil'; ?>
+                    </h1>
+                    <p class="text-muted">
+                        <?php echo isAdmin() ? 'Gira o sistema e veja estatísticas globais' : 'Gira as suas informações pessoais e veja estatísticas de atendimento'; ?>
+                    </p>
                 </div>
             </div>
             
@@ -354,35 +421,79 @@ try {
                             <form id="accountSettingsForm" action="atualizar_dados.php" method="POST">
                                 <input type="hidden" name="entity_keyid" value="<?php echo $usuario['Entity_KeyId']; ?>">
                                 
-                                <div class="row mb-3">
-                                    <div class="col-md-6 mb-3">
-                                        <label for="name" class="form-label fw-bold">Nome Completo</label>
-                                        <input type="text" class="form-control" id="name" name="name" value="<?php echo $usuario['Name']; ?>" required>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label for="email" class="form-label fw-bold">Email</label>
-                                        <input type="email" class="form-control" id="email" name="email" value="<?php echo $usuario['email']; ?>" required>
-                                    </div>
-                                </div>
-                                
-                                <div class="row mb-3">
-                                    <div class="col-md-6 mb-3">
-                                        <label for="permissions" class="form-label fw-bold">Grupo/Permissões</label>
-                                        <input type="text" class="form-control bg-light" id="permissions" name="grupo" value="<?php echo $usuario['Grupo']; ?>" readonly>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label for="password" class="form-label fw-bold">Palavra-passe</label>
-                                        <div class="input-group">
-                                            <input type="password" class="form-control" id="password" name="password" value="<?php echo $usuario['Password']; ?>">
-                                            <button type="button" class="btn btn-outline-secondary" id="togglePassword">
-                                                <i class="bi bi-eye"></i>
-                                            </button>
+                                <?php if (isCommonUser()): ?>
+                                    <!-- Restricted form for common users - only password change -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="name" class="form-label fw-bold">Nome Completo</label>
+                                            <input type="text" class="form-control bg-light" id="name" name="name" value="<?php echo htmlspecialchars($usuario['Name']); ?>" readonly>
                                         </div>
-                                        <small class="form-text text-muted">Deixe em branco para manter a palavra-passe atual</small>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="email" class="form-label fw-bold">Email</label>
+                                            <input type="email" class="form-control bg-light" id="email" name="email" value="<?php echo htmlspecialchars($usuario['email']); ?>" readonly>
+                                        </div>
                                     </div>
-                                </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="permissions" class="form-label fw-bold">Grupo/Permissões</label>
+                                            <input type="text" class="form-control bg-light" id="permissions" name="grupo" value="<?php echo htmlspecialchars($usuario['Grupo']); ?>" readonly>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="password" class="form-label fw-bold">Nova Palavra-passe</label>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="password" name="password" placeholder="Digite a nova palavra-passe">
+                                                <button type="button" class="btn btn-outline-secondary" id="togglePassword">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </div>
+                                            <small class="form-text text-muted">Deixe em branco para manter a palavra-passe atual</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="alert alert-info mt-3">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        <strong>Nota:</strong> Apenas pode alterar a sua palavra-passe. Para alterar outros dados, contacte o administrador.
+                                    </div>
+                                    
+                                <?php else: ?>
+                                    <!-- Full form for admins -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="name" class="form-label fw-bold">Nome Completo</label>
+                                            <input type="text" class="form-control" id="name" name="name" value="<?php echo htmlspecialchars($usuario['Name']); ?>" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="email" class="form-label fw-bold">Email</label>
+                                            <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($usuario['email']); ?>" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="permissions" class="form-label fw-bold">Grupo/Permissões</label>
+                                            <select class="form-select" id="permissions" name="grupo">
+                                                <option value="Admin" <?php echo $usuario['Grupo'] === 'Admin' ? 'selected' : ''; ?>>Administrador</option>
+                                                <option value="Comum" <?php echo $usuario['Grupo'] === 'Comum' ? 'selected' : ''; ?>>Utilizador Comum</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="password" class="form-label fw-bold">Palavra-passe</label>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="password" name="password" value="<?php echo htmlspecialchars($usuario['Password']); ?>">
+                                                <button type="button" class="btn btn-outline-secondary" id="togglePassword">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </div>
+                                            <small class="form-text text-muted">Deixe em branco para manter a palavra-passe atual</small>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
                                 
-                                <div class="mt-4">                                    <button type="submit" class="btn btn-primary">Guardar Alterações</button>
+                                <div class="mt-4">                                    
+                                    <button type="submit" class="btn btn-primary">
+                                        <?php echo isCommonUser() ? 'Alterar Palavra-passe' : 'Guardar Alterações'; ?>
+                                    </button>
                                     <button type="reset" class="btn btn-outline-secondary ms-2">Cancelar</button>
                                 </div>
                             </form>
@@ -390,6 +501,63 @@ try {
                     </div>
                 </div>
             </div>
+            
+            <!-- Add user management section for admins -->
+            <?php if (isAdmin()): ?>
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0">Gestão de Utilizadores</h5>
+                            <small class="text-muted">Lista de todos os utilizadores do sistema</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Nome</th>
+                                            <th>Email</th>
+                                            <th>Empresa</th>
+                                            <th>Grupo</th>
+                                            <th>Password</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($all_users as $user): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($user['Name']); ?></td>
+                                            <td><?php echo htmlspecialchars($user['email']); ?></td>
+                                            <td><?php echo htmlspecialchars($user['entity_name']); ?></td>
+                                            <td>
+                                                <span class="badge <?php echo $user['Grupo'] === 'Admin' ? 'bg-danger' : 'bg-primary'; ?>">
+                                                    <?php echo htmlspecialchars($user['Grupo']); ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="password-field" data-password="<?php echo htmlspecialchars($user['Password']); ?>">
+                                                    ••••••••
+                                                </span>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="togglePassword(this)">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="editUser(<?php echo $user['Entity_KeyId']; ?>)">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
     
@@ -405,6 +573,36 @@ try {
                 '<i class="bi bi-eye"></i>' : 
                 '<i class="bi bi-eye-slash"></i>';
         });
+        
+        function togglePassword(button) {
+            const passwordField = button.previousElementSibling;
+            const isHidden = passwordField.textContent === '••••••••';
+            
+            if (isHidden) {
+                passwordField.textContent = passwordField.getAttribute('data-password');
+                button.innerHTML = '<i class="bi bi-eye-slash"></i>';
+            } else {
+                passwordField.textContent = '••••••••';
+                button.innerHTML = '<i class="bi bi-eye"></i>';
+            }
+        }
+
+        function editUser(userId) {
+            // Implement user editing functionality
+            alert('Funcionalidade de edição em desenvolvimento para utilizador ID: ' + userId);
+        }
+
+        // Add form validation for common users
+        <?php if (isCommonUser()): ?>
+        document.getElementById('accountSettingsForm').addEventListener('submit', function(e) {
+            const passwordField = document.getElementById('password');
+            if (!passwordField.value.trim()) {
+                e.preventDefault();
+                alert('Por favor, introduza uma nova palavra-passe.');
+                passwordField.focus();
+            }
+        });
+        <?php endif; ?>
     </script>
     
     <style>

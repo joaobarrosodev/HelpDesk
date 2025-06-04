@@ -34,19 +34,39 @@ include('conflogin.php');
         }
 
         // Contar tickets em aberto para o usuário atual
-        $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields WHERE (status = 'Em Análise' OR status = 'Em Resolução' OR status = ' Aguarda Resposta') AND Entity = :usuario_id";
-        $stmt_tickets = $pdo->prepare($sql_tickets);
-        $stmt_tickets->bindParam(':usuario_id', $_SESSION['usuario_id']);
+        // Update ticket count query based on user role
+        if (isAdmin()) {
+            // Admins see all open tickets
+            $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields WHERE (status = 'Em Análise' OR status = 'Em Resolução' OR status = ' Aguarda Resposta')";
+            $stmt_tickets = $pdo->prepare($sql_tickets);
+        } else {
+            // Common users see only their open tickets filtered by email
+            $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields WHERE (status = 'Em Análise' OR status = 'Em Resolução' OR status = ' Aguarda Resposta') AND CreationUser = :usuario_email";
+            $stmt_tickets = $pdo->prepare($sql_tickets);
+            $stmt_tickets->bindParam(':usuario_email', $_SESSION['usuario_email']);
+        }
+
         $stmt_tickets->execute();
         $ticket_count = $stmt_tickets->fetchColumn();
 
         // Obter dados para o gráfico de categorias (baseado nos assuntos dos tickets)
-        $sql_categorias = "SELECT User as categoria, COUNT(*) as total FROM info_xdfree01_extrafields 
-                          WHERE Entity = :usuario_id 
-                          GROUP BY User 
-                          ORDER BY total DESC";
-        $stmt_categorias = $pdo->prepare($sql_categorias);
-        $stmt_categorias->bindParam(':usuario_id', $_SESSION['usuario_id']);
+        // Update category chart data based on user role
+        if (isAdmin()) {
+            // Admins see all ticket categories
+            $sql_categorias = "SELECT User as categoria, COUNT(*) as total FROM info_xdfree01_extrafields 
+                              GROUP BY User 
+                              ORDER BY total DESC";
+            $stmt_categorias = $pdo->prepare($sql_categorias);
+        } else {
+            // Common users see only their ticket categories filtered by email
+            $sql_categorias = "SELECT User as categoria, COUNT(*) as total FROM info_xdfree01_extrafields 
+                              WHERE CreationUser = :usuario_email 
+                              GROUP BY User 
+                              ORDER BY total DESC";
+            $stmt_categorias = $pdo->prepare($sql_categorias);
+            $stmt_categorias->bindParam(':usuario_email', $_SESSION['usuario_email']);
+        }
+
         $stmt_categorias->execute();
         $categorias = $stmt_categorias->fetchAll(PDO::FETCH_ASSOC);
         
@@ -65,12 +85,23 @@ include('conflogin.php');
         }
 
         // Obter dados para o gráfico de prioridade
-        $sql_prioridade = "SELECT Priority as prioridade, COUNT(*) as total FROM info_xdfree01_extrafields 
-                          WHERE Entity = :usuario_id 
-                          GROUP BY Priority 
-                          ORDER BY FIELD(Priority, 'Alta', 'Normal', 'Baixa')";
-        $stmt_prioridade = $pdo->prepare($sql_prioridade);
-        $stmt_prioridade->bindParam(':usuario_id', $_SESSION['usuario_id']);
+        // Update priority chart data based on user role
+        if (isAdmin()) {
+            // Admins see all ticket priorities
+            $sql_prioridade = "SELECT Priority as prioridade, COUNT(*) as total FROM info_xdfree01_extrafields 
+                              GROUP BY Priority 
+                              ORDER BY FIELD(Priority, 'Alta', 'Normal', 'Baixa')";
+            $stmt_prioridade = $pdo->prepare($sql_prioridade);
+        } else {
+            // Common users see only their ticket priorities filtered by email
+            $sql_prioridade = "SELECT Priority as prioridade, COUNT(*) as total FROM info_xdfree01_extrafields 
+                              WHERE CreationUser = :usuario_email 
+                              GROUP BY Priority 
+                              ORDER BY FIELD(Priority, 'Alta', 'Normal', 'Baixa')";
+            $stmt_prioridade = $pdo->prepare($sql_prioridade);
+            $stmt_prioridade->bindParam(':usuario_email', $_SESSION['usuario_email']);
+        }
+
         $stmt_prioridade->execute();
         $prioridades = $stmt_prioridade->fetchAll(PDO::FETCH_ASSOC);
         
@@ -99,9 +130,20 @@ include('conflogin.php');
         }
         
         // Calcular o tempo médio de resposta baseado na coluna Tempo
-        $sql_tempo_resposta = "SELECT AVG(Tempo) as media_tempo FROM info_xdfree01_extrafields 
-                              WHERE Tempo IS NOT NULL AND Tempo > 0";
-        $stmt_tempo = $pdo->prepare($sql_tempo_resposta);
+        // Update average response time query based on user role
+        if (isAdmin()) {
+            // Admins see global average response time
+            $sql_tempo_resposta = "SELECT AVG(Tempo) as media_tempo FROM info_xdfree01_extrafields 
+                                  WHERE Tempo IS NOT NULL AND Tempo > 0";
+            $stmt_tempo = $pdo->prepare($sql_tempo_resposta);
+        } else {
+            // Common users see only their average response time filtered by email
+            $sql_tempo_resposta = "SELECT AVG(Tempo) as media_tempo FROM info_xdfree01_extrafields 
+                                  WHERE Tempo IS NOT NULL AND Tempo > 0 AND CreationUser = :usuario_email";
+            $stmt_tempo = $pdo->prepare($sql_tempo_resposta);
+            $stmt_tempo->bindParam(':usuario_email', $_SESSION['usuario_email']);
+        }
+
         $stmt_tempo->execute();
         $tempo_result = $stmt_tempo->fetch(PDO::FETCH_ASSOC);
         
@@ -125,21 +167,42 @@ include('conflogin.php');
         }
         
         // Obter dados reais da avaliação dos clientes da tabela info_xdfree01_extrafields
+        // Update customer review data based on user role (only for admins)
         try {
-            // Total de respostas
-            $sql_total = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Review IS NOT NULL";
-            $stmt_total = $pdo->prepare($sql_total);
-            $stmt_total->execute();
-            $respostas_recebidas = $stmt_total->fetchColumn();
-            
-            // Contagem de avaliações por tipo (1=positivo, 2=neutro, 3=negativo)
-            $sql_avaliacoes = "SELECT 
-                                SUM(CASE WHEN Review = 1 THEN 1 ELSE 0 END) as positivas,
-                                SUM(CASE WHEN Review = 2 THEN 1 ELSE 0 END) as neutras,
-                                SUM(CASE WHEN Review = 3 THEN 1 ELSE 0 END) as negativas
-                               FROM info_xdfree01_extrafields 
-                               WHERE Review IS NOT NULL";
-            $stmt_avaliacoes = $pdo->prepare($sql_avaliacoes);
+            if (isAdmin()) {
+                // Total de respostas - all reviews
+                $sql_total = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Review IS NOT NULL";
+                $stmt_total = $pdo->prepare($sql_total);
+                $stmt_total->execute();
+                $respostas_recebidas = $stmt_total->fetchColumn();
+                
+                // Contagem de avaliações por tipo (1=positivo, 2=neutro, 3=negativo) - all reviews
+                $sql_avaliacoes = "SELECT 
+                                    SUM(CASE WHEN Review = 1 THEN 1 ELSE 0 END) as positivas,
+                                    SUM(CASE WHEN Review = 2 THEN 1 ELSE 0 END) as neutras,
+                                    SUM(CASE WHEN Review = 3 THEN 1 ELSE 0 END) as negativas
+                                   FROM info_xdfree01_extrafields 
+                                   WHERE Review IS NOT NULL";
+                $stmt_avaliacoes = $pdo->prepare($sql_avaliacoes);
+            } else {
+                // Common users see only their review data filtered by email
+                $sql_total = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Review IS NOT NULL AND CreationUser = :usuario_email";
+                $stmt_total = $pdo->prepare($sql_total);
+                $stmt_total->bindParam(':usuario_email', $_SESSION['usuario_email']);
+                $stmt_total->execute();
+                $respostas_recebidas = $stmt_total->fetchColumn();
+                
+                // Contagem de avaliações por tipo filtradas por email
+                $sql_avaliacoes = "SELECT 
+                                    SUM(CASE WHEN Review = 1 THEN 1 ELSE 0 END) as positivas,
+                                    SUM(CASE WHEN Review = 2 THEN 1 ELSE 0 END) as neutras,
+                                    SUM(CASE WHEN Review = 3 THEN 1 ELSE 0 END) as negativas
+                                   FROM info_xdfree01_extrafields 
+                                   WHERE Review IS NOT NULL AND CreationUser = :usuario_email";
+                $stmt_avaliacoes = $pdo->prepare($sql_avaliacoes);
+                $stmt_avaliacoes->bindParam(':usuario_email', $_SESSION['usuario_email']);
+            }
+
             $stmt_avaliacoes->execute();
             $avaliacoes = $stmt_avaliacoes->fetch(PDO::FETCH_ASSOC);
             
@@ -168,7 +231,9 @@ include('conflogin.php');
         <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
             <div>
                 <h1 class="mb-3 display-5">Bem Vindo, <span class="text-primary"><?php echo isset($_SESSION['Nome']) ? htmlspecialchars($_SESSION['Nome']) : 'Utilizador'; ?></span> </h1>
-                <p class="text-muted mb-3 w-100">Aqui pode acompanhar os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real.</p>
+                <p class="text-muted mb-3 w-100">
+                    <?php echo isAdmin() ? 'Painel de administração - Gerir o sistema e ver estatísticas globais' : 'Aqui pode acompanhar os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real.'; ?>
+                </p>
             </div>
             <a href="abrir_ticket.php" class="btn btn-primary btn-primary">Abrir Novo Ticket</a>
         </div>
@@ -211,11 +276,26 @@ include('conflogin.php');
             <div class="col-xl-4 col-md-6 mb-4 flex-1">
                 <div class="card dashboard-card h-100 ">
                     <div class="card-body">
-                        <h5 class="card-title">Avaliação dos Clientes</h5>
+                        <h5 class="card-title">
+                            <?php echo isAdmin() ? 'Avaliação dos Clientes' : 'As Suas Avaliações'; ?>
+                        </h5>
                         <div class="row w-100">
                             <div class="col-6 d-flex justify-content-center align-items-center flex-column mb-3">
-                                <p class="w-100 text-muted">Respostas:</p>
-                                <p class="w-100"><strong><?php echo $respostas_recebidas; ?> <?php echo ($respostas_recebidas == 1) ? 'Cliente' : 'Clientes'; ?></strong></p>
+                                <p class="w-100 text-muted">
+                                    <?php echo isAdmin() ? 'Respostas:' : 'Total de Avaliações:'; ?>
+                                </p>
+                                <p class="w-100">
+                                    <strong>
+                                        <?php echo $respostas_recebidas; ?> 
+                                        <?php 
+                                        if (isAdmin()) {
+                                            echo ($respostas_recebidas == 1) ? 'Cliente' : 'Clientes';
+                                        } else {
+                                            echo ($respostas_recebidas == 1) ? 'Avaliação' : 'Avaliações';
+                                        }
+                                        ?>
+                                    </strong>
+                                </p>
                             </div>
 
                             <div class="col-6 d-flex justify-content-center align-items-center flex-row mb-3">
