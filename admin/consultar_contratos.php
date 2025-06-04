@@ -13,21 +13,16 @@ $records_per_page = 20;
 $offset = ($page - 1) * $records_per_page;
 
 try {
-    // Verificar colunas disponíveis - usar tabela correta
-    $sql_columns = "SHOW COLUMNS FROM info_xdfree02_extrafields";
-    $stmt_columns = $pdo->prepare($sql_columns);
-    $stmt_columns->execute();
-    $columns = $stmt_columns->fetchAll(PDO::FETCH_COLUMN);
-    
-    // Construir query com filtros - usar estrutura correta
+    // Construir query com filtros - usar apenas os campos específicos que você quer
     $where_conditions = [];
     $params = [];
     
     if (!empty($search)) {
         $search_conditions = [];
         $search_conditions[] = "e.name LIKE :search";
-        $search_conditions[] = "x2Extra.Email LIKE :search";
-        $search_conditions[] = "x2Extra.Telefone LIKE :search";
+        $search_conditions[] = "e.ContactEmail LIKE :search";
+        $search_conditions[] = "e.MobilePhone1 LIKE :search";
+        $search_conditions[] = "e.Phone1 LIKE :search";
         $search_conditions[] = "x2Extra.Status LIKE :search";
         
         $where_conditions[] = "(" . implode(" OR ", $search_conditions) . ")";
@@ -41,7 +36,7 @@ try {
     
     $where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
     
-    // Contar total de registros - usar query correta
+    // Contar total de registros
     $sql_count = "SELECT COUNT(*) as total 
                   FROM info_xdfree02_extrafields x2Extra
                   LEFT JOIN entities e ON e.KeyId = x2Extra.Entity
@@ -51,11 +46,14 @@ try {
     $total_records = $stmt_count->fetch(PDO::FETCH_ASSOC)['total'];
     $total_pages = ceil($total_records / $records_per_page);
     
-    // Buscar contratos - usar query que funciona
+    // Buscar contratos com apenas os campos específicos que você quer
     $sql = "SELECT 
                 x2Extra.XDfree02_KeyId,
                 x2Extra.*,
-                e.name as CompanyName
+                e.name as CompanyName,
+                e.ContactEmail as EntityEmail,
+                e.MobilePhone1 as EntityMobilePhone,
+                e.Phone1 as EntityPhone
             FROM info_xdfree02_extrafields x2Extra
             LEFT JOIN entities e ON e.KeyId = x2Extra.Entity
             $where_clause 
@@ -72,7 +70,7 @@ try {
     $stmt->execute();
     $contratos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Obter valores únicos de status - usar query correta
+    // Obter valores únicos de status
     $sql_status = "SELECT DISTINCT x2Extra.Status 
                    FROM info_xdfree02_extrafields x2Extra
                    WHERE x2Extra.Status IS NOT NULL AND x2Extra.Status != ''";
@@ -100,7 +98,7 @@ try {
             <!-- Cabeçalho -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h1 class="h3 mb-2">Consultar Contratos</h1>
+                    <h1 class="mb-3 display-5">Consultar Contratos</h1>
                     <p class="text-muted">Gestão de contratos do sistema</p>
                 </div>
                 <div class="d-flex gap-2">
@@ -121,7 +119,7 @@ try {
                         <label for="search" class="form-label">Pesquisar</label>
                         <input type="text" class="form-control" id="search" name="search" 
                                value="<?php echo htmlspecialchars($search); ?>" 
-                               placeholder="Pesquisar em todos os campos...">
+                               placeholder="Nome, email, telefone, morada, cidade, código postal...">
                     </div>
                     <div class="col-md-3">
                         <label for="status" class="form-label">Status</label>
@@ -157,23 +155,36 @@ try {
                         <thead class="table-light">
                             <tr>
                                 <th>Empresa</th>
+                                <th>Contacto</th>
                                 <th>Data Início</th>
                                 <th>Status</th>
-                                <th>Horas Restantes</th>
-                                <th>Progresso</th>
+                                <th>Horas</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($contratos as $contrato): ?>
+                            <?php foreach ($contratos as $contrato): 
+                                $contract_id = $contrato['XDfree02_KeyId'] ?? $contrato['id'] ?? '';
+                                $total_hours = (int)($contrato['TotalHours'] ?? 0);
+                                $used_hours = (int)($contrato['SpentHours'] ?? 0);
+                                $remaining_hours = $total_hours - $used_hours;
+                            ?>
                             <tr>
                                 <td>
-                                    <div><?php echo htmlspecialchars($contrato['CompanyName'] ?? 'N/A'); ?></div>
-                                    <?php if (!empty($contrato['Email'])): ?>
-                                    <small class="text-muted"><?php echo htmlspecialchars($contrato['Email']); ?></small>
+                                    <div class="fw-bold"><?php echo htmlspecialchars($contrato['CompanyName'] ?? 'N/A'); ?></div>
+                                </td>
+                                <td>
+                                    <?php if (!empty($contrato['EntityEmail'])): ?>
+                                    <div><i class="bi bi-envelope me-1"></i><?php echo htmlspecialchars($contrato['EntityEmail']); ?></div>
                                     <?php endif; ?>
-                                    <?php if (!empty($contrato['Telefone'])): ?>
-                                    <br><small class="text-muted"><i class="bi bi-telephone me-1"></i><?php echo htmlspecialchars($contrato['Telefone']); ?></small>
+                                    <?php if (!empty($contrato['EntityPhone'])): ?>
+                                    <div><i class="bi bi-telephone me-1"></i><?php echo htmlspecialchars($contrato['EntityPhone']); ?></div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($contrato['EntityMobilePhone'])): ?>
+                                    <div><i class="bi bi-phone me-1"></i><?php echo htmlspecialchars($contrato['EntityMobilePhone']); ?></div>
+                                    <?php endif; ?>
+                                    <?php if (empty($contrato['EntityEmail']) && empty($contrato['EntityPhone']) && empty($contrato['EntityMobilePhone'])): ?>
+                                    <span class="text-muted">N/A</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
@@ -212,10 +223,6 @@ try {
                                 </td>
                                 <td>
                                     <?php 
-                                    $total_hours = (int)($contrato['TotalHours'] ?? 0);
-                                    $used_hours = (int)($contrato['SpentHours'] ?? 0);
-                                    $remaining_hours = $total_hours - $used_hours;
-                                    
                                     if ($total_hours > 0) {
                                         $hours_class = '';
                                         if ($remaining_hours <= 0) {
@@ -227,58 +234,36 @@ try {
                                         }
                                         echo "<span class='fw-bold $hours_class'>{$remaining_hours}h</span>";
                                         echo "<br><small class='text-muted'>de {$total_hours}h</small>";
+                                        
+                                        $percentage = min(100, round(($used_hours / $total_hours) * 100));
+                                        $progress_class = '';
+                                        if ($percentage >= 100) {
+                                            $progress_class = 'bg-danger';
+                                        } elseif ($percentage >= 80) {
+                                            $progress_class = 'bg-warning';
+                                        } else {
+                                            $progress_class = 'bg-success';
+                                        }
+                                        ?>
+                                        <div class="progress mt-1" style="height: 4px;">
+                                            <div class="progress-bar <?php echo $progress_class; ?>" 
+                                                 style="width: <?php echo $percentage; ?>%">
+                                            </div>
+                                        </div>
+                                        <?php
                                     } else {
                                         echo '<span class="text-muted">N/A</span>';
                                     }
                                     ?>
                                 </td>
                                 <td>
-                                    <?php if ($total_hours > 0): ?>
-                                    <?php 
-                                    $percentage = min(100, round(($used_hours / $total_hours) * 100));
-                                    $progress_class = '';
-                                    if ($percentage >= 100) {
-                                        $progress_class = 'bg-danger';
-                                    } elseif ($percentage >= 80) {
-                                        $progress_class = 'bg-warning';
-                                    } else {
-                                        $progress_class = 'bg-success';
-                                    }
-                                    ?>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar <?php echo $progress_class; ?>" 
-                                             role="progressbar" 
-                                             style="width: <?php echo $percentage; ?>%"
-                                             title="<?php echo $percentage; ?>% utilizado">
-                                        </div>
-                                    </div>
-                                    <small class="text-muted"><?php echo $percentage; ?>%</small>
+                                    <?php if (!empty($contract_id)): ?>
+                                    <a href="detalhes_contrato.php?id=<?php echo htmlspecialchars($contract_id); ?>" class="btn btn-outline-primary btn-sm" title="Ver detalhes">
+                                        <i class="bi bi-eye me-1"></i> Detalhes
+                                    </a>
                                     <?php else: ?>
-                                    <span class="text-muted">N/A</span>
+                                    <span class="text-muted">ID inválido</span>
                                     <?php endif; ?>
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <a href="detalhes_contrato.php?id=<?php echo htmlspecialchars($contrato['id']); ?>" 
-                                           class="btn btn-outline-primary btn-sm"
-                                           title="Ver detalhes">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        <button type="button" 
-                                                class="btn btn-outline-success btn-sm" 
-                                                onclick="editContract(<?php echo htmlspecialchars($contrato['id']); ?>)"
-                                                title="Editar contrato">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <?php if ($remaining_hours > 0): ?>
-                                        <button type="button" 
-                                                class="btn btn-outline-info btn-sm" 
-                                                onclick="addHours(<?php echo htmlspecialchars($contrato['id']); ?>)"
-                                                title="Adicionar horas">
-                                            <i class="bi bi-plus-circle"></i>
-                                        </button>
-                                        <?php endif; ?>
-                                    </div>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -332,16 +317,52 @@ try {
         </div>
     </div>
     
-    <script>
-        function editContract(id) {
-            // Implementar edição do contrato
-            window.location.href = 'editar_contrato.php?id=' + id;
+    <style>
+        :root {
+            --bs-primary: #529ebe;
+            --bs-primary-rgb: 82, 158, 190;
         }
         
-        function addHours(id) {
-            // Implementar adição de horas
-            window.location.href = 'adicionar_horas.php?id=' + id;
+        .btn-primary, .btn-outline-primary {
+            --bs-btn-color: #529ebe;
+            --bs-btn-border-color: #529ebe;
         }
-    </script>
+        
+        .btn-primary {
+            background-color: #529ebe;
+            border-color: #529ebe;
+        }
+        
+        .btn-primary:hover {
+            background-color: #4a8ba8;
+            border-color: #4a8ba8;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: #529ebe;
+            border-color: #529ebe;
+        }
+        
+        .text-primary {
+            color: #529ebe !important;
+        }
+        
+        .progress-bar.bg-success {
+            background-color: #529ebe !important;
+        }
+        
+        .page-link {
+            color: #529ebe;
+        }
+        
+        .page-item.active .page-link {
+            background-color: #529ebe;
+            border-color: #529ebe;
+        }
+        
+        .badge.bg-info {
+            background-color: #529ebe !important;
+        }
+    </style>
 </body>
 </html>

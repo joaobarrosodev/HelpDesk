@@ -9,7 +9,8 @@ $errorMsg = isset($_GET['error']) ? $_GET['error'] : '';
     <div class="d-flex align-items-center min-vh-100 py-5 w-100" style="background-color: #f8f9fa; background-image: url('img/pattern-bg.png'); background-repeat: repeat;">
         <div class="container">
             <div class="row justify-content-center">
-                <div class="col-lg-5 col-md-8 col-sm-10">                <div class="text-center mb-4">
+                <div class="col-lg-6 col-md-8 col-sm-10">              
+                      <div class="text-center mb-4">
                         <img src="img/logo.png" alt="Logótipo HelpDesk" height="60" class="mb-3" onerror="this.style.display='none'">
                     </div>
                     <div class="card shadow border-0 rounded-lg">                        <div class="card-header bg-primary text-white text-center py-4">

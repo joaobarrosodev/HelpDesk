@@ -17,7 +17,7 @@
 <nav class="sidebar-helpdesk bg-white shadow-sm d-flex flex-column" id="sidebar" aria-label="Menu principal">   
       <header class="sidebar-logo-area p-3 d-flex justify-content-between align-items-center">
         <a href="index.php" title="Página inicial" class="text-decoration-none">
-            <img src="../img/logo.png" alt="Info.exe - Logo" class="img-fluid" width="120" height="40">
+            <img src="img/logo.png" alt="Info.exe - Logo" class="img-fluid" width="120" height="40">
         </a>
         <button class="btn border-0 bg-transparent d-lg-none d-block p-0 fs-5" id="sidebarClose" aria-label="Fechar menu">
             <i class="bi bi-x text-muted" aria-hidden="true"></i>
