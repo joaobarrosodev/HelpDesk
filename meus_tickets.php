@@ -39,11 +39,11 @@ if (isAdmin()) {
                 (SELECT 
                     CASE
                         WHEN c.user = 'admin' THEN 'Administrador'
-                        WHEN oee.Name IS NOT NULL THEN oee.Name
+                        WHEN oee2.Name IS NOT NULL THEN oee2.Name
                         ELSE SUBSTRING_INDEX(c.user, '@', 1)
                     END
                  FROM comments_xdfree01_extrafields c 
-                 LEFT JOIN online_entity_extrafields oee ON c.user = oee.email 
+                 LEFT JOIN online_entity_extrafields oee2 ON c.user = oee2.email 
                  WHERE c.XDFree01_KeyID = t.KeyId 
                  ORDER BY c.Date DESC LIMIT 1) as LastCommentUser
             FROM 
@@ -69,21 +69,24 @@ if (isAdmin()) {
                 (SELECT 
                     CASE
                         WHEN c.user = 'admin' THEN 'Administrador'
-                        WHEN oee.Name IS NOT NULL THEN oee.Name
+                        WHEN oee2.Name IS NOT NULL THEN oee2.Name
                         ELSE SUBSTRING_INDEX(c.user, '@', 1)
                     END
                  FROM comments_xdfree01_extrafields c 
-                 LEFT JOIN online_entity_extrafields oee ON c.user = oee.email 
+                 LEFT JOIN online_entity_extrafields oee2 ON c.user = oee2.email 
                  WHERE c.XDFree01_KeyID = t.KeyId 
                  ORDER BY c.Date DESC LIMIT 1) as LastCommentUser
             FROM 
                 xdfree01 t
             LEFT JOIN 
                 info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
+            LEFT JOIN
+                online_entity_extrafields oee ON i.CreationUser = oee.email
             WHERE 
-                i.CreationUser = :usuario_email";
+                i.XDFree01_KeyID IS NOT NULL
+                AND oee.Entity_KeyId = :usuario_entity_id";
     
-    $params[':usuario_email'] = $usuario_email;
+    $params[':usuario_entity_id'] = $_SESSION['usuario_id']; // Assuming this is Entity_KeyId
 }
 
 // Adiciona filtros se existirem
@@ -118,11 +121,12 @@ if (!isAdmin()) {
     // Update the tickets query for common users to filter by email
     $sql_assuntos = "SELECT DISTINCT i.User 
                      FROM info_xdfree01_extrafields i 
-                     WHERE i.CreationUser = :usuario_email 
+                     INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                     WHERE oee.Entity_KeyId = :usuario_entity_id
                      AND i.User IS NOT NULL 
                      ORDER BY i.User";
     $stmt_assuntos = $pdo->prepare($sql_assuntos);
-    $stmt_assuntos->bindParam(':usuario_email', $usuario_email);
+    $stmt_assuntos->bindParam(':usuario_entity_id', $_SESSION['usuario_id']);
 } else {
     // Admins see all subjects
     $sql_assuntos = "SELECT DISTINCT User FROM info_xdfree01_extrafields WHERE User IS NOT NULL ORDER BY User";
@@ -143,10 +147,10 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
                     <h1 class="mb-3 display-5">
-                        <?php echo isAdmin() ? 'Todos os Tickets' : 'Os Meus Tickets'; ?>
+                        <?php echo isAdmin() ? 'Tickets da Empresa' : 'Tickets da Empresa'; ?>
                     </h1>
                     <p class="">
-                        <?php echo isAdmin() ? 'Lista de todos os tickets do sistema. Utilize os filtros abaixo para refinar a visualização.' : 'Lista de todos os seus tickets, incluindo tickets em aberto e resolvidos. Utilize os filtros abaixo para refinar a visualização.'; ?>
+                        <?php echo isAdmin() ? 'Lista de todos os tickets da sua empresa. Utilize os filtros abaixo para refinar a visualização.' : 'Lista de todos os tickets da sua empresa, incluindo tickets em aberto e resolvidos. Utilize os filtros abaixo para refinar a visualização.'; ?>
                     </p>
                 </div>
                 <a href="abrir_ticket.php" class="btn btn-primary d-flex align-items-center">

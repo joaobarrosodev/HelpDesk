@@ -34,38 +34,28 @@ include('conflogin.php');
         }
 
         // Contar tickets em aberto para o usuário atual
-        // Update ticket count query based on user role
-        if (isAdmin()) {
-            // Admins see all open tickets
-            $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields WHERE (status = 'Em Análise' OR status = 'Em Resolução' OR status = ' Aguarda Resposta')";
-            $stmt_tickets = $pdo->prepare($sql_tickets);
-        } else {
-            // Common users see only their open tickets filtered by email
-            $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields WHERE (status = 'Em Análise' OR status = 'Em Resolução' OR status = ' Aguarda Resposta') AND CreationUser = :usuario_email";
-            $stmt_tickets = $pdo->prepare($sql_tickets);
-            $stmt_tickets->bindParam(':usuario_email', $_SESSION['usuario_email']);
-        }
+        // Update ticket count query to filter by entity for both admin and common users
+        $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields i
+                       INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                       WHERE (i.status = 'Em Análise' OR i.status = 'Em Resolução' OR i.status = ' Aguarda Resposta') 
+                       AND oee.Entity_KeyId = :usuario_entity_id";
+        
+        $stmt_tickets = $pdo->prepare($sql_tickets);
+        $stmt_tickets->bindParam(':usuario_entity_id', $_SESSION['usuario_id']); // Assuming this is Entity_KeyId
 
         $stmt_tickets->execute();
         $ticket_count = $stmt_tickets->fetchColumn();
 
         // Obter dados para o gráfico de categorias (baseado nos assuntos dos tickets)
-        // Update category chart data based on user role
-        if (isAdmin()) {
-            // Admins see all ticket categories
-            $sql_categorias = "SELECT User as categoria, COUNT(*) as total FROM info_xdfree01_extrafields 
-                              GROUP BY User 
-                              ORDER BY total DESC";
-            $stmt_categorias = $pdo->prepare($sql_categorias);
-        } else {
-            // Common users see only their ticket categories filtered by email
-            $sql_categorias = "SELECT User as categoria, COUNT(*) as total FROM info_xdfree01_extrafields 
-                              WHERE CreationUser = :usuario_email 
-                              GROUP BY User 
-                              ORDER BY total DESC";
-            $stmt_categorias = $pdo->prepare($sql_categorias);
-            $stmt_categorias->bindParam(':usuario_email', $_SESSION['usuario_email']);
-        }
+        // Update category chart data to filter by entity
+        $sql_categorias = "SELECT i.User as categoria, COUNT(*) as total FROM info_xdfree01_extrafields i
+                          INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                          WHERE oee.Entity_KeyId = :usuario_entity_id
+                          GROUP BY i.User 
+                          ORDER BY total DESC";
+        
+        $stmt_categorias = $pdo->prepare($sql_categorias);
+        $stmt_categorias->bindParam(':usuario_entity_id', $_SESSION['usuario_id']);
 
         $stmt_categorias->execute();
         $categorias = $stmt_categorias->fetchAll(PDO::FETCH_ASSOC);
@@ -85,22 +75,15 @@ include('conflogin.php');
         }
 
         // Obter dados para o gráfico de prioridade
-        // Update priority chart data based on user role
-        if (isAdmin()) {
-            // Admins see all ticket priorities
-            $sql_prioridade = "SELECT Priority as prioridade, COUNT(*) as total FROM info_xdfree01_extrafields 
-                              GROUP BY Priority 
-                              ORDER BY FIELD(Priority, 'Alta', 'Normal', 'Baixa')";
-            $stmt_prioridade = $pdo->prepare($sql_prioridade);
-        } else {
-            // Common users see only their ticket priorities filtered by email
-            $sql_prioridade = "SELECT Priority as prioridade, COUNT(*) as total FROM info_xdfree01_extrafields 
-                              WHERE CreationUser = :usuario_email 
-                              GROUP BY Priority 
-                              ORDER BY FIELD(Priority, 'Alta', 'Normal', 'Baixa')";
-            $stmt_prioridade = $pdo->prepare($sql_prioridade);
-            $stmt_prioridade->bindParam(':usuario_email', $_SESSION['usuario_email']);
-        }
+        // Update priority chart data to filter by entity
+        $sql_prioridade = "SELECT i.Priority as prioridade, COUNT(*) as total FROM info_xdfree01_extrafields i
+                          INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                          WHERE oee.Entity_KeyId = :usuario_entity_id
+                          GROUP BY i.Priority 
+                          ORDER BY FIELD(i.Priority, 'Alta', 'Normal', 'Baixa')";
+        
+        $stmt_prioridade = $pdo->prepare($sql_prioridade);
+        $stmt_prioridade->bindParam(':usuario_entity_id', $_SESSION['usuario_id']);
 
         $stmt_prioridade->execute();
         $prioridades = $stmt_prioridade->fetchAll(PDO::FETCH_ASSOC);
@@ -130,19 +113,14 @@ include('conflogin.php');
         }
         
         // Calcular o tempo médio de resposta baseado na coluna Tempo
-        // Update average response time query based on user role
-        if (isAdmin()) {
-            // Admins see global average response time
-            $sql_tempo_resposta = "SELECT AVG(Tempo) as media_tempo FROM info_xdfree01_extrafields 
-                                  WHERE Tempo IS NOT NULL AND Tempo > 0";
-            $stmt_tempo = $pdo->prepare($sql_tempo_resposta);
-        } else {
-            // Common users see only their average response time filtered by email
-            $sql_tempo_resposta = "SELECT AVG(Tempo) as media_tempo FROM info_xdfree01_extrafields 
-                                  WHERE Tempo IS NOT NULL AND Tempo > 0 AND CreationUser = :usuario_email";
-            $stmt_tempo = $pdo->prepare($sql_tempo_resposta);
-            $stmt_tempo->bindParam(':usuario_email', $_SESSION['usuario_email']);
-        }
+        // Update average response time query to filter by entity
+        $sql_tempo_resposta = "SELECT AVG(i.Tempo) as media_tempo FROM info_xdfree01_extrafields i
+                              INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                              WHERE i.Tempo IS NOT NULL AND i.Tempo > 0 
+                              AND oee.Entity_KeyId = :usuario_entity_id";
+        
+        $stmt_tempo = $pdo->prepare($sql_tempo_resposta);
+        $stmt_tempo->bindParam(':usuario_entity_id', $_SESSION['usuario_id']);
 
         $stmt_tempo->execute();
         $tempo_result = $stmt_tempo->fetch(PDO::FETCH_ASSOC);
@@ -167,41 +145,29 @@ include('conflogin.php');
         }
         
         // Obter dados reais da avaliação dos clientes da tabela info_xdfree01_extrafields
-        // Update customer review data based on user role (only for admins)
+        // Update customer review data to filter by entity
         try {
-            if (isAdmin()) {
-                // Total de respostas - all reviews
-                $sql_total = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Review IS NOT NULL";
-                $stmt_total = $pdo->prepare($sql_total);
-                $stmt_total->execute();
-                $respostas_recebidas = $stmt_total->fetchColumn();
-                
-                // Contagem de avaliações por tipo (1=positivo, 2=neutro, 3=negativo) - all reviews
-                $sql_avaliacoes = "SELECT 
-                                    SUM(CASE WHEN Review = 1 THEN 1 ELSE 0 END) as positivas,
-                                    SUM(CASE WHEN Review = 2 THEN 1 ELSE 0 END) as neutras,
-                                    SUM(CASE WHEN Review = 3 THEN 1 ELSE 0 END) as negativas
-                                   FROM info_xdfree01_extrafields 
-                                   WHERE Review IS NOT NULL";
-                $stmt_avaliacoes = $pdo->prepare($sql_avaliacoes);
-            } else {
-                // Common users see only their review data filtered by email
-                $sql_total = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Review IS NOT NULL AND CreationUser = :usuario_email";
-                $stmt_total = $pdo->prepare($sql_total);
-                $stmt_total->bindParam(':usuario_email', $_SESSION['usuario_email']);
-                $stmt_total->execute();
-                $respostas_recebidas = $stmt_total->fetchColumn();
-                
-                // Contagem de avaliações por tipo filtradas por email
-                $sql_avaliacoes = "SELECT 
-                                    SUM(CASE WHEN Review = 1 THEN 1 ELSE 0 END) as positivas,
-                                    SUM(CASE WHEN Review = 2 THEN 1 ELSE 0 END) as neutras,
-                                    SUM(CASE WHEN Review = 3 THEN 1 ELSE 0 END) as negativas
-                                   FROM info_xdfree01_extrafields 
-                                   WHERE Review IS NOT NULL AND CreationUser = :usuario_email";
-                $stmt_avaliacoes = $pdo->prepare($sql_avaliacoes);
-                $stmt_avaliacoes->bindParam(':usuario_email', $_SESSION['usuario_email']);
-            }
+            // Total de respostas - filter by entity
+            $sql_total = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields i
+                         INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                         WHERE i.Review IS NOT NULL AND oee.Entity_KeyId = :usuario_entity_id";
+            
+            $stmt_total = $pdo->prepare($sql_total);
+            $stmt_total->bindParam(':usuario_entity_id', $_SESSION['usuario_id']);
+            $stmt_total->execute();
+            $respostas_recebidas = $stmt_total->fetchColumn();
+            
+            // Contagem de avaliações por tipo (1=positivo, 2=neutro, 3=negativo) - filter by entity
+            $sql_avaliacoes = "SELECT 
+                                SUM(CASE WHEN i.Review = 1 THEN 1 ELSE 0 END) as positivas,
+                                SUM(CASE WHEN i.Review = 2 THEN 1 ELSE 0 END) as neutras,
+                                SUM(CASE WHEN i.Review = 3 THEN 1 ELSE 0 END) as negativas
+                               FROM info_xdfree01_extrafields i
+                               INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                               WHERE i.Review IS NOT NULL AND oee.Entity_KeyId = :usuario_entity_id";
+            
+            $stmt_avaliacoes = $pdo->prepare($sql_avaliacoes);
+            $stmt_avaliacoes->bindParam(':usuario_entity_id', $_SESSION['usuario_id']);
 
             $stmt_avaliacoes->execute();
             $avaliacoes = $stmt_avaliacoes->fetch(PDO::FETCH_ASSOC);
@@ -232,7 +198,7 @@ include('conflogin.php');
             <div>
                 <h1 class="mb-3 display-5">Bem Vindo, <span class="text-primary"><?php echo isset($_SESSION['Nome']) ? htmlspecialchars($_SESSION['Nome']) : 'Utilizador'; ?></span> </h1>
                 <p class="text-muted mb-3 w-100">
-                    <?php echo isAdmin() ? 'Painel de administração - Gerir o sistema e ver estatísticas globais' : 'Aqui pode acompanhar os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real.'; ?>
+                    <?php echo isAdmin() ? 'Painel de administração da empresa - Estatísticas e dados da sua organização' : 'Aqui pode acompanhar os tickets da sua empresa, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real.'; ?>
                 </p>
             </div>
             <a href="abrir_ticket.php" class="btn btn-primary btn-primary">Abrir Novo Ticket</a>

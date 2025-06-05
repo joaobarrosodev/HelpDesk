@@ -1,4 +1,4 @@
-<?php
+*<?php
 session_start();  // Inicia a sessão
 
 include('conflogin.php');
@@ -16,87 +16,54 @@ $usuario = $stmt->fetch(PDO::FETCH_ASSOC);    if (!$usuario) {
     exit;
 }
 
-// Modify ticket statistics query based on user role
-if (isAdmin()) {
-    // Admins see all tickets statistics
-    $sql_tickets = "SELECT 
-        COUNT(*) as total_tickets,
-        SUM(CASE WHEN i.Status != 'Concluído' THEN 1 ELSE 0 END) as tickets_ativos,
-        SUM(CASE WHEN i.Status = 'Concluído' THEN 1 ELSE 0 END) as tickets_concluidos,
-        SUM(CASE WHEN i.Status = 'Em Análise' THEN 1 ELSE 0 END) as tickets_em_analise,
-        AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_resposta,
-        AVG(i.Tempo) as avg_tempo,
-        SUM(i.Tempo) as total_tempo
-    FROM 
-        info_xdfree01_extrafields i";
-    
-    $stmt_tickets = $pdo->prepare($sql_tickets);
-} else {
-    // Common users see only their statistics filtered by email
-    $sql_tickets = "SELECT 
-        COUNT(*) as total_tickets,
-        SUM(CASE WHEN i.Status != 'Concluído' THEN 1 ELSE 0 END) as tickets_ativos,
-        SUM(CASE WHEN i.Status = 'Concluído' THEN 1 ELSE 0 END) as tickets_concluidos,
-        SUM(CASE WHEN i.Status = 'Em Análise' THEN 1 ELSE 0 END) as tickets_em_analise,
-        AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_resposta,
-        AVG(i.Tempo) as avg_tempo,
-        SUM(i.Tempo) as total_tempo
-    FROM 
-        info_xdfree01_extrafields i
-    WHERE 
-        i.CreationUser = :usuario_email";
-    
-    $stmt_tickets = $pdo->prepare($sql_tickets);
-    $stmt_tickets->bindParam(':usuario_email', $_SESSION['usuario_email']);
-}
+// Modify ticket statistics query to filter by entity for both admin and common users
+$sql_tickets = "SELECT 
+    COUNT(*) as total_tickets,
+    SUM(CASE WHEN i.Status != 'Concluído' THEN 1 ELSE 0 END) as tickets_ativos,
+    SUM(CASE WHEN i.Status = 'Concluído' THEN 1 ELSE 0 END) as tickets_concluidos,
+    SUM(CASE WHEN i.Status = 'Em Análise' THEN 1 ELSE 0 END) as tickets_em_analise,
+    AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_resposta,
+    AVG(i.Tempo) as avg_tempo,
+    SUM(i.Tempo) as total_tempo
+FROM 
+    info_xdfree01_extrafields i
+INNER JOIN 
+    online_entity_extrafields oee ON i.CreationUser = oee.email
+WHERE 
+    oee.Entity_KeyId = :usuario_entity_id";
+
+$stmt_tickets = $pdo->prepare($sql_tickets);
+$stmt_tickets->bindParam(':usuario_entity_id', $usuario['Entity_KeyId']);
 
 $stmt_tickets->execute();
 $estatisticas = $stmt_tickets->fetch(PDO::FETCH_ASSOC);
 
-// Update overdue tickets query based on user role
-if (isAdmin()) {
-    // Admins see all overdue tickets
-    $sql_overdue = "SELECT COUNT(*) as overdue_tickets
-    FROM info_xdfree01_extrafields i
-    WHERE i.Status != 'Concluído'
-    AND TIMESTAMPDIFF(HOUR, i.dateu, NOW()) > 48";
+// Update overdue tickets query to filter by entity
+$sql_overdue = "SELECT COUNT(*) as overdue_tickets
+FROM info_xdfree01_extrafields i
+INNER JOIN 
+    online_entity_extrafields oee ON i.CreationUser = oee.email
+WHERE oee.Entity_KeyId = :usuario_entity_id
+AND i.Status != 'Concluído'
+AND TIMESTAMPDIFF(HOUR, i.dateu, NOW()) > 48";
 
-    $stmt_overdue = $pdo->prepare($sql_overdue);
-} else {
-    // Common users see only their overdue tickets filtered by email
-    $sql_overdue = "SELECT COUNT(*) as overdue_tickets
-    FROM info_xdfree01_extrafields i
-    WHERE i.CreationUser = :usuario_email 
-    AND i.Status != 'Concluído'
-    AND TIMESTAMPDIFF(HOUR, i.dateu, NOW()) > 48";
-
-    $stmt_overdue = $pdo->prepare($sql_overdue);
-    $stmt_overdue->bindParam(':usuario_email', $_SESSION['usuario_email']);
-}
+$stmt_overdue = $pdo->prepare($sql_overdue);
+$stmt_overdue->bindParam(':usuario_entity_id', $usuario['Entity_KeyId']);
 
 $stmt_overdue->execute();
 $overdue = $stmt_overdue->fetch(PDO::FETCH_ASSOC);
 
-// Update average response time query based on user role
-if (isAdmin()) {
-    // Admins see global average response time
-    $sql_avg = "SELECT AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_fechados
-    FROM info_xdfree01_extrafields i
-    WHERE i.Status = 'Concluído'
-    AND i.dateu IS NOT NULL";
+// Update average response time query to filter by entity
+$sql_avg = "SELECT AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_fechados
+FROM info_xdfree01_extrafields i
+INNER JOIN 
+    online_entity_extrafields oee ON i.CreationUser = oee.email
+WHERE oee.Entity_KeyId = :usuario_entity_id
+AND i.Status = 'Concluído'
+AND i.dateu IS NOT NULL";
 
-    $stmt_avg = $pdo->prepare($sql_avg);
-} else {
-    // Common users see only their average response time filtered by email
-    $sql_avg = "SELECT AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_fechados
-    FROM info_xdfree01_extrafields i
-    WHERE i.CreationUser = :usuario_email 
-    AND i.Status = 'Concluído'
-    AND i.dateu IS NOT NULL";
-
-    $stmt_avg = $pdo->prepare($sql_avg);
-    $stmt_avg->bindParam(':usuario_email', $_SESSION['usuario_email']);
-}
+$stmt_avg = $pdo->prepare($sql_avg);
+$stmt_avg->bindParam(':usuario_entity_id', $usuario['Entity_KeyId']);
 
 $stmt_avg->execute();
 $avg_response = $stmt_avg->fetch(PDO::FETCH_ASSOC);
@@ -213,7 +180,7 @@ try {
     ];
 }
 
-// Get all users for admin
+// Get all users for admin - but only from the same entity/company
 $all_users = [];
 if (isAdmin()) {
     $sql_all_users = "SELECT 
@@ -227,9 +194,12 @@ if (isAdmin()) {
         online_entity_extrafields oee
     INNER JOIN
         entities e ON e.KeyId = oee.Entity_KeyId
+    WHERE 
+        oee.Entity_KeyId = :current_user_entity_id
     ORDER BY oee.Name";
     
     $stmt_all_users = $pdo->prepare($sql_all_users);
+    $stmt_all_users->bindParam(':current_user_entity_id', $usuario['Entity_KeyId']);
     $stmt_all_users->execute();
     $all_users = $stmt_all_users->fetchAll(PDO::FETCH_ASSOC);
 }
@@ -249,12 +219,29 @@ if (isAdmin()) {
                     <p class="text-muted">
                         <?php echo isAdmin() ? 'Gira o sistema e veja estatísticas globais' : 'Gira as suas informações pessoais e veja estatísticas de atendimento'; ?>
                     </p>
+                    
+                    <!-- Success/Error Messages -->
+                    <?php if (isset($_GET['success'])): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <?php echo htmlspecialchars($_GET['success']); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <?php if (isset($_GET['error'])): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <?php echo htmlspecialchars($_GET['error']); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
             
             <div class="row mb-4">
                 <!-- Coluna de Informações Pessoais -->
-                <div class="col-lg-4 mb-4">
+                <div class="col-lg-4">
                     <div class="card shadow-sm h-100">
                         <div class="card-body">
                             <div class="d-flex align-items-center mb-4">
@@ -334,11 +321,6 @@ if (isAdmin()) {
                                 </li>
                                 <?php endif; ?>
                             </ul>
-                        </div>
-                        <div class="card-footer bg-transparent">
-                            <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editProfileModal">
-                                <i class="bi bi-pencil-square me-1"></i> Editar Perfil
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -453,7 +435,7 @@ if (isAdmin()) {
                                     
                                     <div class="alert alert-info mt-3">
                                         <i class="bi bi-info-circle me-2"></i>
-                                        <strong>Nota:</strong> Apenas pode alterar a sua palavra-passe. Para alterar outros dados, contacte o administrador.
+                                        <strong>Nota:</strong> Apenas pode alterar a sua palavra-passe. Para alterar outros dados, contacte um administrador.
                                     </div>
                                     
                                 <?php else: ?>
@@ -509,9 +491,10 @@ if (isAdmin()) {
                     <div class="card shadow-sm">
                         <div class="card-header bg-transparent">
                             <h5 class="mb-0">Gestão de Utilizadores</h5>
-                            <small class="text-muted">Lista de todos os utilizadores do sistema</small>
+                            <small class="text-muted">Lista de utilizadores da sua empresa: <?php echo htmlspecialchars($empresa['nome'] ?? 'N/A'); ?></small>
                         </div>
                         <div class="card-body">
+                            <?php if (count($all_users) > 0): ?>
                             <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead class="table-light">
@@ -544,7 +527,7 @@ if (isAdmin()) {
                                                 </button>
                                             </td>
                                             <td>
-                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="editUser(<?php echo $user['Entity_KeyId']; ?>)">
+                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="editUser('<?php echo htmlspecialchars($user['email']); ?>', '<?php echo htmlspecialchars($user['Name']); ?>', '<?php echo htmlspecialchars($user['email']); ?>', '<?php echo htmlspecialchars($user['Grupo']); ?>')">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
                                             </td>
@@ -553,11 +536,74 @@ if (isAdmin()) {
                                     </tbody>
                                 </table>
                             </div>
+                            <?php else: ?>
+                            <div class="alert alert-info text-center">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Não foram encontrados outros utilizadores na sua empresa.
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
             </div>
             <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editUserModalLabel">Editar Utilizador</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editUserForm" action="update_user.php" method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" id="edit_entity_keyid" name="entity_keyid">
+                        
+                        <div class="mb-3">
+                            <label for="edit_name" class="form-label fw-bold">Nome Completo</label>
+                            <input type="text" class="form-control" id="edit_name" name="name" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_email" class="form-label fw-bold">Email</label>
+                            <input type="email" class="form-control" id="edit_email" name="email" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_grupo" class="form-label fw-bold">Grupo/Permissões</label>
+                            <select class="form-select" id="edit_grupo" name="grupo" required>
+                                <option value="Admin">Administrador</option>
+                                <option value="Comum">Utilizador Comum</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_password" class="form-label fw-bold">Nova Palavra-passe</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="edit_password" name="password" placeholder="Digite a nova palavra-passe">
+                                <button type="button" class="btn btn-outline-secondary" id="toggleEditPassword">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">Deixe em branco para manter a palavra-passe atual</small>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Atenção:</strong> As alterações serão aplicadas imediatamente. O utilizador será notificado por email se a palavra-passe for alterada.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check me-2"></i>Guardar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
     
@@ -587,10 +633,35 @@ if (isAdmin()) {
             }
         }
 
-        function editUser(userId) {
-            // Implement user editing functionality
-            alert('Funcionalidade de edição em desenvolvimento para utilizador ID: ' + userId);
+        function editUser(userEmail, name, email, grupo) {
+            // Populate the modal with user data
+            document.getElementById('edit_entity_keyid').value = userEmail; // Use email as identifier
+            document.getElementById('edit_name').value = name;
+            document.getElementById('edit_email').value = email;
+            document.getElementById('edit_grupo').value = grupo;
+            document.getElementById('edit_password').value = '';
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            modal.show();
         }
+
+        // Toggle password visibility in edit modal
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleEditPasswordBtn = document.getElementById('toggleEditPassword');
+            if (toggleEditPasswordBtn) {
+                toggleEditPasswordBtn.addEventListener('click', function() {
+                    const passwordInput = document.getElementById('edit_password');
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    
+                    // Update icon
+                    this.innerHTML = type === 'password' ? 
+                        '<i class="bi bi-eye"></i>' : 
+                        '<i class="bi bi-eye-slash"></i>';
+                });
+            }
+        });
 
         // Add form validation for common users
         <?php if (isCommonUser()): ?>
