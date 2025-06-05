@@ -7,7 +7,23 @@ if (isset($_SESSION['admin_id'])) {
     exit;
 }
 
-$errorMsg = isset($_GET['error']) ? $_GET['error'] : '';
+// Verificar se há erro de autenticação
+$errorMsg = '';
+if (isset($_GET['error'])) {
+    switch ($_GET['error']) {
+        case 'invalid':
+            $errorMsg = 'E-mail ou palavra-passe incorretos.';
+            break;
+        case 'db_error':
+            $errorMsg = 'Erro na base de dados. Tente novamente.';
+            break;
+        case 'required':
+            $errorMsg = 'Por favor, preencha todos os campos.';
+            break;
+        default:
+            $errorMsg = $_GET['error'];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-pt">
