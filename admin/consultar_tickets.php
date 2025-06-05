@@ -2,6 +2,10 @@
 session_start();  // Inicia a sessão
 
 include('conflogin.php');
+
+// Restrict access to full admins only
+requireFullAdmin();
+
 include('db.php');
 
 // Verifica se existem filtros

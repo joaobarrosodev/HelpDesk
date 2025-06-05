@@ -9,6 +9,17 @@ $admin_id = $_SESSION['admin_id'];
 $estado_filtro = isset($_GET['status']) ? $_GET['status'] : '';
 $params = [];
 
+// Get current user's assigned user ID for restricted admins
+$current_user_id = null;
+if (isRestrictedAdmin()) {
+    $user_sql = "SELECT id FROM users WHERE email = :admin_email";
+    $user_stmt = $pdo->prepare($user_sql);
+    $user_stmt->bindParam(':admin_email', $_SESSION['admin_email']);
+    $user_stmt->execute();
+    $user_result = $user_stmt->fetch(PDO::FETCH_ASSOC);
+    $current_user_id = $user_result['id'] ?? null;
+}
+
 // Prepara a SQL para tickets atribuídos
 $sql = "SELECT 
             xdfree01.KeyId, 
@@ -32,6 +43,12 @@ $sql = "SELECT
         LEFT JOIN online_entity_extrafields online on info_xdfree01_extrafields.CreationUser = online.email
         WHERE (info_xdfree01_extrafields.Atribuido IS NOT NULL AND info_xdfree01_extrafields.Atribuido <> '') 
         AND info_xdfree01_extrafields.Status <> 'Concluído'";
+
+// Add restriction for restricted admins
+if (isRestrictedAdmin()) {
+    $sql .= " AND info_xdfree01_extrafields.Atribuido = :current_user_id";
+    $params[':current_user_id'] = $current_user_id;
+}
 
 if (!empty($estado_filtro)) {
     $sql .= " AND info_xdfree01_extrafields.Status = :estado_filtro";
@@ -67,8 +84,12 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
-                    <h1 class="mb-3 display-5">Tickets Atribuídos</h1>
-                    <p class="">Lista de tickets em andamento que já possuem um responsável designado.</p>
+                    <h1 class="mb-3 display-5">
+                        <?php echo isFullAdmin() ? 'Tickets Atribuídos' : 'Os Meus Tickets'; ?>
+                    </h1>
+                    <p class="">
+                        <?php echo isFullAdmin() ? 'Lista de tickets em andamento que já possuem um responsável designado.' : 'Lista dos tickets que tem atribuídos a si.'; ?>
+                    </p>
                 </div>
             </div>
             

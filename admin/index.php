@@ -17,11 +17,45 @@ try {
     $stmt_total->execute();
     $total_tickets = $stmt_total->fetch(PDO::FETCH_ASSOC)['total'];
 
+    // Get current user's assigned user ID for restricted admins
+    $current_user_id = null;
+    if (isRestrictedAdmin()) {
+        // Get the user ID associated with this admin account
+        $user_sql = "SELECT id FROM users WHERE email = :admin_email";
+        $user_stmt = $pdo->prepare($user_sql);
+        $user_stmt->bindParam(':admin_email', $_SESSION['admin_email']);
+        $user_stmt->execute();
+        $user_result = $user_stmt->fetch(PDO::FETCH_ASSOC);
+        $current_user_id = $user_result['id'] ?? null;
+    }
+
     // Tickets atribuídos ao administrador atual (active tickets)
-    $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status <> 'Concluído'";
-    $stmt_atribuidos = $pdo->prepare($sql_atribuidos);
+    if (isFullAdmin()) {
+        // Full admins see all active tickets
+        $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status <> 'Concluído'";
+        $stmt_atribuidos = $pdo->prepare($sql_atribuidos);
+    } else {
+        // Restricted admins see only tickets assigned to them
+        $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields 
+                          WHERE Status <> 'Concluído' AND Atribuido = :user_id";
+        $stmt_atribuidos = $pdo->prepare($sql_atribuidos);
+        $stmt_atribuidos->bindParam(':user_id', $current_user_id);
+    }
+
     $stmt_atribuidos->execute();
     $total_atribuidos = $stmt_atribuidos->fetch(PDO::FETCH_ASSOC)['total'];
+
+    // Tickets sem atribuição
+    if (isFullAdmin()) {
+        $sql_sem_atribuicao = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields 
+                              WHERE (Atribuido IS NULL OR Atribuido = '') AND Status <> 'Concluído'";
+        $stmt_sem_atribuicao = $pdo->prepare($sql_sem_atribuicao);
+        $stmt_sem_atribuicao->execute();
+        $total_sem_atribuicao = $stmt_sem_atribuicao->fetch(PDO::FETCH_ASSOC)['total'];
+    } else {
+        // Restricted admins don't see unassigned tickets
+        $total_sem_atribuicao = 0;
+    }
 
     // Tickets resolvidos esta semana - using a simple approach
     $sql_semana = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status = 'Concluído'";
@@ -145,8 +179,24 @@ try {
         <div class="container-fluid p-4">
             <!-- Cabeçalho da página -->
             <div class="flex-grow-1">
-                <h1 class="mb-3 display-5">Painel de Administração</h1>
-                <p class="text-muted">Visão geral do sistema de tickets</p>
+                <h1 class="mb-3 display-5">
+                    <?php 
+                    if (isFullAdmin()) {
+                        echo 'Painel de Administração';
+                    } else {
+                        echo 'Painel de Suporte';
+                    }
+                    ?>
+                </h1>
+                <p class="">
+                    <?php 
+                    if (isFullAdmin()) {
+                        echo 'Gerir todos os tickets e utilizadores do sistema. Monitorizar o desempenho geral.';
+                    } else {
+                        echo 'Gerir os seus tickets atribuídos e acompanhar o progresso dos mesmos.';
+                    }
+                    ?>
+                </p>
             </div>
             
             <?php if(isset($erro_db)): ?>
@@ -333,6 +383,42 @@ try {
                     </p>
                 </div>
             </div>
+
+            <!-- Tickets Recentes (5 últimos) - apenas para admins restritos -->
+            <?php if (isRestrictedAdmin()): ?>
+            <div class="bg-white card p-3 rounded d-flex h-100 mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Últimos Tickets Atribuídos</h5>
+                    <a href="consultar_tickets.php" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-eye me-1"></i> Ver Todos
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Título</th>
+                                <th>Prioridade</th>
+                                <th>Status</th>
+                                <th>Criado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($tickets_recentes as $ticket): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($ticket['KeyId']); ?></td>
+                                <td><?php echo htmlspecialchars($ticket['titulo']); ?></td>
+                                <td><?php echo htmlspecialchars($ticket['prioridade']); ?></td>
+                                <td><?php echo htmlspecialchars($ticket['status']); ?></td>
+                                <td><?php echo date("d-m-Y H:i", strtotime($ticket['criado'])); ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
     

@@ -33,7 +33,9 @@
                         <span>Painel de Controlo</span>
                     </a>
                 </li>
-                  <li class="nav-item px-2 py-1">
+                
+                <?php if (isFullAdmin()): ?>
+                <li class="nav-item px-2 py-1">
                     <a href="tickets_sem_atribuicao.php" id="tickets" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'tickets_sem_atribuicao.php' ? 'active' : ''; ?>">
                         <i class="bi bi-ticket me-3 " aria-hidden="true"></i> 
                         <span>Tickets sem Atribuição</span>
@@ -46,6 +48,7 @@
                         <span>Consultar Tickets</span>
                     </a>
                 </li>
+                <?php endif; ?>
                 
                 <li class="nav-item px-2 py-1">
                     <a href="tickets_atribuidos.php" id="tickets-atribuidos" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'tickets_atribuidos.php' ? 'active' : ''; ?>">
@@ -61,12 +64,14 @@
                     </a>
                 </li>
 
+                <?php if (isFullAdmin()): ?>
                 <li class="nav-item px-2 py-1">
                     <a href="consultar_contratos.php" id="tickets-all" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'consultar_contratos.php' ? 'active' : ''; ?>">
                         <i class="bi bi-list-check me-3 " aria-hidden="true"></i> 
                         <span>Consultar Contratos</span>
                     </a>
                 </li>
+                <?php endif; ?>
             <?php else: ?>
                 <li class="nav-item px-2 py-1">
                     <a href="login.php" id="login" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark">

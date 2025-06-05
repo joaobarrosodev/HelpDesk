@@ -1,6 +1,11 @@
 <?php
-session_start();
+session_start();  // Inicia a sessão
+
 include('conflogin.php');
+
+// Restrict access to full admins only
+requireFullAdmin();
+
 include('db.php');
 
 // Parâmetros de pesquisa

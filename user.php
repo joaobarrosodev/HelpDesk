@@ -16,54 +16,100 @@ $usuario = $stmt->fetch(PDO::FETCH_ASSOC);    if (!$usuario) {
     exit;
 }
 
-// Modify ticket statistics query to filter by entity for both admin and common users
-$sql_tickets = "SELECT 
-    COUNT(*) as total_tickets,
-    SUM(CASE WHEN i.Status != 'Concluído' THEN 1 ELSE 0 END) as tickets_ativos,
-    SUM(CASE WHEN i.Status = 'Concluído' THEN 1 ELSE 0 END) as tickets_concluidos,
-    SUM(CASE WHEN i.Status = 'Em Análise' THEN 1 ELSE 0 END) as tickets_em_analise,
-    AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_resposta,
-    AVG(i.Tempo) as avg_tempo,
-    SUM(i.Tempo) as total_tempo
-FROM 
-    info_xdfree01_extrafields i
-INNER JOIN 
-    online_entity_extrafields oee ON i.CreationUser = oee.email
-WHERE 
-    oee.Entity_KeyId = :usuario_entity_id";
-
-$stmt_tickets = $pdo->prepare($sql_tickets);
-$stmt_tickets->bindParam(':usuario_entity_id', $usuario['Entity_KeyId']);
+// Update ticket statistics query based on user role
+if (isAdmin()) {
+    // Admins see statistics for tickets from their entity
+    $sql_tickets = "SELECT 
+        COUNT(*) as total_tickets,
+        SUM(CASE WHEN i.Status != 'Concluído' THEN 1 ELSE 0 END) as tickets_ativos,
+        SUM(CASE WHEN i.Status = 'Concluído' THEN 1 ELSE 0 END) as tickets_concluidos,
+        SUM(CASE WHEN i.Status = 'Em Análise' THEN 1 ELSE 0 END) as tickets_em_analise,
+        AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_resposta,
+        AVG(i.Tempo) as avg_tempo,
+        SUM(i.Tempo) as total_tempo
+    FROM 
+        info_xdfree01_extrafields i
+    INNER JOIN 
+        online_entity_extrafields oee ON i.CreationUser = oee.email
+    WHERE 
+        oee.Entity_KeyId = :usuario_entity_id";
+    
+    $stmt_tickets = $pdo->prepare($sql_tickets);
+    $stmt_tickets->bindParam(':usuario_entity_id', $usuario['Entity_KeyId']);
+} else {
+    // Common users see statistics only for their own tickets
+    $sql_tickets = "SELECT 
+        COUNT(*) as total_tickets,
+        SUM(CASE WHEN i.Status != 'Concluído' THEN 1 ELSE 0 END) as tickets_ativos,
+        SUM(CASE WHEN i.Status = 'Concluído' THEN 1 ELSE 0 END) as tickets_concluidos,
+        SUM(CASE WHEN i.Status = 'Em Análise' THEN 1 ELSE 0 END) as tickets_em_analise,
+        AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_resposta,
+        AVG(i.Tempo) as avg_tempo,
+        SUM(i.Tempo) as total_tempo
+    FROM 
+        info_xdfree01_extrafields i
+    WHERE 
+        i.CreationUser = :usuario_email";
+    
+    $stmt_tickets = $pdo->prepare($sql_tickets);
+    $stmt_tickets->bindParam(':usuario_email', $_SESSION['usuario_email']);
+}
 
 $stmt_tickets->execute();
 $estatisticas = $stmt_tickets->fetch(PDO::FETCH_ASSOC);
 
-// Update overdue tickets query to filter by entity
-$sql_overdue = "SELECT COUNT(*) as overdue_tickets
-FROM info_xdfree01_extrafields i
-INNER JOIN 
-    online_entity_extrafields oee ON i.CreationUser = oee.email
-WHERE oee.Entity_KeyId = :usuario_entity_id
-AND i.Status != 'Concluído'
-AND TIMESTAMPDIFF(HOUR, i.dateu, NOW()) > 48";
-
-$stmt_overdue = $pdo->prepare($sql_overdue);
-$stmt_overdue->bindParam(':usuario_entity_id', $usuario['Entity_KeyId']);
+// Update overdue tickets query based on user role
+if (isAdmin()) {
+    // Admins see overdue tickets for their entity
+    $sql_overdue = "SELECT COUNT(*) as overdue_tickets
+    FROM info_xdfree01_extrafields i
+    INNER JOIN 
+        online_entity_extrafields oee ON i.CreationUser = oee.email
+    WHERE oee.Entity_KeyId = :usuario_entity_id
+    AND i.Status != 'Concluído'
+    AND TIMESTAMPDIFF(HOUR, i.dateu, NOW()) > 48";
+    
+    $stmt_overdue = $pdo->prepare($sql_overdue);
+    $stmt_overdue->bindParam(':usuario_entity_id', $usuario['Entity_KeyId']);
+} else {
+    // Common users see overdue tickets only for their tickets
+    $sql_overdue = "SELECT COUNT(*) as overdue_tickets
+    FROM info_xdfree01_extrafields i
+    WHERE i.CreationUser = :usuario_email
+    AND i.Status != 'Concluído'
+    AND TIMESTAMPDIFF(HOUR, i.dateu, NOW()) > 48";
+    
+    $stmt_overdue = $pdo->prepare($sql_overdue);
+    $stmt_overdue->bindParam(':usuario_email', $_SESSION['usuario_email']);
+}
 
 $stmt_overdue->execute();
 $overdue = $stmt_overdue->fetch(PDO::FETCH_ASSOC);
 
-// Update average response time query to filter by entity
-$sql_avg = "SELECT AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_fechados
-FROM info_xdfree01_extrafields i
-INNER JOIN 
-    online_entity_extrafields oee ON i.CreationUser = oee.email
-WHERE oee.Entity_KeyId = :usuario_entity_id
-AND i.Status = 'Concluído'
-AND i.dateu IS NOT NULL";
-
-$stmt_avg = $pdo->prepare($sql_avg);
-$stmt_avg->bindParam(':usuario_entity_id', $usuario['Entity_KeyId']);
+// Update average response time query based on user role
+if (isAdmin()) {
+    // Admins see average response time for their entity
+    $sql_avg = "SELECT AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_fechados
+    FROM info_xdfree01_extrafields i
+    INNER JOIN 
+        online_entity_extrafields oee ON i.CreationUser = oee.email
+    WHERE oee.Entity_KeyId = :usuario_entity_id
+    AND i.Status = 'Concluído'
+    AND i.dateu IS NOT NULL";
+    
+    $stmt_avg = $pdo->prepare($sql_avg);
+    $stmt_avg->bindParam(':usuario_entity_id', $usuario['Entity_KeyId']);
+} else {
+    // Common users see average response time only for their tickets
+    $sql_avg = "SELECT AVG(TIMESTAMPDIFF(HOUR, i.CreationDate, i.dateu)) as tempo_medio_fechados
+    FROM info_xdfree01_extrafields i
+    WHERE i.CreationUser = :usuario_email
+    AND i.Status = 'Concluído'
+    AND i.dateu IS NOT NULL";
+    
+    $stmt_avg = $pdo->prepare($sql_avg);
+    $stmt_avg->bindParam(':usuario_email', $_SESSION['usuario_email']);
+}
 
 $stmt_avg->execute();
 $avg_response = $stmt_avg->fetch(PDO::FETCH_ASSOC);
@@ -214,10 +260,10 @@ if (isAdmin()) {
             <div class="row mb-4">
                 <div class="col-12">                    
                     <h1 class="display-5 mb-0">
-                        <?php echo isAdmin() ? 'Painel de Administração' : 'O Meu Perfil'; ?>
+                        <?php echo isAdmin() ? 'Painel de Administração da Empresa' : 'O Meu Perfil'; ?>
                     </h1>
                     <p class="text-muted">
-                        <?php echo isAdmin() ? 'Gira o sistema e veja estatísticas globais' : 'Gira as suas informações pessoais e veja estatísticas de atendimento'; ?>
+                        <?php echo isAdmin() ? 'Gira o sistema e veja estatísticas dos tickets da sua empresa' : 'Gira as suas informações pessoais e veja estatísticas dos seus tickets'; ?>
                     </p>
                     
                     <!-- Success/Error Messages -->

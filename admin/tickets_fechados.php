@@ -4,6 +4,17 @@ session_start();  // Inicia a sessão
 include('conflogin.php');
 include('db.php');
 
+// Get current user's assigned user ID for restricted admins
+$current_user_id = null;
+if (isRestrictedAdmin()) {
+    $user_sql = "SELECT id FROM users WHERE email = :admin_email";
+    $user_stmt = $pdo->prepare($user_sql);
+    $user_stmt->bindParam(':admin_email', $_SESSION['admin_email']);
+    $user_stmt->execute();
+    $user_result = $user_stmt->fetch(PDO::FETCH_ASSOC);
+    $current_user_id = $user_result['id'] ?? null;
+}
+
 // Prepara a SQL para tickets fechados (concluídos)
 $sql = "SELECT 
             xdfree01.KeyId, 
@@ -30,8 +41,18 @@ $sql = "SELECT
         LEFT JOIN online_entity_extrafields online ON info_xdfree01_extrafields.CreationUser = online.email
         WHERE info_xdfree01_extrafields.Status = 'Concluído'";
 
-$sql .= " ORDER BY info_xdfree01_extrafields.dateu DESC"; // Ordenar pelo mais recente
+// Add restriction for restricted admins - only show tickets they closed/resolved
+if (isRestrictedAdmin()) {
+    $sql .= " AND info_xdfree01_extrafields.Atribuido = :current_user_id";
+}
+
+$sql .= " ORDER BY info_xdfree01_extrafields.dateu DESC";
 $stmt = $pdo->prepare($sql);
+
+if (isRestrictedAdmin()) {
+    $stmt->bindParam(':current_user_id', $current_user_id);
+}
+
 $stmt->execute();
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -45,8 +66,12 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="container-fluid p-4">
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
-                    <h1 class="mb-3 display-5">Tickets Fechados</h1>
-                    <p class="">Lista de todos os tickets concluídos, com tempo de resolução e informações de conclusão.</p>
+                    <h1 class="mb-3 display-5">
+                        <?php echo isFullAdmin() ? 'Tickets Fechados' : 'Os Meus Tickets Fechados'; ?>
+                    </h1>
+                    <p class="">
+                        <?php echo isFullAdmin() ? 'Lista de todos os tickets concluídos, com tempo de resolução e informações de conclusão.' : 'Lista dos tickets que resolveu e fechou, com tempo de resolução e informações de conclusão.'; ?>
+                    </p>
                 </div>
             </div>
             

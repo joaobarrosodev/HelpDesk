@@ -34,28 +34,80 @@ include('conflogin.php');
         }
 
         // Contar tickets em aberto para o usuário atual
-        // Update ticket count query to filter by entity for both admin and common users
-        $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields i
-                       INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
-                       WHERE (i.status = 'Em Análise' OR i.status = 'Em Resolução' OR i.status = ' Aguarda Resposta') 
-                       AND oee.Entity_KeyId = :usuario_entity_id";
-        
-        $stmt_tickets = $pdo->prepare($sql_tickets);
-        $stmt_tickets->bindParam(':usuario_entity_id', $_SESSION['usuario_id']); // Assuming this is Entity_KeyId
+        // Update ticket count query based on user role
+        if (isAdmin()) {
+            // Admins see statistics for tickets from their entity
+            $admin_entity_sql = "SELECT Entity_KeyId FROM online_entity_extrafields WHERE email = :admin_email";
+            $admin_stmt = $pdo->prepare($admin_entity_sql);
+            $admin_stmt->bindParam(':admin_email', $_SESSION['usuario_email']);
+            $admin_stmt->execute();
+            $admin_entity = $admin_stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields i
+                           INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                           WHERE (i.status = 'Em Análise' OR i.status = 'Em Resolução' OR i.status = ' Aguarda Resposta')
+                           AND oee.Entity_KeyId = :usuario_entity_id";
+            
+            $stmt_tickets = $pdo->prepare($sql_tickets);
+            $stmt_tickets->bindParam(':usuario_entity_id', $admin_entity['Entity_KeyId']);
+        } else {
+            // Common users see statistics only for their own tickets
+            $sql_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields i
+                           WHERE (i.status = 'Em Análise' OR i.status = 'Em Resolução' OR i.status = ' Aguarda Resposta') 
+                           AND i.CreationUser = :usuario_email";
+            
+            $stmt_tickets = $pdo->prepare($sql_tickets);
+            $stmt_tickets->bindParam(':usuario_email', $_SESSION['usuario_email']);
+        }
 
         $stmt_tickets->execute();
         $ticket_count = $stmt_tickets->fetchColumn();
 
+        // Get total tickets count (all tickets, not just open ones)
+        if (isAdmin()) {
+            // Admins see total tickets from their entity
+            $sql_total_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields i
+                                 INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                                 WHERE oee.Entity_KeyId = :usuario_entity_id";
+            
+            $stmt_total_tickets = $pdo->prepare($sql_total_tickets);
+            $stmt_total_tickets->bindParam(':usuario_entity_id', $admin_entity['Entity_KeyId']);
+        } else {
+            // Common users see only their own total tickets
+            $sql_total_tickets = "SELECT COUNT(*) FROM info_xdfree01_extrafields i
+                                 WHERE i.CreationUser = :usuario_email";
+            
+            $stmt_total_tickets = $pdo->prepare($sql_total_tickets);
+            $stmt_total_tickets->bindParam(':usuario_email', $_SESSION['usuario_email']);
+        }
+
+        $stmt_total_tickets->execute();
+        $total_tickets_count = $stmt_total_tickets->fetchColumn();
+
         // Obter dados para o gráfico de categorias (baseado nos assuntos dos tickets)
-        // Update category chart data to filter by entity
-        $sql_categorias = "SELECT i.User as categoria, COUNT(*) as total FROM info_xdfree01_extrafields i
-                          INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
-                          WHERE oee.Entity_KeyId = :usuario_entity_id
-                          GROUP BY i.User 
-                          ORDER BY total DESC";
-        
-        $stmt_categorias = $pdo->prepare($sql_categorias);
-        $stmt_categorias->bindParam(':usuario_entity_id', $_SESSION['usuario_id']);
+        // Update category chart data based on user role
+        if (isAdmin()) {
+            // Admins see categories from tickets in their entity
+            $sql_categorias = "SELECT i.User as categoria, COUNT(*) as total FROM info_xdfree01_extrafields i
+                              INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                              WHERE i.User IS NOT NULL
+                              AND oee.Entity_KeyId = :usuario_entity_id
+                              GROUP BY i.User 
+                              ORDER BY total DESC";
+            
+            $stmt_categorias = $pdo->prepare($sql_categorias);
+            $stmt_categorias->bindParam(':usuario_entity_id', $admin_entity['Entity_KeyId']);
+        } else {
+            // Common users see categories only from their tickets
+            $sql_categorias = "SELECT i.User as categoria, COUNT(*) as total FROM info_xdfree01_extrafields i
+                              WHERE i.CreationUser = :usuario_email
+                              AND i.User IS NOT NULL
+                              GROUP BY i.User 
+                              ORDER BY total DESC";
+            
+            $stmt_categorias = $pdo->prepare($sql_categorias);
+            $stmt_categorias->bindParam(':usuario_email', $_SESSION['usuario_email']);
+        }
 
         $stmt_categorias->execute();
         $categorias = $stmt_categorias->fetchAll(PDO::FETCH_ASSOC);
@@ -75,15 +127,29 @@ include('conflogin.php');
         }
 
         // Obter dados para o gráfico de prioridade
-        // Update priority chart data to filter by entity
-        $sql_prioridade = "SELECT i.Priority as prioridade, COUNT(*) as total FROM info_xdfree01_extrafields i
-                          INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
-                          WHERE oee.Entity_KeyId = :usuario_entity_id
-                          GROUP BY i.Priority 
-                          ORDER BY FIELD(i.Priority, 'Alta', 'Normal', 'Baixa')";
-        
-        $stmt_prioridade = $pdo->prepare($sql_prioridade);
-        $stmt_prioridade->bindParam(':usuario_entity_id', $_SESSION['usuario_id']);
+        // Update priority chart data based on user role
+        if (isAdmin()) {
+            // Admins see priorities from tickets in their entity
+            $sql_prioridade = "SELECT i.Priority as prioridade, COUNT(*) as total FROM info_xdfree01_extrafields i
+                              INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                              WHERE i.Priority IS NOT NULL
+                              AND oee.Entity_KeyId = :usuario_entity_id
+                              GROUP BY i.Priority 
+                              ORDER BY FIELD(i.Priority, 'Alta', 'Normal', 'Baixa')";
+            
+            $stmt_prioridade = $pdo->prepare($sql_prioridade);
+            $stmt_prioridade->bindParam(':usuario_entity_id', $admin_entity['Entity_KeyId']);
+        } else {
+            // Common users see priorities only from their tickets
+            $sql_prioridade = "SELECT i.Priority as prioridade, COUNT(*) as total FROM info_xdfree01_extrafields i
+                              WHERE i.CreationUser = :usuario_email
+                              AND i.Priority IS NOT NULL
+                              GROUP BY i.Priority 
+                              ORDER BY FIELD(i.Priority, 'Alta', 'Normal', 'Baixa')";
+            
+            $stmt_prioridade = $pdo->prepare($sql_prioridade);
+            $stmt_prioridade->bindParam(':usuario_email', $_SESSION['usuario_email']);
+        }
 
         $stmt_prioridade->execute();
         $prioridades = $stmt_prioridade->fetchAll(PDO::FETCH_ASSOC);
@@ -113,14 +179,25 @@ include('conflogin.php');
         }
         
         // Calcular o tempo médio de resposta baseado na coluna Tempo
-        // Update average response time query to filter by entity
-        $sql_tempo_resposta = "SELECT AVG(i.Tempo) as media_tempo FROM info_xdfree01_extrafields i
-                              INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
-                              WHERE i.Tempo IS NOT NULL AND i.Tempo > 0 
-                              AND oee.Entity_KeyId = :usuario_entity_id";
-        
-        $stmt_tempo = $pdo->prepare($sql_tempo_resposta);
-        $stmt_tempo->bindParam(':usuario_entity_id', $_SESSION['usuario_id']);
+        // Update average response time query based on user role
+        if (isAdmin()) {
+            // Admins see average time for tickets in their entity
+            $sql_tempo_resposta = "SELECT AVG(i.Tempo) as media_tempo FROM info_xdfree01_extrafields i
+                                  INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                                  WHERE i.Tempo IS NOT NULL AND i.Tempo > 0 
+                                  AND oee.Entity_KeyId = :usuario_entity_id";
+            
+            $stmt_tempo = $pdo->prepare($sql_tempo_resposta);
+            $stmt_tempo->bindParam(':usuario_entity_id', $admin_entity['Entity_KeyId']);
+        } else {
+            // Common users see average time only for their tickets
+            $sql_tempo_resposta = "SELECT AVG(i.Tempo) as media_tempo FROM info_xdfree01_extrafields i
+                                  WHERE i.Tempo IS NOT NULL AND i.Tempo > 0 
+                                  AND i.CreationUser = :usuario_email";
+            
+            $stmt_tempo = $pdo->prepare($sql_tempo_resposta);
+            $stmt_tempo->bindParam(':usuario_email', $_SESSION['usuario_email']);
+        }
 
         $stmt_tempo->execute();
         $tempo_result = $stmt_tempo->fetch(PDO::FETCH_ASSOC);
@@ -145,29 +222,51 @@ include('conflogin.php');
         }
         
         // Obter dados reais da avaliação dos clientes da tabela info_xdfree01_extrafields
-        // Update customer review data to filter by entity
+        // Update customer review data based on user role
         try {
-            // Total de respostas - filter by entity
-            $sql_total = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields i
-                         INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
-                         WHERE i.Review IS NOT NULL AND oee.Entity_KeyId = :usuario_entity_id";
-            
-            $stmt_total = $pdo->prepare($sql_total);
-            $stmt_total->bindParam(':usuario_entity_id', $_SESSION['usuario_id']);
-            $stmt_total->execute();
-            $respostas_recebidas = $stmt_total->fetchColumn();
-            
-            // Contagem de avaliações por tipo (1=positivo, 2=neutro, 3=negativo) - filter by entity
-            $sql_avaliacoes = "SELECT 
-                                SUM(CASE WHEN i.Review = 1 THEN 1 ELSE 0 END) as positivas,
-                                SUM(CASE WHEN i.Review = 2 THEN 1 ELSE 0 END) as neutras,
-                                SUM(CASE WHEN i.Review = 3 THEN 1 ELSE 0 END) as negativas
-                               FROM info_xdfree01_extrafields i
-                               INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
-                               WHERE i.Review IS NOT NULL AND oee.Entity_KeyId = :usuario_entity_id";
-            
-            $stmt_avaliacoes = $pdo->prepare($sql_avaliacoes);
-            $stmt_avaliacoes->bindParam(':usuario_entity_id', $_SESSION['usuario_id']);
+            if (isAdmin()) {
+                // Admins see reviews from tickets in their entity
+                $sql_total = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields i
+                             INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                             WHERE i.Review IS NOT NULL
+                             AND oee.Entity_KeyId = :usuario_entity_id";
+                
+                $stmt_total = $pdo->prepare($sql_total);
+                $stmt_total->bindParam(':usuario_entity_id', $admin_entity['Entity_KeyId']);
+                $stmt_total->execute();
+                $respostas_recebidas = $stmt_total->fetchColumn();
+                
+                $sql_avaliacoes = "SELECT 
+                                    SUM(CASE WHEN i.Review = 1 THEN 1 ELSE 0 END) as positivas,
+                                    SUM(CASE WHEN i.Review = 2 THEN 1 ELSE 0 END) as neutras,
+                                    SUM(CASE WHEN i.Review = 3 THEN 1 ELSE 0 END) as negativas
+                                   FROM info_xdfree01_extrafields i
+                                   INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
+                                   WHERE i.Review IS NOT NULL
+                                   AND oee.Entity_KeyId = :usuario_entity_id";
+                
+                $stmt_avaliacoes = $pdo->prepare($sql_avaliacoes);
+                $stmt_avaliacoes->bindParam(':usuario_entity_id', $admin_entity['Entity_KeyId']);
+            } else {
+                // Common users see reviews only from their tickets
+                $sql_total = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields i
+                             WHERE i.Review IS NOT NULL AND i.CreationUser = :usuario_email";
+                
+                $stmt_total = $pdo->prepare($sql_total);
+                $stmt_total->bindParam(':usuario_email', $_SESSION['usuario_email']);
+                $stmt_total->execute();
+                $respostas_recebidas = $stmt_total->fetchColumn();
+                
+                $sql_avaliacoes = "SELECT 
+                                    SUM(CASE WHEN i.Review = 1 THEN 1 ELSE 0 END) as positivas,
+                                    SUM(CASE WHEN i.Review = 2 THEN 1 ELSE 0 END) as neutras,
+                                    SUM(CASE WHEN i.Review = 3 THEN 1 ELSE 0 END) as negativas
+                                   FROM info_xdfree01_extrafields i
+                                   WHERE i.Review IS NOT NULL AND i.CreationUser = :usuario_email";
+                
+                $stmt_avaliacoes = $pdo->prepare($sql_avaliacoes);
+                $stmt_avaliacoes->bindParam(':usuario_email', $_SESSION['usuario_email']);
+            }
 
             $stmt_avaliacoes->execute();
             $avaliacoes = $stmt_avaliacoes->fetch(PDO::FETCH_ASSOC);
@@ -198,7 +297,7 @@ include('conflogin.php');
             <div>
                 <h1 class="mb-3 display-5">Bem Vindo, <span class="text-primary"><?php echo isset($_SESSION['Nome']) ? htmlspecialchars($_SESSION['Nome']) : 'Utilizador'; ?></span> </h1>
                 <p class="text-muted mb-3 w-100">
-                    <?php echo isAdmin() ? 'Painel de administração da empresa - Estatísticas e dados da sua organização' : 'Aqui pode acompanhar os tickets da sua empresa, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real.'; ?>
+                    <?php echo isAdmin() ? 'Painel de administração da empresa - Estatísticas e dados dos tickets da sua empresa' : 'Aqui pode acompanhar os seus tickets, ver o estado de cada pedido de suporte, e consultar informações importantes em tempo real.'; ?>
                 </p>
             </div>
             <a href="abrir_ticket.php" class="btn btn-primary btn-primary">Abrir Novo Ticket</a>
@@ -247,56 +346,31 @@ include('conflogin.php');
                         </h5>
                         <div class="row w-100">
                             <div class="col-6 d-flex justify-content-center align-items-center flex-column mb-3">
-                                <p class="w-100 text-muted">
-                                    <?php echo isAdmin() ? 'Respostas:' : 'Total de Avaliações:'; ?>
-                                </p>
-                                <p class="w-100">
-                                    <strong>
-                                        <?php echo $respostas_recebidas; ?> 
-                                        <?php 
-                                        if (isAdmin()) {
-                                            echo ($respostas_recebidas == 1) ? 'Cliente' : 'Clientes';
-                                        } else {
-                                            echo ($respostas_recebidas == 1) ? 'Avaliação' : 'Avaliações';
-                                        }
-                                        ?>
-                                    </strong>
-                                </p>
-                            </div>
-
-                            <div class="col-6 d-flex justify-content-center align-items-center flex-row mb-3">
-                                    <i class="bi bi-hand-thumbs-up-fill text-success fs-4"></i>
-                                    <div class="flex-column w-100 justify-content-center align-items-center d-flex">
-                                        <span class="text-muted">Positivo</span>
-                                            <div class="progress w-75 mt-1"  style=" height: 6px;">
-                                                <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $positive_percentage; ?>%"></div>
-                                            </div>       
-                                    </div>
-                                    <div>
-                                        <span class="client-rating-number"><?php echo $positive_percentage; ?>%</span>
-                                    </div>
-                            </div>
-
-                            <div class="col-6 d-flex justify-content-center align-items-center flex-row mb-3">
-                                 <i class="bi bi-hand-thumbs-down-fill text-danger fs-4"></i>
-                                <div class="flex-column w-100 justify-content-center align-items-center d-flex">
-                                    <span class="text-muted">Negativo</span>
-                                    <div class="progress w-75 mt-1"  style=" height: 6px;">
-                                        <div class="progress-bar bg-danger" role="progressbar" style="width: <?php echo $negative_percentage; ?>%"></div>
-                                    </div>
+                                <div class="text-center">
+                                    <h4 class="text-success mb-0"><?php echo $positive_percentage; ?>%</h4>
+                                    <small class="text-muted">Positivas</small>
                                 </div>
-                                <span class="client-rating-number"><?php echo $negative_percentage; ?>%</span>
                             </div>
 
                             <div class="col-6 d-flex justify-content-center align-items-center flex-row mb-3">
-                                 <i class="bi bi-emoji-neutral-fill text-warning fs-4"></i>   
-                                <div class="flex-column w-100 justify-content-center align-items-center d-flex">
-                                    <span class="text-muted">Neutro</span>
-                                    <div class="progress w-75 mt-1"  style=" height: 6px;">
-                                        <div class="progress-bar bg-warning" role="progressbar" style="width: <?php echo $neutral_percentage; ?>%"></div>
-                                   </div>
+                                <div class="text-center">
+                                    <h4 class="text-warning mb-0"><?php echo $neutral_percentage; ?>%</h4>
+                                    <small class="text-muted">Neutras</small>
                                 </div>
-                                <span class="client-rating-number"><?php echo $neutral_percentage; ?>%</span>
+                            </div>
+
+                            <div class="col-6 d-flex justify-content-center align-items-center flex-row mb-3">
+                                <div class="text-center">
+                                    <h4 class="text-danger mb-0"><?php echo $negative_percentage; ?>%</h4>
+                                    <small class="text-muted">Negativas</small>
+                                </div>
+                            </div>
+
+                            <div class="col-6 d-flex justify-content-center align-items-center flex-row mb-3">
+                                <div class="text-center">
+                                    <h4 class="text-info mb-0"><?php echo $total_tickets_count; ?></h4>
+                                    <small class="text-muted">Total de Tickets</small>
+                                </div>
                             </div>
                         </div>
                     </div>

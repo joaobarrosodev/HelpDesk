@@ -24,7 +24,7 @@ $params = [];
 
 // Modify the SQL query based on user role
 if (isAdmin()) {
-    // Admins see all tickets from their entity with entity information
+    // Admins see ALL tickets from THEIR entity
     $sql = "SELECT 
                 t.id, 
                 t.KeyId,
@@ -58,9 +58,16 @@ if (isAdmin()) {
                 i.XDFree01_KeyID IS NOT NULL
                 AND oee.Entity_KeyId = :usuario_entity_id";
     
-    $params[':usuario_entity_id'] = $_SESSION['usuario_id']; // Assuming this is Entity_KeyId
+    // Get the admin's entity ID
+    $admin_entity_sql = "SELECT Entity_KeyId FROM online_entity_extrafields WHERE email = :admin_email";
+    $admin_stmt = $pdo->prepare($admin_entity_sql);
+    $admin_stmt->bindParam(':admin_email', $_SESSION['usuario_email']);
+    $admin_stmt->execute();
+    $admin_entity = $admin_stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $params[':usuario_entity_id'] = $admin_entity['Entity_KeyId'];
 } else {
-    // Common users see only tickets from their entity
+    // Common users see only tickets THEY created (by their email)
     $sql = "SELECT 
                 t.id, 
                 t.KeyId,
@@ -85,13 +92,11 @@ if (isAdmin()) {
                 xdfree01 t
             LEFT JOIN 
                 info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
-            LEFT JOIN
-                online_entity_extrafields oee ON i.CreationUser = oee.email
             WHERE 
                 i.XDFree01_KeyID IS NOT NULL
-                AND oee.Entity_KeyId = :usuario_entity_id";
+                AND i.CreationUser = :usuario_email";
     
-    $params[':usuario_entity_id'] = $_SESSION['usuario_id']; // Assuming this is Entity_KeyId
+    $params[':usuario_email'] = $_SESSION['usuario_email'];
 }
 
 // Adiciona filtros se existirem
@@ -122,8 +127,14 @@ $stmt->execute($params);
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Obter lista de assuntos únicos para o dropdown
-if (!isAdmin()) {
-    // Update the tickets query for common users to filter by email
+if (isAdmin()) {
+    // Admins see subjects from tickets in their entity
+    $admin_entity_sql = "SELECT Entity_KeyId FROM online_entity_extrafields WHERE email = :admin_email";
+    $admin_stmt = $pdo->prepare($admin_entity_sql);
+    $admin_stmt->bindParam(':admin_email', $_SESSION['usuario_email']);
+    $admin_stmt->execute();
+    $admin_entity = $admin_stmt->fetch(PDO::FETCH_ASSOC);
+    
     $sql_assuntos = "SELECT DISTINCT i.User 
                      FROM info_xdfree01_extrafields i 
                      INNER JOIN online_entity_extrafields oee ON i.CreationUser = oee.email
@@ -131,11 +142,16 @@ if (!isAdmin()) {
                      AND i.User IS NOT NULL 
                      ORDER BY i.User";
     $stmt_assuntos = $pdo->prepare($sql_assuntos);
-    $stmt_assuntos->bindParam(':usuario_entity_id', $_SESSION['usuario_id']);
+    $stmt_assuntos->bindParam(':usuario_entity_id', $admin_entity['Entity_KeyId']);
 } else {
-    // Admins see all subjects
-    $sql_assuntos = "SELECT DISTINCT User FROM info_xdfree01_extrafields WHERE User IS NOT NULL ORDER BY User";
+    // Common users see only subjects from their own tickets
+    $sql_assuntos = "SELECT DISTINCT i.User 
+                     FROM info_xdfree01_extrafields i 
+                     WHERE i.CreationUser = :usuario_email
+                     AND i.User IS NOT NULL 
+                     ORDER BY i.User";
     $stmt_assuntos = $pdo->prepare($sql_assuntos);
+    $stmt_assuntos->bindParam(':usuario_email', $_SESSION['usuario_email']);
 }
 
 $stmt_assuntos->execute();
@@ -152,10 +168,10 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
                     <h1 class="mb-3 display-5">
-                        <?php echo isAdmin() ? 'Tickets da Empresa' : 'Tickets da Empresa'; ?>
+                        <?php echo isAdmin() ? 'Tickets da Empresa' : 'Os Meus Tickets'; ?>
                     </h1>
                     <p class="">
-                        <?php echo isAdmin() ? 'Lista de todos os tickets da sua empresa. Utilize os filtros abaixo para refinar a visualização.' : 'Lista de todos os tickets da sua empresa, incluindo tickets em aberto e resolvidos. Utilize os filtros abaixo para refinar a visualização.'; ?>
+                        <?php echo isAdmin() ? 'Lista de todos os tickets da sua empresa. Utilize os filtros abaixo para refinar a visualização.' : 'Lista dos tickets que criou. Utilize os filtros abaixo para refinar a visualização.'; ?>
                     </p>
                 </div>
                 <a href="abrir_ticket.php" class="btn btn-primary d-flex align-items-center">
