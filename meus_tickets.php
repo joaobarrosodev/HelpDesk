@@ -24,7 +24,7 @@ $params = [];
 
 // Modify the SQL query based on user role
 if (isAdmin()) {
-    // Admins see all tickets with entity information
+    // Admins see all tickets from their entity with entity information
     $sql = "SELECT 
                 t.id, 
                 t.KeyId,
@@ -51,11 +51,16 @@ if (isAdmin()) {
             LEFT JOIN 
                 info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
             LEFT JOIN
-                entities e ON t.Entity = e.KeyId
+                online_entity_extrafields oee ON i.CreationUser = oee.email
+            LEFT JOIN
+                entities e ON e.KeyId = oee.Entity_KeyId
             WHERE 
-                i.XDFree01_KeyID IS NOT NULL";
+                i.XDFree01_KeyID IS NOT NULL
+                AND oee.Entity_KeyId = :usuario_entity_id";
+    
+    $params[':usuario_entity_id'] = $_SESSION['usuario_id']; // Assuming this is Entity_KeyId
 } else {
-    // Common users see only tickets they created (filtered by email)
+    // Common users see only tickets from their entity
     $sql = "SELECT 
                 t.id, 
                 t.KeyId,

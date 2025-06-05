@@ -1,4 +1,4 @@
-*<?php
+<?php
 session_start();  // Inicia a sessão
 
 include('conflogin.php');
@@ -363,7 +363,7 @@ if (isAdmin()) {
                                     }
                                     ?>
                                     <h2 class="display-4 mb-1 fw-bold text-danger"><?php echo $tempo_formatado; ?></h2>
-                                    <p class="text-muted mb-0">Tickets AVG Ticket</p>
+                                    <p class="text-muted mb-0">Tempo Médio</p>
                                 </div>
                             </div>
                         </div>
@@ -375,16 +375,22 @@ if (isAdmin()) {
                                     // Utilizar o campo de soma total de Tempo
                                     $tempo_total = $estatisticas['total_tempo'] ?? 0;
                                     if ($tempo_total > 0) {
-                                        $total_horas = floor($tempo_total / 60);
-                                        $total_minutos = $tempo_total % 60;
-                                        
-                                        if ($total_horas > 0) {
-                                            $total_formatado = $total_horas . "h" . ($total_minutos > 0 ? " " . $total_minutos . "m" : "");
+                                        if ($tempo_total >= 60) {
+                                            // Se for 60 minutos ou mais, mostrar em horas e minutos
+                                            $total_horas = floor($tempo_total / 60);
+                                            $total_minutos = $tempo_total % 60;
+                                            
+                                            if ($total_horas > 0) {
+                                                $total_formatado = $total_horas . "h" . ($total_minutos > 0 ? " " . $total_minutos . "m" : "");
+                                            } else {
+                                                $total_formatado = $total_minutos . "m";
+                                            }
                                         } else {
-                                            $total_formatado = $total_minutos . "m";
+                                            // Se for menos de 60 minutos, mostrar apenas em minutos
+                                            $total_formatado = $tempo_total . "m";
                                         }
                                     } else {
-                                        $total_formatado = "0h";
+                                        $total_formatado = "0m";
                                     }
                                     ?>
                                     <h2 class="display-4 mb-1 fw-bold text-success"><?php echo $total_formatado; ?></h2>

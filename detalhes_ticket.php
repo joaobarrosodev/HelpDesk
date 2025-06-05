@@ -810,7 +810,7 @@ function getStatusColor($status) {
 
             // Check if ticket is closed and review not given yet
             checkTicketReview();
-        });
+        }); 
     </script>
 </body>
 </html>
