@@ -6,7 +6,7 @@ include('db.php');
 
 // Get current user's assigned user ID for restricted admins
 $current_user_id = null;
-if (isRestrictedAdmin()) {
+if (isComum()) {  // CHANGED: was isRestrictedAdmin()
     $user_sql = "SELECT id FROM users WHERE email = :admin_email";
     $user_stmt = $pdo->prepare($user_sql);
     $user_stmt->bindParam(':admin_email', $_SESSION['admin_email']);
@@ -42,14 +42,14 @@ $sql = "SELECT
         WHERE info_xdfree01_extrafields.Status = 'Concluído'";
 
 // Add restriction for restricted admins - only show tickets they closed/resolved
-if (isRestrictedAdmin()) {
+if (isComum()) {  // CHANGED: was isRestrictedAdmin()
     $sql .= " AND info_xdfree01_extrafields.Atribuido = :current_user_id";
 }
 
 $sql .= " ORDER BY info_xdfree01_extrafields.dateu DESC";
 $stmt = $pdo->prepare($sql);
 
-if (isRestrictedAdmin()) {
+if (isComum()) {  // CHANGED: was isRestrictedAdmin()
     $stmt->bindParam(':current_user_id', $current_user_id);
 }
 
@@ -67,10 +67,10 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
                     <h1 class="mb-3 display-5">
-                        <?php echo isFullAdmin() ? 'Tickets Fechados' : 'Os Meus Tickets Fechados'; ?>
+                        <?php echo isAdmin() ? 'Tickets Fechados' : 'Os Meus Tickets Fechados'; ?>
                     </h1>
                     <p class="">
-                        <?php echo isFullAdmin() ? 'Lista de todos os tickets concluídos, com tempo de resolução e informações de conclusão.' : 'Lista dos tickets que resolveu e fechou, com tempo de resolução e informações de conclusão.'; ?>
+                        <?php echo isAdmin() ? 'Lista de todos os tickets concluídos, com tempo de resolução e informações de conclusão.' : 'Lista dos tickets que resolveu e fechou, com tempo de resolução e informações de conclusão.'; ?>
                     </p>
                 </div>
             </div>

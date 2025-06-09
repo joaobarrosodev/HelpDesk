@@ -17,9 +17,9 @@ try {
     $stmt_total->execute();
     $total_tickets = $stmt_total->fetch(PDO::FETCH_ASSOC)['total'];
 
-    // Get current user's assigned user ID for restricted admins
+    // Get current user's assigned user ID for restricted users
     $current_user_id = null;
-    if (isRestrictedAdmin()) {
+    if (isComum()) {
         // Get the user ID associated with this admin account
         $user_sql = "SELECT id FROM users WHERE email = :admin_email";
         $user_stmt = $pdo->prepare($user_sql);
@@ -29,13 +29,13 @@ try {
         $current_user_id = $user_result['id'] ?? null;
     }
 
-    // Tickets atribuídos ao administrador atual (active tickets)
-    if (isFullAdmin()) {
+    // Tickets atribuídos (active tickets)
+    if (isAdmin()) {
         // Full admins see all active tickets
         $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status <> 'Concluído'";
         $stmt_atribuidos = $pdo->prepare($sql_atribuidos);
     } else {
-        // Restricted admins see only tickets assigned to them
+        // Restricted users see only tickets assigned to them
         $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields 
                           WHERE Status <> 'Concluído' AND Atribuido = :user_id";
         $stmt_atribuidos = $pdo->prepare($sql_atribuidos);
@@ -45,15 +45,14 @@ try {
     $stmt_atribuidos->execute();
     $total_atribuidos = $stmt_atribuidos->fetch(PDO::FETCH_ASSOC)['total'];
 
-    // Tickets sem atribuição
-    if (isFullAdmin()) {
+    // Tickets sem atribuição - only for admins
+    if (isAdmin()) {
         $sql_sem_atribuicao = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields 
                               WHERE (Atribuido IS NULL OR Atribuido = '') AND Status <> 'Concluído'";
         $stmt_sem_atribuicao = $pdo->prepare($sql_sem_atribuicao);
         $stmt_sem_atribuicao->execute();
         $total_sem_atribuicao = $stmt_sem_atribuicao->fetch(PDO::FETCH_ASSOC)['total'];
     } else {
-        // Restricted admins don't see unassigned tickets
         $total_sem_atribuicao = 0;
     }
 
@@ -181,7 +180,7 @@ try {
             <div class="flex-grow-1">
                 <h1 class="mb-3 display-5">
                     <?php 
-                    if (isFullAdmin()) {
+                    if (isAdmin()) {  // CHANGED: was isFullAdmin()
                         echo 'Painel de Administração';
                     } else {
                         echo 'Painel de Suporte';
@@ -190,7 +189,7 @@ try {
                 </h1>
                 <p class="">
                     <?php 
-                    if (isFullAdmin()) {
+                    if (isAdmin()) {  // CHANGED: was isFullAdmin()
                         echo 'Gerir todos os tickets e utilizadores do sistema. Monitorizar o desempenho geral.';
                     } else {
                         echo 'Gerir os seus tickets atribuídos e acompanhar o progresso dos mesmos.';
@@ -385,7 +384,7 @@ try {
             </div>
 
             <!-- Tickets Recentes (5 últimos) - apenas para admins restritos -->
-            <?php if (isRestrictedAdmin()): ?>
+            <?php if (isComum()): ?>  <!-- CHANGED: was isRestrictedAdmin() -->
             <div class="bg-white card p-3 rounded d-flex h-100 mt-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="mb-0">Últimos Tickets Atribuídos</h5>

@@ -34,7 +34,8 @@
                     </a>
                 </li>
                 
-                <?php if (isFullAdmin()): ?>
+                <!-- Menus apenas para Admin (FULL ACCESS) -->
+                <?php if (isAdmin()): ?>  <!-- CORRECT: Only Admin users see these menus -->
                 <li class="nav-item px-2 py-1">
                     <a href="tickets_sem_atribuicao.php" id="tickets" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'tickets_sem_atribuicao.php' ? 'active' : ''; ?>">
                         <i class="bi bi-ticket me-3 " aria-hidden="true"></i> 
@@ -48,23 +49,7 @@
                         <span>Consultar Tickets</span>
                     </a>
                 </li>
-                <?php endif; ?>
                 
-                <li class="nav-item px-2 py-1">
-                    <a href="tickets_atribuidos.php" id="tickets-atribuidos" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'tickets_atribuidos.php' ? 'active' : ''; ?>">
-                        <i class="bi bi-ticket-detailed me-3 " aria-hidden="true"></i> 
-                        <span>Tickets Atribuídos</span>
-                    </a>
-                </li>
-
-                <li class="nav-item px-2 py-1">
-                    <a href="tickets_fechados.php" id="tickets-all" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'tickets_fechados.php' ? 'active' : ''; ?>">
-                        <i class="bi bi-list-check me-3 " aria-hidden="true"></i> 
-                        <span>Tickets Fechados</span>
-                    </a>
-                </li>
-
-                <?php if (isFullAdmin()): ?>
                 <li class="nav-item px-2 py-1">
                     <a href="consultar_contratos.php" id="tickets-all" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'consultar_contratos.php' ? 'active' : ''; ?>">
                         <i class="bi bi-list-check me-3 " aria-hidden="true"></i> 
@@ -72,6 +57,22 @@
                     </a>
                 </li>
                 <?php endif; ?>
+                
+                <!-- Menus para Admin e Comum (BOTH ACCESS LEVELS) -->
+                <li class="nav-item px-2 py-1">
+                    <a href="tickets_atribuidos.php" id="tickets-atribuidos" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'tickets_atribuidos.php' ? 'active' : ''; ?>">
+                        <i class="bi bi-ticket-detailed me-3 " aria-hidden="true"></i> 
+                        <span><?php echo isAdmin() ? 'Tickets Atribuídos' : 'Os Meus Tickets'; ?></span>
+                    </a>
+                </li>
+
+                <li class="nav-item px-2 py-1">
+                    <a href="tickets_fechados.php" id="tickets-all" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'tickets_fechados.php' ? 'active' : ''; ?>">
+                        <i class="bi bi-list-check me-3 " aria-hidden="true"></i> 
+                        <span><?php echo isAdmin() ? 'Tickets Fechados' : 'Os Meus Tickets Fechados'; ?></span>
+                    </a>
+                </li>
+
             <?php else: ?>
                 <li class="nav-item px-2 py-1">
                     <a href="login.php" id="login" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark">

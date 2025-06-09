@@ -15,8 +15,25 @@ include('../auto-start.php');
 include('conflogin.php');
 include('db.php');
 
+// Get ticket ID from URL - use 'keyid' parameter which contains the actual ID
+$ticketId = isset($_GET['keyid']) ? $_GET['keyid'] : '';
+
+if (empty($ticketId)) {
+    echo '<div class="alert alert-danger" role="alert">';
+    echo 'Ticket não especificado.';
+    echo '<br><a href="index.php" class="btn btn-primary mt-3">Voltar ao Painel</a>';
+    echo '</div>';
+    exit;
+}
+
+// Check if user can access this ticket using the keyid
+if (!canAccessTicket($ticketId)) {
+    header("Location: index.php?error=" . urlencode("Acesso negado. Não tem permissões para ver este ticket."));
+    exit;
+}
+
 // Properly decode the ticket ID
-$ticket_id = isset($_GET['keyid']) ? urldecode($_GET['keyid']) : '';
+$ticket_id = urldecode($ticketId);
 
 // We need to check if keyid exists and proceed directly to the ticket query
 if (isset($_GET['keyid'])) {

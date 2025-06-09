@@ -28,81 +28,84 @@ if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 
 // Atualizar o timestamp da última atividade
 $_SESSION['last_activity'] = time();
 
-// Function to check if user is full admin (unrestricted)
-function isFullAdmin() {
+// Function to check if user is Admin (full access)
+function isAdmin() {
     return isset($_SESSION['Grupo']) && $_SESSION['Grupo'] === 'Admin';
 }
 
-// Function to check if user is restricted admin (common user in admin panel)
-function isRestrictedAdmin() {
+// Function to check if user is Comum (restricted access)
+function isComum() {
     return isset($_SESSION['Grupo']) && $_SESSION['Grupo'] === 'Comum';
 }
 
-// Function to check if user has any admin access (full or restricted)
+// Function to check if user has admin access (only Admin users)
 function hasAdminAccess() {
-    return isFullAdmin() || isRestrictedAdmin();
+    return isAdmin(); // Only Admin users have full access
 }
 
-// Function to restrict page access to full admins only
+// Function to check if user has any valid access (both Admin and Comum)
+function hasValidAccess() {
+    return isAdmin() || isComum();
+}
+
 function requireFullAdmin() {
-    if (!isFullAdmin()) {
-        header("Location: index.php?error=" . urlencode("Acesso negado. Esta página é apenas para administradores com permissões completas."));
+    if (!isAdmin()) {
+        header("Location: index.php?error=" . urlencode("Acesso negado. Esta página é apenas para administradores."));
         exit;
     }
-}
-
-// Function to check if user can access a specific admin page
-function canAccessAdminPage($page) {
-    if (!hasAdminAccess()) {
-        return false;
-    }
-    
-    // Pages that only full admins can access
-    $fullAdminOnlyPages = [
-        'consultar_tickets.php',
-        'tickets_sem_atribuicao.php',
-        'consultar_contratos.php',
-        'detalhes_contrato.php'
-    ];
-    
-    // Pages that all admin users can access (both full and restricted)
-    $allAdminPages = [
-        'index.php',
-        'tickets_atribuidos.php',
-        'tickets_fechados.php',
-        'detalhes_ticket.php',
-        'processar_alteracao.php',
-        'processar_fechar_ticket.php',
-        'atribuir_a_mim.php',
-        'logout.php',
-        'user.php'
-    ];
-    
-    // If it's a page all admins can access, allow it
-    if (in_array($page, $allAdminPages)) {
-        return true;
-    }
-    
-    // If it's a full admin only page, check if user is full admin
-    if (in_array($page, $fullAdminOnlyPages)) {
-        return isFullAdmin();
-    }
-    
-    // For any other page not explicitly listed, allow access if user has admin access
-    // This is a fallback to prevent blocking of legitimate pages
-    return true;
 }
 
 // Get current page name
 $currentPage = basename($_SERVER['PHP_SELF']);
 
-// Only perform page access check if user has admin access
-// Skip the check entirely if user doesn't have admin access (will be handled by login check above)
-if (hasAdminAccess()) {
-    // Enhanced session check with role validation
-    if (!canAccessAdminPage($currentPage)) {
-        header("Location: index.php?error=" . urlencode("Acesso negado. Não tem permissões para aceder a esta página."));
+// Pages that ONLY ADMIN can access
+$adminOnlyPages = [
+    'tickets_sem_atribuicao.php',
+    'consultar_tickets.php',
+    'consultar_contratos.php',
+    'detalhes_contrato.php'
+];
+
+// Check if current page requires admin access
+if (in_array($currentPage, $adminOnlyPages)) {
+    if (!isAdmin()) {
+        header("Location: index.php?error=" . urlencode("Acesso negado. Esta página é apenas para administradores."));
         exit;
     }
+}
+
+// Function to check if Comum user can access a specific ticket
+function canAccessTicket($ticketId) {
+    global $pdo;
+    
+    // Check if PDO connection exists
+    if (!isset($pdo) || $pdo === null) {
+        error_log("PDO connection not available in canAccessTicket");
+        return false;
+    }
+    
+    if (isAdmin()) {
+        return true; // Admin can access all tickets
+    }
+    
+    if (isComum()) {
+        try {
+            // For comum users, check if ticket is assigned to them
+            $stmt = $pdo->prepare("SELECT free.id 
+                FROM xdfree01 free
+                LEFT JOIN info_xdfree01_extrafields info ON free.KeyId = info.XDFree01_KeyID
+                WHERE free.id = :ticket_id AND info.Atribuido = :user_id");
+            $stmt->bindParam(':ticket_id', $ticketId);
+            $stmt->bindParam(':user_id', $_SESSION['admin_id']);
+            $stmt->execute();
+            
+            return $stmt->rowCount() > 0;
+        } catch (PDOException $e) {
+            error_log("canAccessTicket error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    return false;
 }
 ?>
