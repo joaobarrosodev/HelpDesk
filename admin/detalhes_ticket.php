@@ -149,21 +149,6 @@ function getStatusColor($status)
         }
     }
 
-    .close-ticket-btn {
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 8px 16px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: background-color 0.3s;
-    }
-
-    .close-ticket-btn:hover {
-        background-color: #c82333;
-    }
 
     .admin-controls {
         background-color: #f8f9fa;
@@ -386,12 +371,12 @@ function getStatusColor($status)
     <?php include('menu.php'); ?>
 
     <div class="content chat-container">
-        <div class="chat-header">
-            <div>
+       <div class="chat-header flex-column flex-sm-row">
+            <div class="col-12 col-sm-6">
                 <h1 class="chat-title">Ticket de <?php echo htmlspecialchars($ticket['CreationUser']); ?></h1>
                 <p class="text-muted mb-0"><?php echo htmlspecialchars($ticket['Name']); ?></p>
             </div>
-            <div class="d-flex align-items-center gap-2">
+            <div class="col-12 col-sm-6 d-flex align-items-center gap-2 justify-content-sm-end justify-content-start">
                 <span class="badge bg-<?php echo getStatusColor($ticket['Status']); ?>">
                     <?php echo htmlspecialchars($ticket['Status']); ?>
                 </span>
@@ -503,15 +488,7 @@ function getStatusColor($status)
                     </div>
                     
                     <!-- Botões de Ação -->
-                    <div class="d-flex justify-content-between mt-3 pt-3 border-top">
-                        <?php if ($ticket['Status'] !== 'Concluído') { ?>
-                            <button type="button" class="close-ticket-btn" onclick="fecharTicket(<?php echo $ticket['id']; ?>)">
-                                <i class="bi bi-x-circle"></i> Encerrar Ticket
-                            </button>
-                        <?php } else { ?>
-                            <div></div>
-                        <?php } ?>
-                        
+                    <div class="d-flex justify-content-between mt-3 pt-3 border-top">                       
                         <div>
                             <button type="submit" class="btn btn-success" id="saveChangesBtn">
                                 <i class="bi bi-save me-1"></i> Guardar Alterações

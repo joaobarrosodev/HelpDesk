@@ -4,16 +4,45 @@ session_start();  // Inicia a sessão
 include('conflogin.php');
 include('db.php');
 
-// Get current user's assigned user ID for restricted admins
+// Get current user's assigned user ID for all users
 $current_user_id = null;
-if (isComum()) {  // CHANGED: was isRestrictedAdmin()
-    $user_sql = "SELECT id FROM users WHERE email = :admin_email";
-    $user_stmt = $pdo->prepare($user_sql);
-    $user_stmt->bindParam(':admin_email', $_SESSION['admin_email']);
-    $user_stmt->execute();
-    $user_result = $user_stmt->fetch(PDO::FETCH_ASSOC);
-    $current_user_id = $user_result['id'] ?? null;
-}
+$admin_email = $_SESSION['admin_email'] ?? '';
+
+// Adicionar diagnóstico temporário
+echo "<!-- Debug Email: " . htmlspecialchars($admin_email) . " -->";
+
+// Verificar se há tickets para este usuário
+$verify_sql = "SELECT COUNT(*) as ticket_count FROM info_xdfree01_extrafields 
+               JOIN users ON info_xdfree01_extrafields.Atribuido = users.id 
+               WHERE users.email = :admin_email AND info_xdfree01_extrafields.Status = 'Concluído'";
+$verify_stmt = $pdo->prepare($verify_sql);
+$verify_stmt->bindParam(':admin_email', $admin_email);
+$verify_stmt->execute();
+$verify_result = $verify_stmt->fetch(PDO::FETCH_ASSOC);
+$ticket_count = $verify_result['ticket_count'] ?? 0;
+
+echo "<!-- Debug: Encontrados " . $ticket_count . " tickets fechados para este email -->";
+
+// Verificar o total de tickets fechados no sistema
+$total_sql = "SELECT COUNT(*) as total_tickets FROM info_xdfree01_extrafields WHERE Status = 'Concluído'";
+$total_stmt = $pdo->prepare($total_sql);
+$total_stmt->execute();
+$total_result = $total_stmt->fetch(PDO::FETCH_ASSOC);
+$total_tickets = $total_result['total_tickets'] ?? 0;
+
+echo "<!-- Debug: Total de " . $total_tickets . " tickets fechados no sistema -->";
+
+// Obter o ID do usuário atual - usuário que está logado
+$user_sql = "SELECT id, Name, email FROM users WHERE email = :admin_email";
+$user_stmt = $pdo->prepare($user_sql);
+$user_stmt->bindParam(':admin_email', $admin_email);
+$user_stmt->execute();
+$user_result = $user_stmt->fetch(PDO::FETCH_ASSOC);
+$current_user_id = $user_result['id'] ?? null;
+$current_user_name = $user_result['Name'] ?? 'Desconhecido';
+$current_user_email = $user_result['email'] ?? '';
+
+echo "<!-- Debug ID: " . ($current_user_id ?? 'null') . " | Nome: " . $current_user_name . " | Email: " . $current_user_email . " -->";
 
 // Prepara a SQL para tickets fechados (concluídos)
 $sql = "SELECT 
@@ -41,17 +70,33 @@ $sql = "SELECT
         LEFT JOIN online_entity_extrafields online ON info_xdfree01_extrafields.CreationUser = online.email
         WHERE info_xdfree01_extrafields.Status = 'Concluído'";
 
-// Add restriction for restricted admins - only show tickets they closed/resolved
-if (isComum()) {  // CHANGED: was isRestrictedAdmin()
-    $sql .= " AND info_xdfree01_extrafields.Atribuido = :current_user_id";
+// Verificar quais utilizadores têm tickets fechados
+$users_tickets_sql = "SELECT u.id, u.Name, u.email, COUNT(*) as ticket_count 
+                     FROM info_xdfree01_extrafields e
+                     JOIN users u ON e.Atribuido = u.id
+                     WHERE e.Status = 'Concluído' 
+                     GROUP BY u.id, u.Name, u.email
+                     ORDER BY ticket_count DESC";
+$users_tickets_stmt = $pdo->prepare($users_tickets_sql);
+$users_tickets_stmt->execute();
+$users_with_tickets = $users_tickets_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+echo "<!-- utilizadores com tickets fechados: ";
+foreach ($users_with_tickets as $user) {
+    echo $user['Name'] . " (ID: " . $user['id'] . ", Email: " . $user['email'] . "): " . $user['ticket_count'] . " tickets; ";
 }
+echo " -->";
+
+// Sempre filtrar para mostrar apenas tickets atribuídos ao usuário atual
+// Independentemente de ser Admin ou não
+$sql .= " AND info_xdfree01_extrafields.Atribuido = :current_user_id";
+
+// Log para debug
+echo "<!-- Filtrando tickets para o usuário: " . $current_user_name . " (ID: " . $current_user_id . ") -->";
 
 $sql .= " ORDER BY info_xdfree01_extrafields.dateu DESC";
 $stmt = $pdo->prepare($sql);
-
-if (isComum()) {  // CHANGED: was isRestrictedAdmin()
-    $stmt->bindParam(':current_user_id', $current_user_id);
-}
+$stmt->bindParam(':current_user_id', $current_user_id);
 
 $stmt->execute();
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -66,12 +111,8 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="container-fluid p-4">
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
-                    <h1 class="mb-3 display-5">
-                        <?php echo isAdmin() ? 'Tickets Fechados' : 'Os Meus Tickets Fechados'; ?>
-                    </h1>
-                    <p class="">
-                        <?php echo isAdmin() ? 'Lista de todos os tickets concluídos, com tempo de resolução e informações de conclusão.' : 'Lista dos tickets que resolveu e fechou, com tempo de resolução e informações de conclusão.'; ?>
-                    </p>
+                    <h1 class="mb-3 display-5">Tickets Fechados</h1>
+                    <p class="">Lista de todos os tickets concluídos, com tempo de resolução e informações de conclusão.</p>
                 </div>
             </div>
             

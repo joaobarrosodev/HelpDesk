@@ -74,7 +74,7 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Consultar todos os usuários para o dropdown de filtro
+// Consultar todos os utilizadores para o dropdown de filtro
 $sql_users = "SELECT id, Name FROM users ORDER BY Name ASC";
 $stmt_users = $pdo->prepare($sql_users);
 $stmt_users->execute();
@@ -152,9 +152,8 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                                     <th scope="col" class="sortable text-nowrap">Atualizado</th>
                                     <th scope="col" class="sortable text-nowrap">Criado</th>
                                     <th scope="col" class="sortable text-nowrap">Estado</th>
-                                    <th scope="col" class="sortable text-nowrap">Prioridade</th>
-                                    <th scope="col" class="sortable text-nowrap">Criador</th>
-                                    <th scope="col" class="sortable text-nowrap">Última Mensagem Por</th>
+                                    <th scope="col" class="sortable text-nowrap">Prioridade</th>                                    <th scope="col" class="sortable text-nowrap">Criador</th>
+                                    <th scope="col" class="sortable text-nowrap">Atribuído a</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -198,9 +197,8 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                                                 }
                                                 ?>
                                                 <span class="badge <?php echo $badgeClass; ?>"><?php echo $ticket['prioridade']; ?></span>
-                                            </td>
-                                            <td><?php echo $ticket['CreationUser']; ?></td>
-                                            <td><?php echo !empty($ticket['LastCommentUser']) ? htmlspecialchars($ticket['LastCommentUser']) : '-'; ?></td>
+                                            </td>                                            <td><?php echo $ticket['CreationUser']; ?></td>
+                                            <td><?php echo !empty($ticket['atribuido_a']) ? htmlspecialchars($ticket['atribuido_a']) : '-'; ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>

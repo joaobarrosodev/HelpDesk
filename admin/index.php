@@ -382,42 +382,6 @@ try {
                     </p>
                 </div>
             </div>
-
-            <!-- Tickets Recentes (5 últimos) - apenas para admins restritos -->
-            <?php if (isComum()): ?>  <!-- CHANGED: was isRestrictedAdmin() -->
-            <div class="bg-white card p-3 rounded d-flex h-100 mt-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0">Últimos Tickets Atribuídos</h5>
-                    <a href="consultar_tickets.php" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-eye me-1"></i> Ver Todos
-                    </a>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Título</th>
-                                <th>Prioridade</th>
-                                <th>Status</th>
-                                <th>Criado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($tickets_recentes as $ticket): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($ticket['KeyId']); ?></td>
-                                <td><?php echo htmlspecialchars($ticket['titulo']); ?></td>
-                                <td><?php echo htmlspecialchars($ticket['prioridade']); ?></td>
-                                <td><?php echo htmlspecialchars($ticket['status']); ?></td>
-                                <td><?php echo date("d-m-Y H:i", strtotime($ticket['criado'])); ?></td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <?php endif; ?>
         </div>
     </div>
     

@@ -255,8 +255,8 @@ if (isAdmin()) {
 <?php include('head.php'); ?>
 <body>
     <?php include('menu.php'); ?>
-    <div class="content p-4">
-        <div class="container-fluid">
+    <div class="content">
+        <div class="container-fluid p-4">
             <div class="row mb-4">
                 <div class="col-12">                    
                     <h1 class="display-5 mb-0">

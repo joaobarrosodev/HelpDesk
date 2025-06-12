@@ -514,12 +514,12 @@ function getStatusColor($status) {
     <?php include('menu.php'); ?>
 
     <div class="content chat-container">
-        <div class="chat-header">
-            <div>
+        <div class="chat-header flex-column flex-sm-row">
+            <div class="col-12 col-sm-6">
                 <h1 class="chat-title">Ticket de <?php echo htmlspecialchars($ticket['CreationUser']); ?></h1>
                 <p class="text-muted mb-0"><?php echo htmlspecialchars($ticket['Name']); ?></p>
             </div>
-            <div class="d-flex align-items-center gap-2">
+            <div class="col-12 col-sm-6 d-flex align-items-center gap-2 justify-content-sm-end justify-content-start">
                 <!-- AnyDesk logo (always visible, click to open modal) -->
                 <button class="anydesk-logo" id="anydeskLogo" onclick="showAnydeskModal()" title="AnyDesk - Acesso Remoto">
                     <span class="anydesk-logo-text">AD</span>

@@ -332,12 +332,11 @@ try {
             --bs-btn-color: #529ebe;
             --bs-btn-border-color: #529ebe;
         }
-        
         .btn-primary {
-            background-color: #529ebe;
+            background-color: #e7f3ff;
             border-color: #529ebe;
         }
-        
+
         .btn-primary:hover {
             background-color: #4a8ba8;
             border-color: #4a8ba8;
