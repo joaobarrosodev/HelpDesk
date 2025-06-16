@@ -144,14 +144,34 @@ function distribuirTempoContratos($entity, $tempoGasto, $ticketId, $pdo) {
             if ($disponivelContrato > 0) {
                 $tempoAUsar = min($tempoRestante, $disponivelContrato);
                 
-                // Inserir na tabela tickets_xdfree02_extrafields
-                $sqlInsert = "INSERT INTO tickets_xdfree02_extrafields (XDfree02_KeyId, TicketNumber, TotTime) 
-                             VALUES (:contratoId, :ticketNumber, :totTime)";
-                $stmtInsert = $pdo->prepare($sqlInsert);
-                $stmtInsert->bindParam(':contratoId', $contrato['XDfree02_KeyId']);
-                $stmtInsert->bindParam(':ticketNumber', $ticketId);
-                $stmtInsert->bindParam(':totTime', $tempoAUsar);
-                $stmtInsert->execute();
+                // Verificar se já existe um registro para este ticket e contrato
+                $sqlCheck = "SELECT Id FROM tickets_xdfree02_extrafields 
+                            WHERE XDfree02_KeyId = :contratoId AND TicketNumber = :ticketNumber";
+                $stmtCheck = $pdo->prepare($sqlCheck);
+                $stmtCheck->bindParam(':contratoId', $contrato['XDfree02_KeyId']);
+                $stmtCheck->bindParam(':ticketNumber', $ticketId);
+                $stmtCheck->execute();
+                $existingRecord = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+                
+                if ($existingRecord) {
+                    // Atualizar registro existente
+                    $sqlUpdate = "UPDATE tickets_xdfree02_extrafields 
+                                 SET TotTime = TotTime + :totTime 
+                                 WHERE Id = :id";
+                    $stmtUpdate = $pdo->prepare($sqlUpdate);
+                    $stmtUpdate->bindParam(':totTime', $tempoAUsar);
+                    $stmtUpdate->bindParam(':id', $existingRecord['Id']);
+                    $stmtUpdate->execute();
+                } else {
+                    // Inserir novo registro
+                    $sqlInsert = "INSERT INTO tickets_xdfree02_extrafields (XDfree02_KeyId, TicketNumber, TotTime) 
+                                 VALUES (:contratoId, :ticketNumber, :totTime)";
+                    $stmtInsert = $pdo->prepare($sqlInsert);
+                    $stmtInsert->bindParam(':contratoId', $contrato['XDfree02_KeyId']);
+                    $stmtInsert->bindParam(':ticketNumber', $ticketId);
+                    $stmtInsert->bindParam(':totTime', $tempoAUsar);
+                    $stmtInsert->execute();
+                }
                 
                 // Atualizar SpentHours do contrato
                 $novoSpentHours = ($contrato['SpentHours'] ?? 0) + ($tempoAUsar / 60);

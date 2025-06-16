@@ -44,6 +44,7 @@ try {
         header('Location: consultar_tickets.php?error=ticket_not_found');
         exit;
     }
+    
     // Preparar campos para atualização
     $updateFields = [];
     $params = [':keyid' => $ticketId];
@@ -198,7 +199,7 @@ try {
     if ($newStatus === 'Concluído' && $ticketAtual['Status'] !== 'Concluído') {
         $tempoGasto = intval($newResolutionTime ?: $ticketAtual['Tempo']);
         $entity = $ticketAtual['Entity'];
-        $ticketNumber = $ticketAtual['ticket_number'];
+        $ticketNumber = $ticketAtual['ticket_number']; // Usar o ID numérico do ticket
         
         $distribuicao = distribuirTempoContratos($entity, $tempoGasto, $ticketNumber, $pdo);
         
@@ -244,7 +245,7 @@ try {
     
 } catch (PDOException $e) {
     error_log("Erro na base de dados: " . $e->getMessage());
-    $response = ['success' => false, 'message' => 'Erro na base de dados'];
+    $response = ['success' => false, 'message' => 'Erro na base de dados: ' . $e->getMessage()];
     
     if ($isAjax) {
         echo json_encode($response);
@@ -254,7 +255,7 @@ try {
     header('Location: consultar_tickets.php?error=database_error');
 } catch (Exception $e) {
     error_log("Erro geral: " . $e->getMessage());
-    $response = ['success' => false, 'message' => 'Erro interno do servidor'];
+    $response = ['success' => false, 'message' => 'Erro interno do servidor: ' . $e->getMessage()];
     
     if ($isAjax) {
         echo json_encode($response);

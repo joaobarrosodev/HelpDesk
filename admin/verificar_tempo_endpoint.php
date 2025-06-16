@@ -2,7 +2,7 @@
 // verificar_tempo_endpoint.php
 session_start();
 include('conflogin.php');
-include('db.php');
+include('db.php'); 
 include('verificar_tempo_disponivel.php');
 
 header('Content-Type: application/json');
@@ -28,7 +28,6 @@ if ($tempo <= 0) {
 try {
     $resultado = verificarTempoDisponivel($entity, $tempo, $pdo);
     echo json_encode($resultado);
-    
 } catch (Exception $e) {
     error_log("Erro ao verificar tempo: " . $e->getMessage());
     echo json_encode(['erro' => 'Erro interno do servidor']);
