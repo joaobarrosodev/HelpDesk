@@ -1,7 +1,67 @@
 <?php
+//abrir_ticket.php
 session_start();  // Inicia a sessão
 include('conflogin.php');
 include('db.php');  // Incluindo o arquivo de conexão com o banco de dados
+
+// Verificar contratos e tempo disponível do cliente
+$tempoDisponivel = 0;
+$contratosInfo = [];
+$avisoTempo = '';
+
+try {
+    // Obter entity do usuário logado
+    $entity = $_SESSION['usuario_id'];
+    
+    // Buscar contratos do cliente
+    $sql_contratos = "SELECT XDfree02_KeyId, TotalHours, SpentHours, Status, StartDate
+                      FROM info_xdfree02_extrafields 
+                      WHERE Entity = :entity 
+                      ORDER BY 
+                          CASE 
+                              WHEN Status = 'Em Utilização' AND SpentHours < TotalHours THEN 1
+                              WHEN Status = 'Por Começar' THEN 2
+                              ELSE 3
+                          END,
+                          TotalHours DESC";
+    
+    $stmt_contratos = $pdo->prepare($sql_contratos);
+    $stmt_contratos->bindParam(':entity', $entity);
+    $stmt_contratos->execute();
+    $contratos = $stmt_contratos->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Calcular tempo total disponível
+    foreach ($contratos as $contrato) {
+        $totalMinutos = $contrato['TotalHours'] * 60;
+        $gastoMinutos = ($contrato['SpentHours'] ?? 0) * 60;
+        $restanteMinutos = max(0, $totalMinutos - $gastoMinutos);
+        
+        if (($contrato['SpentHours'] ?? 0) <= $contrato['TotalHours']) {
+            $tempoDisponivel += $restanteMinutos;
+        }
+        
+        $contratosInfo[] = [
+            'id' => $contrato['XDfree02_KeyId'],
+            'totalHoras' => $contrato['TotalHours'],
+            'gastasHoras' => $contrato['SpentHours'] ?? 0,
+            'restanteMinutos' => $restanteMinutos,
+            'status' => $contrato['Status'],
+            'excedido' => ($contrato['SpentHours'] ?? 0) > $contrato['TotalHours']
+        ];
+    }
+    
+    // Definir avisos baseados no tempo disponível
+    if ($tempoDisponivel <= 0) {
+        $avisoTempo = 'danger';
+    } elseif ($tempoDisponivel <= 120) { // Menos de 2 horas
+        $avisoTempo = 'warning';
+    } elseif ($tempoDisponivel <= 300) { // Menos de 5 horas
+        $avisoTempo = 'info';
+    }
+    
+} catch (Exception $e) {
+    error_log("Erro ao obter contratos: " . $e->getMessage());
+}
 
 // Processamento do formulário quando enviado
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -65,12 +125,144 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <!-- Importando Dropzone.js para o Drag & Drop -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.css">
+    <style>
+        .contracts-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .contracts-summary .contract-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+        }
+        
+        .contract-active { border-left-color: #28a745 !important; }
+        .contract-warning { border-left-color: #ffc107 !important; }
+        .contract-danger { border-left-color: #dc3545 !important; }
+        
+        .time-alert {
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .priority-selector {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .priority-item {
+            flex: 1;
+            min-width: 120px;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .priority-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .priority-item.selected {
+            border-color: #007bff;
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .priority-icon {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+    </style>
 </head>
 <body>
-    <?php include('menu.php'); ?>    <div class="content p-5">
-            <h2 class="mb-3 display-5">Criar Ticket de Suporte</h2>
-            <p class="text-muted">Preencher os campos abaixo para solicitar suporte técnico</p>
-             
+    <?php include('menu.php'); ?>
+    
+    <div class="content p-5">
+        <h2 class="mb-3 display-5">Criar Ticket de Suporte</h2>
+        <p class="text-muted">Preencher os campos abaixo para solicitar suporte técnico</p>
+        
+        <!-- Resumo de Contratos e Tempo -->
+        <?php if (!empty($contratosInfo)): ?>
+        <div class="contracts-summary">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="mb-3">
+                        <i class="bi bi-clock-history me-2"></i>
+                        Tempo Disponível: 
+                        <strong>
+                            <?php 
+                            $horas = floor($tempoDisponivel / 60);
+                            $minutos = $tempoDisponivel % 60;
+                            echo $horas . 'h ' . $minutos . 'min';
+                            ?>
+                        </strong>
+                    </h5>
+                    
+                    <div class="row">
+                        <?php foreach (array_slice($contratosInfo, 0, 3) as $contrato): ?>
+                        <div class="col-md-4 mb-2">
+                            <div class="contract-item <?php echo $contrato['excedido'] ? 'contract-danger' : ($contrato['restanteMinutos'] <= 120 ? 'contract-warning' : 'contract-active'); ?>">
+                                <div class="d-flex justify-content-between">
+                                    <span><?php echo $contrato['totalHoras']; ?>h</span>
+                                    <span>
+                                        <?php 
+                                        $h = floor($contrato['restanteMinutos'] / 60);
+                                        $m = $contrato['restanteMinutos'] % 60;
+                                        echo $h . 'h ' . $m . 'min';
+                                        ?>
+                                    </span>
+                                </div>
+                                <small class="opacity-75"><?php echo $contrato['status']; ?></small>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="mb-2">
+                        <i class="bi bi-file-earmark-text" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <a href="meus_contratos.php" class="btn btn-light btn-sm">
+                        <i class="bi bi-eye me-1"></i>Ver Todos os Contratos
+                    </a>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <!-- Avisos de Tempo -->
+        <?php if ($avisoTempo === 'danger'): ?>
+        <div class="alert alert-danger time-alert" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Atenção!</strong> Não tem tempo disponível nos seus contratos. 
+            Contacte-nos para renovar ou adquirir um novo pacote de horas.
+        </div>
+        <?php elseif ($avisoTempo === 'warning'): ?>
+        <div class="alert alert-warning time-alert" role="alert">
+            <i class="bi bi-clock me-2"></i>
+            <strong>Tempo Baixo!</strong> Tem apenas <?php echo floor($tempoDisponivel / 60); ?>h <?php echo $tempoDisponivel % 60; ?>min restantes. 
+            Considere renovar o seu pacote de horas.
+        </div>
+        <?php elseif ($avisoTempo === 'info'): ?>
+        <div class="alert alert-info time-alert" role="alert">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Tempo Limitado:</strong> Tem <?php echo floor($tempoDisponivel / 60); ?>h <?php echo $tempoDisponivel % 60; ?>min disponíveis. 
+            Planeie as suas solicitações de suporte.
+        </div>
+        <?php endif; ?>
+         
         <div class="card mt-4">
             <div class="p-4">
                 <form action="abrir_ticket.php" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
@@ -134,20 +326,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 </div>
                             </div>
 
-                    <!-- Upload de Imagem (Drag & Drop) -->
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">
-                            <i class="bi bi-image me-1"></i> Anexar Imagem do Problema:
-                        </label>
-                        <div id="dropzone" class="dropzone"></div>
-                        <div class="form-text">Arrastar uma imagem ou clicar para selecionar (opcional)</div>
-                        <input type="hidden" name="imagem" id="imagem_path">                    </div>
+                            <!-- Upload de Imagem (Drag & Drop) -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-image me-1"></i> Anexar Imagem do Problema:
+                                </label>
+                                <div id="dropzone" class="dropzone"></div>
+                                <div class="form-text">Arrastar uma imagem ou clicar para selecionar (opcional)</div>
+                                <input type="hidden" name="imagem" id="imagem_path">
+                            </div>
 
-                    <!-- Botão de envio -->
-                    <div class="text-end mt-4">
-                        <button type="submit" class="btn btn-success submit-btn">
-                            <i class="bi bi-send me-2"></i>Criar Ticket
-                        </button>
+                            <!-- Botão de envio -->
+                            <div class="text-end mt-4">
+                                <button type="submit" class="btn btn-success submit-btn" 
+                                        <?php echo ($tempoDisponivel <= 0) ? 'disabled title="Sem tempo disponível nos contratos"' : ''; ?>>
+                                    <i class="bi bi-send me-2"></i>Criar Ticket
+                                </button>
+                                <?php if ($tempoDisponivel <= 0): ?>
+                                <div class="text-muted mt-2">
+                                    <small><i class="bi bi-info-circle me-1"></i>Contacte-nos para renovar o seu pacote de horas</small>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -167,6 +368,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <h4 class="mt-3">Ticket registado com sucesso!</h4>
                     <p class="lead">O seu número de ticket é: <strong id="ticketId"></strong></p>
                     <p>Um técnico irá analisar a sua solicitação em breve.</p>
+                    
+                    <?php if ($tempoDisponivel <= 300): // Menos de 5 horas ?>
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-clock me-2"></i>
+                        <strong>Lembrete:</strong> Tem <?php echo floor($tempoDisponivel / 60); ?>h <?php echo $tempoDisponivel % 60; ?>min restantes nos seus contratos.
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-success" data-bs-dismiss="modal">Fechar</button>

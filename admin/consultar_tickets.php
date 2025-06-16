@@ -1,3 +1,4 @@
+//consultar_tickets.php
 <?php
 session_start();  // Inicia a sessão
 
@@ -163,6 +164,82 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
 <!DOCTYPE html>
 <html lang="pt-pt">
 <?php include('head.php'); ?>
+<head>
+    <!-- Add sticky table styles -->
+    <style>
+        /* Sticky first column styles */
+        .table-wrapper {
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .table {
+            min-width: 900px; /* Force horizontal scroll on small screens */
+        }
+
+        /* Mobile sticky first column */
+        @media (max-width: 768px) {
+            .table-wrapper {
+                position: relative;
+            }
+
+            /* First column sticky */
+            .table th:first-child,
+            .table td:first-child {
+                position: sticky;
+                left: 0;
+                background-color: white;
+                z-index: 1;
+                box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+            }
+
+            .table th:first-child {
+                background-color: #f8f9fa;
+                z-index: 3; /* Higher z-index for header of first column */
+            }
+
+            /* Alternating row colors for sticky column */
+            .table tbody tr:nth-child(even) td:first-child {
+                background-color: #f9f9f9;
+            }
+
+            .table tbody tr:hover td:first-child {
+                background-color: #f0f8ff;
+            }
+
+            /* Scroll indicator shadow */
+            .table-wrapper::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                width: 20px;
+                background: linear-gradient(to left, rgba(0,0,0,0.1), transparent);
+                pointer-events: none;
+            }
+        }
+
+        /* Scroll indicator */
+        .scroll-indicator {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #666;
+            font-size: 14px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .scroll-indicator {
+                display: block;
+            }
+        }
+    </style>
+</head>
 <body>
     <?php include('menu.php'); ?>
     <div class="content">
@@ -251,10 +328,10 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                                 <i class="bi bi-x-circle me-1"></i>Limpar
                             </a>
                         </div>
-                    </form
+                    </form                
                         
                     <!-- Table -->
-                    <div class="table-responsive">
+                    <div class="table-responsive table-wrapper">
                         <table class="table align-middle">
                             <thead class="table-light">
                                 <tr>
@@ -433,6 +510,29 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                 return new Date(parts[3], parts[2] - 1, parts[1]);
             }
             return null;
+        }
+
+        // Sticky table functionality
+        const tableWrapper = document.querySelector('.table-wrapper');
+        const scrollIndicator = document.querySelector('.scroll-indicator');
+
+        if (tableWrapper && scrollIndicator) {
+            tableWrapper.addEventListener('scroll', function() {
+                if (this.scrollLeft > 0) {
+                    scrollIndicator.style.display = 'none';
+                } else if (window.innerWidth <= 768) {
+                    scrollIndicator.style.display = 'block';
+                }
+            });
+        }
+
+        // Detect mobile and show tips
+        function isMobile() {
+            return window.innerWidth <= 768;
+        }
+
+        if (isMobile()) {
+            console.log('Vista mobile ativa - primeira coluna fixa habilitada');
         }
     });
     </script>

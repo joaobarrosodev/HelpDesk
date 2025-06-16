@@ -1,4 +1,5 @@
 <?php
+//index.php client side
 session_start();
 include('conflogin.php');
 ?>

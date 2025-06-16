@@ -1,5 +1,6 @@
 <?php
 // Start session first
+//Detalhes do ticket
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

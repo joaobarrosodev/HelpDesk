@@ -104,6 +104,82 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
 <!DOCTYPE html>
 <html lang="pt-pt">
 <?php include('head.php'); ?>
+<head>
+    <!-- Add sticky table styles -->
+    <style>
+        /* Sticky first column styles */
+        .table-wrapper {
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .table {
+            min-width: 800px; /* Force horizontal scroll on small screens */
+        }
+
+        /* Mobile sticky first column */
+        @media (max-width: 768px) {
+            .table-wrapper {
+                position: relative;
+            }
+
+            /* First column sticky */
+            .table th:first-child,
+            .table td:first-child {
+                position: sticky;
+                left: 0;
+                background-color: white;
+                z-index: 1;
+                box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+            }
+
+            .table th:first-child {
+                background-color: #f8f9fa;
+                z-index: 3; /* Higher z-index for header of first column */
+            }
+
+            /* Alternating row colors for sticky column */
+            .table tbody tr:nth-child(even) td:first-child {
+                background-color: #f9f9f9;
+            }
+
+            .table tbody tr:hover td:first-child {
+                background-color: #f0f8ff;
+            }
+
+            /* Scroll indicator shadow */
+            .table-wrapper::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                width: 20px;
+                background: linear-gradient(to left, rgba(0,0,0,0.1), transparent);
+                pointer-events: none;
+            }
+        }
+
+        /* Scroll indicator */
+        .scroll-indicator {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #666;
+            font-size: 14px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .scroll-indicator {
+                display: block;
+            }
+        }
+    </style>
+</head>
 <body>
     <?php include('menu.php'); ?>
     <div class="content">
@@ -191,8 +267,10 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                         </div>
                     </form>
                         
+                
+                        
                     <!-- Table -->
-                    <div class="table-responsive pb-5">
+                    <div class="table-responsive pb-5 table-wrapper">
                         <table class="table align-middle">
                             <thead class="table-light">
                                 <tr>
@@ -269,100 +347,6 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Time adjustment functions for modal
-        window.adjustTimeModal = function(minutesToAdd) {
-            const timeInput = document.getElementById('tempo_resolucao');
-            const timeDisplay = document.getElementById('timeDisplayModal');
-            const removeBtn = document.getElementById('removeTimeBtnModal');
-            
-            let currentTime = parseInt(timeInput.value) || 15;
-            let newTime = currentTime + minutesToAdd;
-            
-            // Ensure minimum time is 15 minutes
-            if (newTime < 15) {
-                newTime = 15;
-            }
-            
-            // Update hidden input
-            timeInput.value = newTime;
-            
-            // Update display
-            updateTimeDisplayModal(newTime);
-            
-            // Enable/disable remove button based on minimum
-            if (removeBtn) {
-                removeBtn.disabled = (newTime <= 15);
-                if (newTime <= 15) {
-                    removeBtn.classList.add('disabled');
-                } else {
-                    removeBtn.classList.remove('disabled');
-                }
-            }
-        };
-        
-        window.updateTimeDisplayModal = function(timeInMinutes) {
-            const timeDisplay = document.getElementById('timeDisplayModal');
-            if (!timeDisplay) return;
-            
-            const hours = Math.floor(timeInMinutes / 60);
-            const minutes = timeInMinutes % 60;
-            
-            let displayText = '';
-            if (hours > 0) {
-                displayText = hours + 'h';
-                if (minutes > 0) {
-                    displayText += ' ' + minutes + 'min';
-                }
-            } else {
-                displayText = minutes + ' minuto' + (minutes !== 1 ? 's' : '');
-            }
-            
-            timeDisplay.textContent = displayText;
-        };
-
-        // Close ticket modal functionality
-        const closeTicketModal = document.getElementById('closeTicketModal');
-        closeTicketModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const ticketId = button.getAttribute('data-ticket-id');
-            const ticketTitle = button.getAttribute('data-ticket-title');
-            
-            document.getElementById('ticket_id').value = ticketId;
-            document.getElementById('ticketTitle').textContent = ticketTitle;
-            
-            // Reset time to 15 minutes when modal opens
-            document.getElementById('tempo_resolucao').value = 15;
-            updateTimeDisplayModal(15);
-            const removeBtn = document.getElementById('removeTimeBtnModal');
-            if (removeBtn) {
-                removeBtn.disabled = true;
-                removeBtn.classList.add('disabled');
-            }
-        });
-
-        // Form validation
-        document.getElementById('closeTicketForm').addEventListener('submit', function(e) {
-            const descricao = document.getElementById('resolucao_descricao').value.trim();
-            const tempo = document.getElementById('tempo_resolucao').value;
-            
-            if (descricao.length < 5) {
-                e.preventDefault();
-                alert('Insira uma descrição da resolução.');
-                return;
-            }
-            
-            if (!tempo || tempo < 15) {
-                e.preventDefault();
-                alert('O tempo mínimo de resolução é de 15 minutos.');
-                return;
-            }
-            
-            // Debug - log the values being sent
-            console.log('Ticket ID:', document.getElementById('ticket_id').value);
-            console.log('Descrição:', descricao);
-            console.log('Tempo:', tempo);
-        });
-
         // Sorting functionality
         const table = document.querySelector('table');
         const headers = table.querySelectorAll('th.sortable');
@@ -425,6 +409,29 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                 return new Date(parts[3], parts[2] - 1, parts[1]);
             }
             return null;
+        }
+
+        // Sticky table functionality
+        const tableWrapper = document.querySelector('.table-wrapper');
+        const scrollIndicator = document.querySelector('.scroll-indicator');
+
+        if (tableWrapper && scrollIndicator) {
+            tableWrapper.addEventListener('scroll', function() {
+                if (this.scrollLeft > 0) {
+                    scrollIndicator.style.display = 'none';
+                } else if (window.innerWidth <= 768) {
+                    scrollIndicator.style.display = 'block';
+                }
+            });
+        }
+
+        // Detect mobile and show tips
+        function isMobile() {
+            return window.innerWidth <= 768;
+        }
+
+        if (isMobile()) {
+            console.log('Vista mobile ativa - primeira coluna fixa habilitada');
         }
     });
     </script>

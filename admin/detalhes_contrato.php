@@ -2,6 +2,7 @@
 session_start();
 include('conflogin.php');
 include('db.php');
+include('verificar_tempo_disponivel.php'); // Incluir o sistema de verificação
 
 // Get contract ID - keep as string
 $contract_id = isset($_GET['id']) ? trim($_GET['id']) : '';
@@ -53,13 +54,36 @@ try {
         exit;
     }
 
-    // Set empty tickets for now
-    $tickets = [];
+    // Get tickets used in this contract
+    $sql_tickets = "SELECT 
+                        t.TicketNumber, 
+                        t.TotTime,
+                        free.KeyId as TicketKeyId,
+                        free.Name as TicketName,
+                        info.Description as TicketDescription,
+                        info.Status as TicketStatus,
+                        info.CreationDate,
+                        info.CreationUser
+                    FROM tickets_xdfree02_extrafields t
+                    LEFT JOIN xdfree01 free ON t.TicketNumber = free.id
+                    LEFT JOIN info_xdfree01_extrafields info ON free.KeyId = info.XDFree01_KeyID
+                    WHERE t.XDfree02_KeyId = :contract_id
+                    ORDER BY info.CreationDate DESC";
+    
+    $stmt_tickets = $pdo->prepare($sql_tickets);
+    $stmt_tickets->bindValue(':contract_id', $contract_id, PDO::PARAM_STR);
+    $stmt_tickets->execute();
+    $tickets = $stmt_tickets->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get all contracts for this entity (for context)
+    $entity = $contrato['Entity'];
+    $resumoContratos = obterResumoContratos($entity, $pdo);
     
 } catch (PDOException $e) {
     $erro_db = "Erro ao carregar contrato: " . $e->getMessage();
     $tickets = [];
     $contrato = null;
+    $resumoContratos = ['contratos' => [], 'tempoRestante' => 0];
 }
 ?>
 
@@ -162,6 +186,7 @@ try {
                                             case 'em utilização': $status_class = 'bg-success'; break;
                                             case 'por começar': $status_class = 'bg-warning'; break;
                                             case 'concluido': $status_class = 'bg-info'; break;
+                                            case 'excedido': $status_class = 'bg-danger'; break;
                                             default: $status_class = 'bg-secondary';
                                         }
                                         echo "<span class='badge $status_class fs-6'>" . htmlspecialchars($status) . "</span>";
@@ -180,18 +205,124 @@ try {
                             </div>
                         </div>
                     </div>
+
+                    <!-- Simulador de Tempo -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Simulador de Tempo</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row align-items-end">
+                                <div class="col-md-6">
+                                    <label for="tempoSimular" class="form-label">Simular tempo de ticket (minutos):</label>
+                                    <input type="number" class="form-control" id="tempoSimular" min="1" placeholder="Ex: 30">
+                                </div>
+                                <div class="col-md-3">
+                                    <button class="btn btn-info w-100" onclick="simularTempo()">
+                                        <i class="bi bi-play-circle me-1"></i> Simular
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <button class="btn btn-secondary w-100" onclick="limparSimulacao()">
+                                        <i class="bi bi-x-circle me-1"></i> Limpar
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="resultadoSimulacao" class="mt-3" style="display: none;"></div>
+                        </div>
+                    </div>
                     
                     <!-- Tickets Table -->
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Tickets Utilizados (<?php echo count($tickets); ?>)</h5>
+                            <small class="text-muted">
+                                <?php
+                                $tempoTotalUtilizado = array_sum(array_column($tickets, 'TotTime'));
+                                $horasUtilizadas = floor($tempoTotalUtilizado / 60);
+                                $minutosUtilizados = $tempoTotalUtilizado % 60;
+                                echo "Total: {$horasUtilizadas}h {$minutosUtilizados}min";
+                                ?>
+                            </small>
                         </div>
                         <div class="card-body p-0">
+                            <?php if (!empty($tickets)): ?>
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Ticket</th>
+                                            <th>Descrição</th>
+                                            <th>Tempo Usado</th>
+                                            <th>Status</th>
+                                            <th>Criado em</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($tickets as $ticket): ?>
+                                        <tr>
+                                            <td>
+                                                <strong><?php echo htmlspecialchars($ticket['TicketName'] ?? 'N/A'); ?></strong><br>
+                                                <small class="text-muted"><?php echo htmlspecialchars($ticket['TicketKeyId'] ?? 'N/A'); ?></small>
+                                            </td>
+                                            <td>
+                                                <?php 
+                                                $description = $ticket['TicketDescription'] ?? '';
+                                                echo !empty($description) ? htmlspecialchars(substr($description, 0, 100)) . (strlen($description) > 100 ? '...' : '') : '<span class="text-muted">N/A</span>';
+                                                ?>
+                                            </td>
+                                            <td>
+                                                <?php 
+                                                $tempo = intval($ticket['TotTime']);
+                                                $horas = floor($tempo / 60);
+                                                $minutos = $tempo % 60;
+                                                if ($horas > 0) {
+                                                    echo "<strong>{$horas}h {$minutos}min</strong>";
+                                                } else {
+                                                    echo "<strong>{$minutos}min</strong>";
+                                                }
+                                                ?>
+                                            </td>
+                                            <td>
+                                                <?php 
+                                                $status = $ticket['TicketStatus'] ?? '';
+                                                $badge_class = '';
+                                                switch(strtolower($status)) {
+                                                    case 'concluído': $badge_class = 'bg-success'; break;
+                                                    case 'em resolução': $badge_class = 'bg-warning'; break;
+                                                    case 'em análise': $badge_class = 'bg-info'; break;
+                                                    default: $badge_class = 'bg-secondary';
+                                                }
+                                                echo !empty($status) ? "<span class='badge $badge_class'>" . htmlspecialchars($status) . "</span>" : '<span class="text-muted">N/A</span>';
+                                                ?>
+                                            </td>
+                                            <td>
+                                                <?php 
+                                                $created = $ticket['CreationDate'] ?? '';
+                                                echo !empty($created) ? date('d/m/Y H:i', strtotime($created)) : '<span class="text-muted">N/A</span>';
+                                                ?>
+                                            </td>
+                                            <td>
+                                                <?php if (!empty($ticket['TicketNumber'])): ?>
+                                                <a href="detalhes_ticket.php?keyid=<?php echo htmlspecialchars($ticket['TicketNumber']); ?>" 
+                                                   class="btn btn-sm btn-outline-primary" title="Ver ticket">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <?php else: ?>
                             <div class="text-center py-4">
                                 <i class="bi bi-ticket-perforated text-muted" style="font-size: 3rem;"></i>
                                 <h6 class="mt-3 text-muted">Nenhum ticket encontrado</h6>
                                 <p class="text-muted">Este contrato ainda não possui tickets associados.</p>
                             </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -204,20 +335,32 @@ try {
                         </div>
                         <div class="card-body">
                             <?php 
-                            $total_hours = (int)($contrato['TotalHours'] ?? 0);
-                            $used_hours = (int)($contrato['SpentHours'] ?? 0);
+                            $total_hours = (float)($contrato['TotalHours'] ?? 0);
+                            $used_hours = (float)($contrato['SpentHours'] ?? 0);
                             $remaining_hours = $total_hours - $used_hours;
+                            $remaining_minutes = $remaining_hours * 60;
                             $percentage = $total_hours > 0 ? round(($used_hours / $total_hours) * 100) : 0;
+                            
+                            $remaining_h = floor($remaining_minutes / 60);
+                            $remaining_m = $remaining_minutes % 60;
                             ?>
                             
                             <div class="text-center mb-3">
-                                <h3 class="text-primary"><?php echo $remaining_hours; ?>h</h3>
-                                <small class="text-muted">Horas Restantes</small>
+                                <h3 class="<?php echo $remaining_hours <= 0 ? 'text-danger' : 'text-primary'; ?>">
+                                    <?php echo $remaining_h; ?>h <?php echo abs($remaining_m); ?>min
+                                </h3>
+                                <small class="text-muted">
+                                    <?php echo $remaining_hours <= 0 ? 'Horas Excedidas' : 'Horas Restantes'; ?>
+                                </small>
                             </div>
                             
                             <div class="progress mb-3" style="height: 10px;">
-                                <div class="progress-bar <?php echo $percentage >= 80 ? 'bg-warning' : ($percentage >= 100 ? 'bg-danger' : 'bg-primary'); ?>" 
+                                <div class="progress-bar <?php echo $percentage >= 100 ? 'bg-danger' : ($percentage >= 80 ? 'bg-warning' : 'bg-primary'); ?>" 
                                      style="width: <?php echo min(100, $percentage); ?>%"></div>
+                                <?php if ($percentage > 100): ?>
+                                <div class="progress-bar bg-danger bg-opacity-50" 
+                                     style="width: <?php echo min($percentage - 100, 100); ?>%"></div>
+                                <?php endif; ?>
                             </div>
                             
                             <div class="row text-center">
@@ -226,24 +369,62 @@ try {
                                     <small class="text-muted">Total</small>
                                 </div>
                                 <div class="col-6">
-                                    <strong><?php echo $used_hours; ?>h</strong><br>
+                                    <strong><?php echo number_format($used_hours, 1); ?>h</strong><br>
                                     <small class="text-muted">Utilizadas</small>
                                 </div>
                             </div>
                             
                             <?php if ($percentage >= 80): ?>
-                            <div class="alert alert-warning mt-3 p-2" role="alert">
+                            <div class="alert alert-<?php echo $percentage >= 100 ? 'danger' : 'warning'; ?> mt-3 p-2" role="alert">
                                 <small><i class="bi bi-exclamation-triangle me-1"></i>
                                 <?php if ($percentage >= 100): ?>
-                                Contrato esgotado
+                                Contrato excedido em <?php echo number_format($used_hours - $total_hours, 1); ?>h
                                 <?php else: ?>
-                                Poucas horas restantes
+                                Poucas horas restantes (<?php echo 100 - $percentage; ?>%)
                                 <?php endif; ?>
                                 </small>
                             </div>
                             <?php endif; ?>
                         </div>
                     </div>
+                    
+                    <!-- Outros Contratos da Entity -->
+                    <?php if (!empty($resumoContratos['contratos']) && count($resumoContratos['contratos']) > 1): ?>
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Outros Contratos</h6>
+                        </div>
+                        <div class="card-body">
+                            <?php foreach ($resumoContratos['contratos'] as $outroContrato): ?>
+                                <?php if ($outroContrato['id'] !== $contract_id): ?>
+                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-start border-3 <?php echo $outroContrato['excedido'] ? 'border-danger' : 'border-primary'; ?>">
+                                    <div>
+                                        <small class="fw-bold"><?php echo $outroContrato['totalHoras']; ?>h</small><br>
+                                        <small class="text-muted"><?php echo $outroContrato['status']; ?></small>
+                                    </div>
+                                    <div class="text-end">
+                                        <?php 
+                                        $restH = floor($outroContrato['restanteMinutos'] / 60);
+                                        $restM = $outroContrato['restanteMinutos'] % 60;
+                                        ?>
+                                        <small class="<?php echo $outroContrato['excedido'] ? 'text-danger' : 'text-success'; ?>">
+                                            <?php echo $restH; ?>h <?php echo $restM; ?>min
+                                        </small>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                            
+                            <div class="mt-3 pt-2 border-top">
+                                <?php 
+                                $totalRestH = floor($resumoContratos['tempoRestante'] / 60);
+                                $totalRestM = $resumoContratos['tempoRestante'] % 60;
+                                ?>
+                                <small class="text-muted">Total disponível: <strong><?php echo $totalRestH; ?>h <?php echo $totalRestM; ?>min</strong></small>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                     
                     <!-- Contract Details -->
                     <div class="card mt-4">
@@ -261,7 +442,7 @@ try {
                             </div>
                             <div class="mb-2">
                                 <strong>Montante Total:</strong><br>
-                                <small class="text-muted"><?php echo htmlspecialchars($contrato['TotalAmount'] ?? 'N/A'); ?></small>
+                                <small class="text-muted"><?php echo number_format($contrato['TotalAmount'] ?? 0, 2, ',', '.'); ?>€</small>
                             </div>
                         </div>
                     </div>
@@ -315,5 +496,98 @@ try {
             background-color: #529ebe !important;
         }
     </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function simularTempo() {
+            const tempo = parseInt(document.getElementById('tempoSimular').value);
+            const entity = '<?php echo $contrato["Entity"] ?? ""; ?>';
+            
+            if (!tempo || tempo <= 0) {
+                alert('Por favor, digite um tempo válido');
+                return;
+            }
+
+            fetch('verificar_tempo_endpoint.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `entity=${encodeURIComponent(entity)}&tempo=${tempo}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                mostrarResultadoSimulacao(data, tempo);
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao simular tempo');
+            });
+        }
+
+        function mostrarResultadoSimulacao(data, tempo) {
+            const container = document.getElementById('resultadoSimulacao');
+            
+            let html = `
+                <div class="alert alert-${data.temTempo ? 'success' : 'danger'}" role="alert">
+                    <h6><i class="bi bi-${data.temTempo ? 'check-circle' : 'x-circle'}"></i> 
+                        ${data.temTempo ? 'Tempo Suficiente' : 'Tempo Insuficiente'}</h6>
+                    <p class="mb-2">${data.mensagem}</p>
+            `;
+
+            if (data.distribuicao && data.distribuicao.length > 0) {
+                html += `
+                    <h6 class="mt-3">Distribuição do Tempo:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Contrato</th>
+                                    <th>Tempo Usado</th>
+                                    <th>Restante Depois</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                data.distribuicao.forEach(dist => {
+                    const restanteHoras = Math.floor(dist.tempoDisponivelDepois / 60);
+                    const restanteMin = dist.tempoDisponivelDepois % 60;
+                    const tempoUsadoHoras = Math.floor(dist.tempoUsado / 60);
+                    const tempoUsadoMin = dist.tempoUsado % 60;
+
+                    html += `
+                        <tr>
+                            <td>${dist.contratoNome}</td>
+                            <td>${tempoUsadoHoras}h ${tempoUsadoMin}min</td>
+                            <td>${restanteHoras}h ${restanteMin}min</td>
+                            <td>
+                                <span class="badge bg-${dist.ficaExcedido ? 'danger' : 'success'}">
+                                    ${dist.ficaExcedido ? 'Fica Excedido' : 'OK'}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            
+            container.innerHTML = html;
+            container.style.display = 'block';
+        }
+
+        function limparSimulacao() {
+            document.getElementById('tempoSimular').value = '';
+            document.getElementById('resultadoSimulacao').style.display = 'none';
+        }
+    </script>
 </body>
 </html>

@@ -44,7 +44,7 @@ if (isset($_GET['keyid'])) {
     
     // Consultar os detalhes do ticket
     $sql = "SELECT free.KeyId, free.id, free.Name, info.Description, info.Priority, info.Status,
-            info.CreationUser, info.CreationDate, info.dateu, info.image, info.Atribuido as User,
+            info.CreationUser, info.CreationDate, info.dateu, info.image, info.Atribuido as User, info.Entity,
             u.Name as atribuido_a, info.Tempo as Time, info.Relatorio as Descr, info.MensagensInternas as info
             FROM xdfree01 free
             LEFT JOIN info_xdfree01_extrafields info ON free.KeyId = info.XDFree01_KeyID
@@ -1107,112 +1107,6 @@ function getStatusColor($status)
             }
         });
 
-        function processNewMessages(messages) {
-            if (!messages || messages.length === 0) {
-                return;
-            }
-
-            const chatBody = document.getElementById('chatBody');
-            let newMessagesAdded = false;
-
-            messages.forEach(message => {
-                if (!message || typeof message !== 'object') {
-                    return;
-                }
-
-                const type = parseInt(message.type);
-                const isUser = (type === 1);
-                const messageClass = isUser ? 'message-user' : 'message-admin';
-                const messageText = message.Message || '';
-                const user = message.user || 'unknown';
-                const time = message.CommentTime || new Date().toISOString();
-
-                // Create multiple possible keys for this message
-                const possibleKeys = [
-                    message.messageId,
-                    `${user}-${formatMessageTime(time)}-${messageText.substring(0, 20)}`,
-                    `${user}-${time}-${messageText.substring(0, 20)}`,
-                    `db_${message.messageId}`,
-                    `admin_msg_${message.messageId}`,
-                    `temp_admin_${message.messageId}`
-                ];
-
-                // Check if any of these keys already exist
-                let messageExists = false;
-                possibleKeys.forEach(key => {
-                    if (key && processedMessageIds.has(key)) {
-                        messageExists = true;
-                    }
-                });
-
-                // Also check DOM for existing message (but not temp messages)
-                if (!messageExists) {
-                    possibleKeys.forEach(key => {
-                        if (key) {
-                            const existingElement = document.querySelector(`[data-message-key="${key}"]`);
-                            if (existingElement && !existingElement.getAttribute('data-temp-message')) {
-                                messageExists = true;
-                            }
-                        }
-                    });
-                }
-
-                // Special handling: if this message matches a temp message from the same user,
-                // remove the temp message and add the real one
-                const tempMessageSelector = `[data-temp-message="true"][data-awaiting-sync="true"]`;
-                const tempMessages = document.querySelectorAll(tempMessageSelector);
-                
-                tempMessages.forEach(tempMsg => {
-                    const tempUser = tempMsg.querySelector('.message-user-info')?.textContent;
-                    const tempTime = tempMsg.querySelector('.message-time')?.textContent;
-                    const tempText = tempMsg.querySelector('.message-content')?.textContent;
-                    
-                    // Check if this real message matches the temp message
-                    if (tempUser === user && tempText === messageText) {
-                        console.log("Found matching temp message, removing it");
-                        tempMsg.parentNode.removeChild(tempMsg);
-                        messageExists = false; // Allow the real message to be added
-                    }
-                });
-
-                if (messageExists) {
-                    return;
-                }
-
-                // Add all possible keys to processed set
-                possibleKeys.forEach(key => {
-                    if (key) {
-                        processedMessageIds.add(key);
-                    }
-                });
-
-                newMessagesAdded = true;
-
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${messageClass} new-message`;
-                messageDiv.setAttribute('data-message-key', message.messageId || possibleKeys[1]);
-
-                let timeDisplay = formatMessageTime(time);
-
-                messageDiv.innerHTML = `
-                    <p class="message-content">${messageText.replace(/\n/g, '<br>')}</p>
-                    <div class="message-meta">
-                        <span class="message-user-info">${user}</span>
-                        <span class="message-time">${timeDisplay}</span>
-                    </div>
-                `;
-
-                chatBody.appendChild(messageDiv);
-            });
-
-            if (newMessagesAdded) {
-                const isAtBottom = chatBody.scrollHeight - chatBody.clientHeight <= chatBody.scrollTop + 100;
-                if (isAtBottom) {
-                    chatBody.scrollTop = chatBody.scrollHeight;
-                }
-            }
-        }
-
         // Also handle button click explicitly
         document.getElementById('sendButton')?.addEventListener('click', function(e) {
             const form = document.getElementById('chatForm');
@@ -1259,8 +1153,158 @@ function getStatusColor($status)
             }
         }
 
+        // Função para verificar tempo antes de fechar ticket
+        function verificarTempoAntesFechamento() {
+            const statusSelect = document.getElementById('status');
+            const tempoInput = document.getElementById('resolution_time');
+            const entity = '<?php echo $ticket["Entity"] ?? ""; ?>'; // Entity do ticket atual
+            
+            // Só verificar se status for "Concluído"
+            if (statusSelect.value !== 'Concluído') {
+                return Promise.resolve(true);
+            }
+            
+            const tempo = parseInt(tempoInput.value);
+            if (!tempo || tempo <= 0) {
+                return Promise.resolve(true); // Deixar a validação normal lidar com isso
+            }
+            
+            // Fazer verificação assíncrona
+            return fetch('verificar_tempo_endpoint.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `entity=${encodeURIComponent(entity)}&tempo=${tempo}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.temTempo) {
+                    mostrarModalTempoInsuficiente(data, tempo);
+                    return false;
+                }
+                return true;
+            })
+            .catch(error => {
+                console.error('Erro ao verificar tempo:', error);
+                return true; // Em caso de erro, permitir o fechamento
+            });
+        }
+
+        // Função para mostrar modal com detalhes de tempo insuficiente
+        function mostrarModalTempoInsuficiente(dadosVerificacao, tempoNecessario) {
+            // Criar modal dinamicamente
+            const modalHtml = `
+                <div class="modal fade" id="modalTempoInsuficiente" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>Tempo Insuficiente
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-danger">
+                                    <h6>Não é possível fechar este ticket</h6>
+                                    <p class="mb-0">${dadosVerificacao.mensagem}</p>
+                                </div>
+                                
+                                <h6>Tempo necessário: <strong>${tempoNecessario} minutos</strong></h6>
+                                <h6>Tempo disponível: <strong>${dadosVerificacao.tempoRestanteTotal} minutos</strong></h6>
+                                
+                                ${dadosVerificacao.distribuicao && dadosVerificacao.distribuicao.length > 0 ? `
+                                    <h6 class="mt-3">Como seria distribuído (se houvesse tempo):</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Contrato</th>
+                                                    <th>Tempo a Usar</th>
+                                                    <th>Disponível Antes</th>
+                                                    <th>Ficaria Depois</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${dadosVerificacao.distribuicao.map(dist => {
+                                                    const tempoUsarH = Math.floor(dist.tempoUsado / 60);
+                                                    const tempoUsarM = dist.tempoUsado % 60;
+                                                    const dispAntesH = Math.floor(dist.tempoDisponivelAntes / 60);
+                                                    const dispAntesM = dist.tempoDisponivelAntes % 60;
+                                                    const dispDepoisH = Math.floor(dist.tempoDisponivelDepois / 60);
+                                                    const dispDepoisM = dist.tempoDisponivelDepois % 60;
+                                                    
+                                                    return `
+                                                        <tr>
+                                                            <td>${dist.contratoNome}</td>
+                                                            <td>${tempoUsarH}h ${tempoUsarM}min</td>
+                                                            <td>${dispAntesH}h ${dispAntesM}min</td>
+                                                            <td class="${dist.ficaExcedido ? 'text-danger' : ''}">
+                                                                ${dispDepoisH}h ${dispDepoisM}min
+                                                                ${dist.ficaExcedido ? '<br><small>(Excedido)</small>' : ''}
+                                                            </td>
+                                                        </tr>
+                                                    `;
+                                                }).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="alert alert-info mt-3">
+                                    <h6><i class="bi bi-lightbulb"></i> Soluções possíveis:</h6>
+                                    <ul class="mb-0">
+                                        <li>Reduzir o tempo de resolução do ticket</li>
+                                        <li>Cliente pode adquirir um novo pacote de horas</li>
+                                        <li>Contactar o cliente sobre a situação dos contratos</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remover modal anterior se existir
+            const modalAnterior = document.getElementById('modalTempoInsuficiente');
+            if (modalAnterior) {
+                modalAnterior.remove();
+            }
+            
+            // Adicionar novo modal
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('modalTempoInsuficiente'));
+            modal.show();
+        }
+
         // Function to update all modified fields automatically
         function updateAllModifiedFields() {
+            const statusSelect = document.getElementById('status');
+            const originalStatus = statusSelect.getAttribute('data-original-value') || '';
+            
+            // Se está tentando fechar o ticket (mudar para Concluído)
+            if (statusSelect.value === 'Concluído' && originalStatus !== 'Concluído') {
+                // Verificar tempo primeiro
+                verificarTempoAntesFechamento().then(tempoOk => {
+                    if (tempoOk) {
+                        // Tempo OK, prosseguir com o fechamento normal
+                        executarUpdateOriginal();
+                    }
+                    // Se não tem tempo, o modal já foi mostrado, não fazer nada
+                });
+            } else {
+                // Não está fechando ticket, usar função normal
+                executarUpdateOriginal();
+            }
+        }
+
+        // Função para executar o update original
+        function executarUpdateOriginal() {
             const form = document.getElementById('adminUpdateForm');
             const formData = new FormData(form);
             
@@ -1321,7 +1365,7 @@ function getStatusColor($status)
             saveButton.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> A guardar...';
             saveButton.disabled = true;
             
-            // Send update request - use the existing form submission logic
+            // Send update request
             fetch('processar_alteracao.php', {
                 method: 'POST',
                 body: formData,
@@ -1347,7 +1391,12 @@ function getStatusColor($status)
                         }, 1000);
                     }
                 } else {
-                    showNotification('Erro ao guardar alterações: ' + (data.message || 'Erro desconhecido'), 'error');
+                    // Se for erro de tempo insuficiente, mostrar modal personalizado
+                    if (data.detalhes) {
+                        mostrarModalTempoInsuficiente(data, data.tempoNecessario);
+                    } else {
+                        showNotification('Erro ao guardar alterações: ' + (data.message || 'Erro desconhecido'), 'error');
+                    }
                 }
             })
             .catch(error => {
@@ -1465,6 +1514,7 @@ function getStatusColor($status)
 
         // Initialize when page loads
         window.addEventListener('DOMContentLoaded', function() {
+
             // Time adjustment functionality
             window.adjustTime = function(minutesToAdd) {
                 const timeInput = document.getElementById('resolution_time');
@@ -1626,6 +1676,43 @@ function getStatusColor($status)
                     // Call original function
                     return originalProcessNewMessages(messages);
                 };
+            }
+
+            // Adicionar indicador visual quando status = Concluído
+            const statusSelect = document.getElementById('status');
+            const tempoInput = document.getElementById('resolution_time');
+            
+            if (statusSelect && tempoInput) {
+                statusSelect.addEventListener('change', function() {
+                    const tempoContainer = document.querySelector('.time-control-container');
+                    
+                    if (this.value === 'Concluído') {
+                        // Adicionar aviso visual
+                        if (!document.getElementById('avisoFechamento')) {
+                            const aviso = document.createElement('div');
+                            aviso.id = 'avisoFechamento';
+                            aviso.className = 'alert alert-warning mt-2';
+                            aviso.innerHTML = `
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>Atenção:</strong> O tempo será verificado e distribuído pelos contratos do cliente ao fechar o ticket.
+                            `;
+                            tempoContainer.parentNode.insertBefore(aviso, tempoContainer.nextSibling);
+                        }
+                        
+                        // Destacar container de tempo
+                        tempoContainer.style.border = '2px solid #ffc107';
+                        tempoContainer.style.backgroundColor = '#fff3cd';
+                    } else {
+                        // Remover aviso e destacar
+                        const aviso = document.getElementById('avisoFechamento');
+                        if (aviso) {
+                            aviso.remove();
+                        }
+                        
+                        tempoContainer.style.border = '';
+                        tempoContainer.style.backgroundColor = '';
+                    }
+                });
             }
         });
     </script>
