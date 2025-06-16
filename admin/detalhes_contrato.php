@@ -54,6 +54,16 @@ try {
         exit;
     }
 
+    // Atualizar status do contrato antes de exibir
+    $entity = $contrato['Entity'];
+    atualizarStatusContratos($entity, $pdo);
+    
+    // Recarregar dados do contrato após atualização de status
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(':contract_id', $contract_id, PDO::PARAM_STR);
+    $stmt->execute();
+    $contrato = $stmt->fetch(PDO::FETCH_ASSOC);
+
     // Get tickets used in this contract
     $sql_tickets = "SELECT 
                         t.TicketNumber, 
@@ -185,6 +195,7 @@ try {
                                         switch(strtolower($status)) {
                                             case 'em utilização': $status_class = 'bg-success'; break;
                                             case 'por começar': $status_class = 'bg-warning'; break;
+                                            case 'concluído': 
                                             case 'concluido': $status_class = 'bg-info'; break;
                                             case 'excedido': $status_class = 'bg-danger'; break;
                                             default: $status_class = 'bg-secondary';
@@ -206,32 +217,6 @@ try {
                         </div>
                     </div>
 
-                    <!-- Simulador de Tempo -->
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Simulador de Tempo</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row align-items-end">
-                                <div class="col-md-6">
-                                    <label for="tempoSimular" class="form-label">Simular tempo de ticket (minutos):</label>
-                                    <input type="number" class="form-control" id="tempoSimular" min="1" placeholder="Ex: 30">
-                                </div>
-                                <div class="col-md-3">
-                                    <button class="btn btn-info w-100" onclick="simularTempo()">
-                                        <i class="bi bi-play-circle me-1"></i> Simular
-                                    </button>
-                                </div>
-                                <div class="col-md-3">
-                                    <button class="btn btn-secondary w-100" onclick="limparSimulacao()">
-                                        <i class="bi bi-x-circle me-1"></i> Limpar
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="resultadoSimulacao" class="mt-3" style="display: none;"></div>
-                        </div>
-                    </div>
-                    
                     <!-- Tickets Table -->
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
@@ -309,6 +294,11 @@ try {
                                                    class="btn btn-sm btn-outline-primary" title="Ver ticket">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
+                                                <?php if ($ticket['TicketStatus'] === 'Concluído'): ?>
+                                                <span class="badge bg-secondary ms-1" title="Ticket encerrado - apenas leitura">
+                                                    <i class="bi bi-lock-fill"></i>
+                                                </span>
+                                                <?php endif; ?>
                                                 <?php endif; ?>
                                             </td>
                                         </tr>
@@ -335,22 +325,38 @@ try {
                         </div>
                         <div class="card-body">
                             <?php 
-                            $total_hours = (float)($contrato['TotalHours'] ?? 0);
-                            $used_hours = (float)($contrato['SpentHours'] ?? 0);
-                            $remaining_hours = $total_hours - $used_hours;
-                            $remaining_minutes = $remaining_hours * 60;
-                            $percentage = $total_hours > 0 ? round(($used_hours / $total_hours) * 100) : 0;
+                            // Fix: Ensure we're working with minutes consistently
+                            $total_minutes = (int)($contrato['TotalHours'] ?? 0); // Already in minutes from DB
+                            $used_minutes = (int)($contrato['SpentHours'] ?? 0);   // Already in minutes from DB
                             
-                            $remaining_h = floor($remaining_minutes / 60);
-                            $remaining_m = $remaining_minutes % 60;
+                            // Calculate remaining minutes
+                            $remaining_minutes = $total_minutes - $used_minutes;
+                            
+                            // Convert for display
+                            $total_hours_display = $total_minutes / 60;
+                            $used_hours_display = $used_minutes / 60;
+                            
+                            // Fix: Calculate percentage based on actual values
+                            $percentage = $total_minutes > 0 ? round(($used_minutes / $total_minutes) * 100) : 0;
+                            
+                            // Fix: Display remaining time correctly
+                            $remaining_h = floor(abs($remaining_minutes) / 60);
+                            $remaining_m = abs($remaining_minutes) % 60;
+                            
+                            // Debug: Log the actual values
+                            error_log("Contract Debug - Total: {$total_minutes}min, Used: {$used_minutes}min, Remaining: {$remaining_minutes}min");
                             ?>
                             
                             <div class="text-center mb-3">
-                                <h3 class="<?php echo $remaining_hours <= 0 ? 'text-danger' : 'text-primary'; ?>">
-                                    <?php echo $remaining_h; ?>h <?php echo abs($remaining_m); ?>min
+                                <h3 class="<?php echo $remaining_minutes <= 0 ? 'text-danger' : 'text-primary'; ?>">
+                                    <?php if ($remaining_minutes < 0): ?>
+                                        -<?php echo $remaining_h; ?>h <?php echo $remaining_m; ?>min
+                                    <?php else: ?>
+                                        <?php echo $remaining_h; ?>h <?php echo $remaining_m; ?>min
+                                    <?php endif; ?>
                                 </h3>
                                 <small class="text-muted">
-                                    <?php echo $remaining_hours <= 0 ? 'Horas Excedidas' : 'Horas Restantes'; ?>
+                                    <?php echo $remaining_minutes <= 0 ? 'Horas Excedidas' : 'Horas Restantes'; ?>
                                 </small>
                             </div>
                             
@@ -365,11 +371,11 @@ try {
                             
                             <div class="row text-center">
                                 <div class="col-6">
-                                    <strong><?php echo $total_hours; ?>h</strong><br>
+                                    <strong><?php echo number_format($total_hours_display, 1); ?>h</strong><br>
                                     <small class="text-muted">Total</small>
                                 </div>
                                 <div class="col-6">
-                                    <strong><?php echo number_format($used_hours, 1); ?>h</strong><br>
+                                    <strong><?php echo number_format($used_hours_display, 1); ?>h</strong><br>
                                     <small class="text-muted">Utilizadas</small>
                                 </div>
                             </div>
@@ -378,7 +384,7 @@ try {
                             <div class="alert alert-<?php echo $percentage >= 100 ? 'danger' : 'warning'; ?> mt-3 p-2" role="alert">
                                 <small><i class="bi bi-exclamation-triangle me-1"></i>
                                 <?php if ($percentage >= 100): ?>
-                                Contrato excedido em <?php echo number_format($used_hours - $total_hours, 1); ?>h
+                                Contrato excedido em <?php echo number_format(abs($used_hours_display - $total_hours_display), 1); ?>h
                                 <?php else: ?>
                                 Poucas horas restantes (<?php echo 100 - $percentage; ?>%)
                                 <?php endif; ?>
@@ -399,7 +405,17 @@ try {
                                 <?php if ($outroContrato['id'] !== $contract_id): ?>
                                 <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-start border-3 <?php echo $outroContrato['excedido'] ? 'border-danger' : 'border-primary'; ?>">
                                     <div>
-                                        <small class="fw-bold"><?php echo $outroContrato['totalHoras']; ?>h</small><br>
+                                        <?php 
+                                        // Convert totalHoras from minutes to hours for display
+                                        $totalMinutos = (int)$outroContrato['totalHoras'];
+                                        $totalHorasDisplay = floor($totalMinutos / 60);
+                                        $totalMinutosResto = $totalMinutos % 60;
+                                        $horasTexto = $totalHorasDisplay . 'h';
+                                        if ($totalMinutosResto > 0) {
+                                            $horasTexto .= ' ' . $totalMinutosResto . 'min';
+                                        }
+                                        ?>
+                                        <small class="fw-bold"><?php echo $horasTexto; ?></small><br>
                                         <small class="text-muted"><?php echo $outroContrato['status']; ?></small>
                                     </div>
                                     <div class="text-end">
@@ -498,96 +514,5 @@ try {
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function simularTempo() {
-            const tempo = parseInt(document.getElementById('tempoSimular').value);
-            const entity = '<?php echo $contrato["Entity"] ?? ""; ?>';
-            
-            if (!tempo || tempo <= 0) {
-                alert('Por favor, digite um tempo válido');
-                return;
-            }
-
-            fetch('verificar_tempo_endpoint.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `entity=${encodeURIComponent(entity)}&tempo=${tempo}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                mostrarResultadoSimulacao(data, tempo);
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao simular tempo');
-            });
-        }
-
-        function mostrarResultadoSimulacao(data, tempo) {
-            const container = document.getElementById('resultadoSimulacao');
-            
-            let html = `
-                <div class="alert alert-${data.temTempo ? 'success' : 'danger'}" role="alert">
-                    <h6><i class="bi bi-${data.temTempo ? 'check-circle' : 'x-circle'}"></i> 
-                        ${data.temTempo ? 'Tempo Suficiente' : 'Tempo Insuficiente'}</h6>
-                    <p class="mb-2">${data.mensagem}</p>
-            `;
-
-            if (data.distribuicao && data.distribuicao.length > 0) {
-                html += `
-                    <h6 class="mt-3">Distribuição do Tempo:</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Contrato</th>
-                                    <th>Tempo Usado</th>
-                                    <th>Restante Depois</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-
-                data.distribuicao.forEach(dist => {
-                    const restanteHoras = Math.floor(dist.tempoDisponivelDepois / 60);
-                    const restanteMin = dist.tempoDisponivelDepois % 60;
-                    const tempoUsadoHoras = Math.floor(dist.tempoUsado / 60);
-                    const tempoUsadoMin = dist.tempoUsado % 60;
-
-                    html += `
-                        <tr>
-                            <td>${dist.contratoNome}</td>
-                            <td>${tempoUsadoHoras}h ${tempoUsadoMin}min</td>
-                            <td>${restanteHoras}h ${restanteMin}min</td>
-                            <td>
-                                <span class="badge bg-${dist.ficaExcedido ? 'danger' : 'success'}">
-                                    ${dist.ficaExcedido ? 'Fica Excedido' : 'OK'}
-                                </span>
-                            </td>
-                        </tr>
-                    `;
-                });
-
-                html += `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            }
-
-            html += '</div>';
-            
-            container.innerHTML = html;
-            container.style.display = 'block';
-        }
-
-        function limparSimulacao() {
-            document.getElementById('tempoSimular').value = '';
-            document.getElementById('resultadoSimulacao').style.display = 'none';
-        }
-    </script>
 </body>
 </html>

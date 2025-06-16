@@ -387,6 +387,7 @@ function getStatusColor($status)
         </div>
 
         <!-- Secção de controlos de administrador -->
+        <?php if ($ticket['Status'] !== 'Concluído'): ?>
         <div class="admin-controls">
             <a href="javascript:void(0);" class="d-flex align-items-center justify-content-between admin-controls-header collapsed" 
                 data-bs-toggle="collapse" 
@@ -501,6 +502,14 @@ function getStatusColor($status)
                 </form>
             </div>
         </div>
+        <?php else: ?>
+        <div class="admin-controls">
+            <div class="alert alert-info">
+                <h5 class="mb-2"><i class="bi bi-lock-fill me-2"></i>Ticket Encerrado</h5>
+                <p class="mb-0">Este ticket foi encerrado e não pode mais ser modificado. Todas as informações administrativas estão bloqueadas para preservar a integridade do registo.</p>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <div class="chat-body" id="chatBody">
             <!-- Mensagem de informação do ticket no topo -->

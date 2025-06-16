@@ -8,6 +8,7 @@ include('conflogin.php');
 requireFullAdmin();
 
 include('db.php');
+include('verificar_tempo_disponivel.php'); // Incluir para usar a função de atualização
 
 // Parâmetros de pesquisa
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -19,6 +20,16 @@ $records_per_page = 20;
 $offset = ($page - 1) * $records_per_page;
 
 try {
+    // Atualizar status de todos os contratos antes de exibir
+    $sqlEntities = "SELECT DISTINCT Entity FROM info_xdfree02_extrafields WHERE Entity IS NOT NULL";
+    $stmtEntities = $pdo->prepare($sqlEntities);
+    $stmtEntities->execute();
+    $entities = $stmtEntities->fetchAll(PDO::FETCH_COLUMN);
+    
+    foreach ($entities as $entity) {
+        atualizarStatusContratos($entity, $pdo);
+    }
+    
     // Construir query com filtros - usar apenas os campos específicos que você quer
     $where_conditions = [];
     $params = [];
@@ -171,9 +182,13 @@ try {
                         <tbody>
                             <?php foreach ($contratos as $contrato): 
                                 $contract_id = $contrato['XDfree02_KeyId'] ?? $contrato['id'] ?? '';
-                                $total_hours = (int)($contrato['TotalHours'] ?? 0);
-                                $used_hours = (int)($contrato['SpentHours'] ?? 0);
-                                $remaining_hours = $total_hours - $used_hours;
+                                $total_minutes = (int)($contrato['TotalHours'] ?? 0);
+                                $used_minutes = (int)($contrato['SpentHours'] ?? 0);
+                                $remaining_minutes = $total_minutes - $used_minutes;
+                                
+                                // Convert to hours for display
+                                $total_hours = $total_minutes / 60;
+                                $remaining_hours = $remaining_minutes / 60;
                             ?>
                             <tr>
                                 <td>
@@ -214,8 +229,12 @@ try {
                                         case 'por começar':
                                             $status_class = 'bg-warning';
                                             break;
+                                        case 'concluído':
                                         case 'concluido':
                                             $status_class = 'bg-info';
+                                            break;
+                                        case 'excedido':
+                                            $status_class = 'bg-danger';
                                             break;
                                         default:
                                             $status_class = 'bg-secondary';
@@ -229,7 +248,7 @@ try {
                                 </td>
                                 <td>
                                     <?php 
-                                    if ($total_hours > 0) {
+                                    if ($total_minutes > 0) {
                                         $hours_class = '';
                                         if ($remaining_hours <= 0) {
                                             $hours_class = 'text-danger';
@@ -238,10 +257,16 @@ try {
                                         } else {
                                             $hours_class = 'text-success';
                                         }
-                                        echo "<span class='fw-bold $hours_class'>{$remaining_hours}h</span>";
-                                        echo "<br><small class='text-muted'>de {$total_hours}h</small>";
                                         
-                                        $percentage = min(100, round(($used_hours / $total_hours) * 100));
+                                        $remaining_h = floor($remaining_minutes / 60);
+                                        $remaining_m = abs($remaining_minutes % 60);
+                                        echo "<span class='fw-bold $hours_class'>{$remaining_h}h {$remaining_m}min</span>";
+                                        
+                                        $total_h = floor($total_minutes / 60);
+                                        $total_min = $total_minutes % 60;
+                                        echo "<br><small class='text-muted'>de {$total_h}h {$total_min}min</small>";
+                                        
+                                        $percentage = min(100, round(($used_minutes / $total_minutes) * 100));
                                         $progress_class = '';
                                         if ($percentage >= 100) {
                                             $progress_class = 'bg-danger';

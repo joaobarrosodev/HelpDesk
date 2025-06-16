@@ -238,6 +238,62 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                 display: block;
             }
         }
+
+        :root {
+            --bs-primary: #529ebe;
+            --bs-primary-rgb: 82, 158, 190;
+        }
+        
+        .content {
+            border-top: none !important;
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+        
+        .container-fluid {
+            border-top: none !important;
+        }
+        
+        .btn-primary, .btn-outline-primary {
+            --bs-btn-color: #529ebe;
+            --bs-btn-border-color: #529ebe;
+        }
+        
+        .btn-primary {
+            background-color: #e7f3ff;
+            border-color: #529ebe;
+        }
+
+        .btn-primary:hover {
+            background-color: #4a8ba8;
+            border-color: #4a8ba8;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: #529ebe;
+            border-color: #529ebe;
+        }
+        
+        .text-primary {
+            color: #529ebe !important;
+        }
+        
+        .progress-bar.bg-success {
+            background-color: #529ebe !important;
+        }
+        
+        .page-link {
+            color: #529ebe;
+        }
+        
+        .page-item.active .page-link {
+            background-color: #529ebe;
+            border-color: #529ebe;
+        }
+        
+        .badge.bg-info {
+            background-color: #529ebe !important;
+        }
     </style>
 </head>
 <body>

@@ -32,8 +32,9 @@ try {
     
     // Calcular tempo total disponível
     foreach ($contratos as $contrato) {
-        $totalMinutos = $contrato['TotalHours'] * 60;
-        $gastoMinutos = ($contrato['SpentHours'] ?? 0) * 60;
+        // TotalHours and SpentHours are already in minutes in database
+        $totalMinutos = $contrato['TotalHours']; // Already in minutes
+        $gastoMinutos = ($contrato['SpentHours'] ?? 0); // Already in minutes
         $restanteMinutos = max(0, $totalMinutos - $gastoMinutos);
         
         if (($contrato['SpentHours'] ?? 0) <= $contrato['TotalHours']) {
@@ -42,7 +43,7 @@ try {
         
         $contratosInfo[] = [
             'id' => $contrato['XDfree02_KeyId'],
-            'totalHoras' => $contrato['TotalHours'],
+            'totalHoras' => $contrato['TotalHours'], // Keep in minutes for internal calculations
             'gastasHoras' => $contrato['SpentHours'] ?? 0,
             'restanteMinutos' => $restanteMinutos,
             'status' => $contrato['Status'],
@@ -215,12 +216,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <div class="col-md-4 mb-2">
                             <div class="contract-item <?php echo $contrato['excedido'] ? 'contract-danger' : ($contrato['restanteMinutos'] <= 120 ? 'contract-warning' : 'contract-active'); ?>">
                                 <div class="d-flex justify-content-between">
-                                    <span><?php echo $contrato['totalHoras']; ?>h</span>
+                                    <span>
+                                        <?php 
+                                        // Convert minutes to hours for display
+                                        $totalH = floor($contrato['totalHoras'] / 60);
+                                        $totalM = $contrato['totalHoras'] % 60;
+                                        echo $totalH . 'h';
+                                        if ($totalM > 0) {
+                                            echo ' ' . $totalM . 'min';
+                                        }
+                                        ?>
+                                    </span>
                                     <span>
                                         <?php 
                                         $h = floor($contrato['restanteMinutos'] / 60);
                                         $m = $contrato['restanteMinutos'] % 60;
-                                        echo $h . 'h ' . $m . 'min';
+                                        echo $h . 'h';
+                                        if ($m > 0) {
+                                            echo ' ' . $m . 'min';
+                                        }
                                         ?>
                                     </span>
                                 </div>

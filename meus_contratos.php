@@ -38,8 +38,9 @@ try {
     $contratosExcedidos = 0;
     
     foreach ($contratos as &$contrato) {
-        $totalMinutos = $contrato['TotalHours'] * 60;
-        $gastoMinutos = ($contrato['SpentHours'] ?? 0) * 60;
+        // TotalHours and SpentHours are already in minutes in database
+        $totalMinutos = $contrato['TotalHours']; // Already in minutes
+        $gastoMinutos = ($contrato['SpentHours'] ?? 0); // Already in minutes
         $restanteMinutos = max(0, $totalMinutos - $gastoMinutos);
         
         $contrato['restanteMinutos'] = $restanteMinutos;
@@ -306,7 +307,17 @@ try {
                                 
                                 <div class="row mb-3">
                                     <div class="col-6 text-center">
-                                        <div class="time-display text-primary"><?php echo $contrato['TotalHours']; ?>h</div>
+                                        <div class="time-display text-primary">
+                                            <?php 
+                                            // Convert minutes to hours for display
+                                            $totalHorasDisplay = floor($contrato['TotalHours'] / 60);
+                                            $totalMinutosResto = $contrato['TotalHours'] % 60;
+                                            echo $totalHorasDisplay . 'h';
+                                            if ($totalMinutosResto > 0) {
+                                                echo ' ' . $totalMinutosResto . 'min';
+                                            }
+                                            ?>
+                                        </div>
                                         <small class="text-muted">Total</small>
                                     </div>
                                     <div class="col-6 text-center">
@@ -314,7 +325,10 @@ try {
                                             <?php 
                                             $restH = floor($contrato['restanteMinutos'] / 60);
                                             $restM = $contrato['restanteMinutos'] % 60;
-                                            echo $restH . 'h ' . $restM . 'min';
+                                            echo $restH . 'h';
+                                            if ($restM > 0) {
+                                                echo ' ' . $restM . 'min';
+                                            }
                                             ?>
                                         </div>
                                         <small class="text-muted">Restante</small>
@@ -326,7 +340,16 @@ try {
                                     $percentage = ($contrato['TotalHours'] > 0) ? min(100, round(($contrato['SpentHours'] / $contrato['TotalHours']) * 100)) : 0;
                                     ?>
                                     <div class="d-flex justify-content-between mb-1">
-                                        <small>Utilizado: <?php echo number_format($contrato['SpentHours'] ?? 0, 1); ?>h</small>
+                                        <small>Utilizado: 
+                                            <?php 
+                                            $spentH = floor(($contrato['SpentHours'] ?? 0) / 60);
+                                            $spentM = ($contrato['SpentHours'] ?? 0) % 60;
+                                            echo $spentH . 'h';
+                                            if ($spentM > 0) {
+                                                echo ' ' . $spentM . 'min';
+                                            }
+                                            ?>
+                                        </small>
                                         <small><?php echo $percentage; ?>%</small>
                                     </div>
                                     <div class="progress progress-custom">

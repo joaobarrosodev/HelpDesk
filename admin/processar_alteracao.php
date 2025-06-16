@@ -45,6 +45,17 @@ try {
         exit;
     }
     
+    // Verificar se o ticket já está encerrado - NOVA VALIDAÇÃO
+    if ($ticketAtual['Status'] === 'Concluído') {
+        $response = ['success' => false, 'message' => 'Este ticket já foi encerrado e não pode mais ser modificado'];
+        if ($isAjax) {
+            echo json_encode($response);
+            exit;
+        }
+        header('Location: detalhes_ticket.php?keyid=' . urlencode($ticketId) . '&error=ticket_closed');
+        exit;
+    }
+    
     // Preparar campos para atualização
     $updateFields = [];
     $params = [':keyid' => $ticketId];
@@ -112,7 +123,16 @@ try {
                 $restanteMin = $contrato['restanteMinutos'] % 60;
                 $statusDisplay = $contrato['excedido'] ? 'Excedido' : $contrato['status'];
                 
-                $mensagemDetalhada .= "- Contrato {$contrato['totalHoras']}h: ";
+                // Convert totalHoras from minutes to hours for display
+                $totalMinutos = (int)$contrato['totalHoras'];
+                $totalHorasDisplay = floor($totalMinutos / 60);
+                $totalMinutosResto = $totalMinutos % 60;
+                $contratoNome = $totalHorasDisplay . 'h';
+                if ($totalMinutosResto > 0) {
+                    $contratoNome .= ' ' . $totalMinutosResto . 'min';
+                }
+                
+                $mensagemDetalhada .= "- Contrato {$contratoNome}: ";
                 if ($contrato['restanteMinutos'] > 0) {
                     $mensagemDetalhada .= "{$restanteHoras}h {$restanteMin}min restantes";
                 } else {
@@ -223,6 +243,11 @@ try {
             
             header('Location: detalhes_ticket.php?keyid=' . urlencode($ticketId) . '&error=distribution_failed');
             exit;
+        }
+        
+        // Recalcular SpentHours para garantir precisão
+        foreach ($distribuicao['distribuicoes'] as $dist) {
+            recalcularSpentHours($dist['contratoId'], $pdo);
         }
         
         // Log da distribuição para auditoria
