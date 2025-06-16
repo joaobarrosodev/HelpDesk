@@ -3,8 +3,11 @@ session_start();  // Inicia a sessão
 
 include('conflogin.php');
 
-// Restrict access to full admins only
-requireFullAdmin();
+// Restrict access to admins only - comum users shouldn't see unassigned tickets
+if (!isAdmin()) {
+    header('Location: index.php?error=' . urlencode('Acesso negado. Apenas administradores podem ver tickets sem atribuição.'));
+    exit();
+}
 
 include('db.php');
 

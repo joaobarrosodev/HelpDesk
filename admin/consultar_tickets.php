@@ -2,21 +2,35 @@
 session_start();  // Inicia a sessão
 
 include('conflogin.php');
-
-// Restrict access to full admins only
-requireFullAdmin();
-
 include('db.php');
+
+// Allow both admin and comum users to access tickets consultation
+// Restrict access based on user permissions in the query instead
 
 // Verifica se existem filtros
 $data_filtro = isset($_GET['data']) ? $_GET['data'] : '';
 $prioridade_filtro = isset($_GET['prioridade']) ? $_GET['prioridade'] : '';
 $status_filtro = isset($_GET['status']) ? $_GET['status'] : '';
 $usuario_filtro = isset($_GET['usuario']) ? $_GET['usuario'] : '';
+$criador_filtro = isset($_GET['criador']) ? $_GET['criador'] : '';
+$data_inicio = isset($_GET['data_inicio']) ? $_GET['data_inicio'] : '';
+$data_fim = isset($_GET['data_fim']) ? $_GET['data_fim'] : '';
 
 $params = [];
 
-// Prepara a SQL para admin
+// Get current user info
+$current_user_id = null;
+$admin_email = $_SESSION['admin_email'] ?? '';
+$admin_id = $_SESSION['admin_id'];
+
+$user_sql = "SELECT id FROM users WHERE email = :admin_email";
+$user_stmt = $pdo->prepare($user_sql);
+$user_stmt->bindParam(':admin_email', $admin_email);
+$user_stmt->execute();
+$user_result = $user_stmt->fetch(PDO::FETCH_ASSOC);
+$current_user_id = $user_result['id'] ?? null;
+
+// Prepara a SQL para consultar todos os tickets
 $sql = "SELECT 
             xdfree01.KeyId, 
             xdfree01.id, 
@@ -30,42 +44,80 @@ $sql = "SELECT
             DATE_FORMAT(info_xdfree01_extrafields.CreationDate, '%d/%m/%Y') as criado, 
             DATE_FORMAT(info_xdfree01_extrafields.dateu, '%d/%m/%Y') as atualizado, 
             online.name as CreationUser,
+            info_xdfree01_extrafields.CreationUser as CreationUserEmail,
             (SELECT oee.Name 
              FROM comments_xdfree01_extrafields c 
              JOIN online_entity_extrafields oee ON c.user = oee.email 
              WHERE c.XDFree01_KeyID = xdfree01.KeyId 
-             ORDER BY c.Date DESC LIMIT 1) as LastCommentUser
+             ORDER BY c.Date DESC LIMIT 1) as LastCommentUser,
+            info_xdfree01_extrafields.Tempo as ResolutionTime
         FROM xdfree01 
         JOIN info_xdfree01_extrafields ON xdfree01.KeyId = info_xdfree01_extrafields.XDFree01_KeyID
         LEFT JOIN users u ON info_xdfree01_extrafields.Atribuido = u.id
         LEFT JOIN online_entity_extrafields online on info_xdfree01_extrafields.CreationUser = online.email";
 
-// Adiciona condição apenas se não for incluir os fechados
-if (empty($status_filtro) || $status_filtro != 'Concluído') {
-    $sql .= " WHERE (info_xdfree01_extrafields.Status <> 'Concluído' OR info_xdfree01_extrafields.Status IS NULL)";
+// Base WHERE clause
+$whereConditions = [];
+
+// Filter based on user permissions
+if (isAdmin()) {
+    // Full admins can see all tickets
+    // No additional restriction needed
 } else {
-    $sql .= " WHERE 1=1"; // Condição que sempre é verdadeira para manter a estrutura do SQL
+    // Common users can only see tickets assigned to them or created by them
+    $whereConditions[] = "(info_xdfree01_extrafields.Atribuido = :current_user_id OR info_xdfree01_extrafields.CreationUser = :admin_email)";
+    $params[':current_user_id'] = $current_user_id;
+    $params[':admin_email'] = $admin_email;
+}
+
+// Add WHERE clause if we have conditions
+if (!empty($whereConditions)) {
+    $sql .= " WHERE " . implode(" AND ", $whereConditions);
 }
 
 // Adiciona filtros se existirem
+$hasWhere = !empty($whereConditions);
+
 if (!empty($data_filtro)) {
-    $sql .= " AND DATE(info_xdfree01_extrafields.dateu) = :data_filtro";
+    $sql .= ($hasWhere ? " AND" : " WHERE") . " DATE(info_xdfree01_extrafields.dateu) = :data_filtro";
     $params[':data_filtro'] = $data_filtro;
+    $hasWhere = true;
+}
+
+if (!empty($data_inicio)) {
+    $sql .= ($hasWhere ? " AND" : " WHERE") . " DATE(info_xdfree01_extrafields.dateu) >= :data_inicio";
+    $params[':data_inicio'] = $data_inicio;
+    $hasWhere = true;
+}
+
+if (!empty($data_fim)) {
+    $sql .= ($hasWhere ? " AND" : " WHERE") . " DATE(info_xdfree01_extrafields.dateu) <= :data_fim";
+    $params[':data_fim'] = $data_fim;
+    $hasWhere = true;
 }
 
 if (!empty($prioridade_filtro)) {
-    $sql .= " AND info_xdfree01_extrafields.Priority = :prioridade_filtro";
+    $sql .= ($hasWhere ? " AND" : " WHERE") . " info_xdfree01_extrafields.Priority = :prioridade_filtro";
     $params[':prioridade_filtro'] = $prioridade_filtro;
+    $hasWhere = true;
 }
 
 if (!empty($status_filtro)) {
-    $sql .= " AND LOWER(TRIM(info_xdfree01_extrafields.Status)) = :processed_status_filtro";
+    $sql .= ($hasWhere ? " AND" : " WHERE") . " LOWER(TRIM(info_xdfree01_extrafields.Status)) = :processed_status_filtro";
     $params[':processed_status_filtro'] = strtolower(trim($status_filtro));
+    $hasWhere = true;
 }
 
 if (!empty($usuario_filtro)) {
-    $sql .= " AND info_xdfree01_extrafields.Atribuido = :usuario_filtro";
+    $sql .= ($hasWhere ? " AND" : " WHERE") . " info_xdfree01_extrafields.Atribuido = :usuario_filtro";
     $params[':usuario_filtro'] = $usuario_filtro;
+    $hasWhere = true;
+}
+
+if (!empty($criador_filtro)) {
+    $sql .= ($hasWhere ? " AND" : " WHERE") . " info_xdfree01_extrafields.CreationUser = :criador_filtro";
+    $params[':criador_filtro'] = $criador_filtro;
+    $hasWhere = true;
 }
 
 $sql .= " ORDER BY info_xdfree01_extrafields.dateu DESC";
@@ -74,11 +126,38 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Consultar todos os utilizadores para o dropdown de filtro
-$sql_users = "SELECT id, Name FROM users ORDER BY Name ASC";
-$stmt_users = $pdo->prepare($sql_users);
-$stmt_users->execute();
-$users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
+// Consultar todos os utilizadores para o dropdown de filtro (only for admins)
+if (isAdmin()) {
+    $sql_users = "SELECT id, Name FROM users ORDER BY Name ASC";
+    $stmt_users = $pdo->prepare($sql_users);
+    $stmt_users->execute();
+    $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $users = [];
+}
+
+// Obter listas de criadores para o dropdown de filtro
+if (isAdmin()) {
+    $sql_criadores = "SELECT DISTINCT online.email, online.name 
+                      FROM info_xdfree01_extrafields info 
+                      LEFT JOIN online_entity_extrafields online ON info.CreationUser = online.email 
+                      WHERE online.name IS NOT NULL 
+                      ORDER BY online.name ASC";
+} else {
+    $sql_criadores = "SELECT DISTINCT online.email, online.name 
+                      FROM info_xdfree01_extrafields info 
+                      LEFT JOIN online_entity_extrafields online ON info.CreationUser = online.email 
+                      WHERE (info.Atribuido = :current_user_id OR info.CreationUser = :admin_email)
+                      AND online.name IS NOT NULL 
+                      ORDER BY online.name ASC";
+}
+$stmt_criadores = $pdo->prepare($sql_criadores);
+if (!isAdmin()) {
+    $stmt_criadores->bindParam(':current_user_id', $current_user_id);
+    $stmt_criadores->bindParam(':admin_email', $admin_email);
+}
+$stmt_criadores->execute();
+$criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -91,23 +170,29 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
             <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-lg-row">
                 <div class="flex-grow-1">
                     <h1 class="mb-3 display-5">Consultar Tickets</h1>
-                    <p class="">Visualizar e gerir todos os tickets do sistema. Utilizar os filtros abaixo para refinar a visualização.</p>
+                    <p class="">Consulte todos os tickets do sistema com filtros avançados e informações detalhadas.</p>
                 </div>
             </div>
             
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
-                    <!-- Filtros -->
+                    <!-- Filters -->
                     <form method="get" action="" class="row g-3 mb-4">
-                        <div class="col-md-2">
-                            <label for="data" class="form-label">Data</label>
-                            <input type="date" class="form-control" id="data" name="data" value="<?php echo $data_filtro; ?>">
+                        <div class="col-md-1">
+                            <label for="data_inicio" class="form-label">Data Início</label>
+                            <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="<?php echo $data_inicio; ?>">
                         </div>
-                       
-                        <div class="col-md-3">
+                        
+                        <div class="col-md-1">
+                            <label for="data_fim" class="form-label">Data Fim</label>
+                            <input type="date" class="form-control" id="data_fim" name="data_fim" value="<?php echo $data_fim; ?>">
+                        </div>
+                        
+                        <div class="col-md-2">
                             <label for="status" class="form-label">Estado</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="">Todos</option>
+                                <option value="Aberto" <?php echo $status_filtro == 'Aberto' ? 'selected' : ''; ?>>Aberto</option>
                                 <option value="Em Análise" <?php echo $status_filtro == 'Em Análise' ? 'selected' : ''; ?>>Em Análise</option>
                                 <option value="Em Resolução" <?php echo $status_filtro == 'Em Resolução' ? 'selected' : ''; ?>>Em Resolução</option>
                                 <option value="Aguarda Resposta" <?php echo $status_filtro == 'Aguarda Resposta' ? 'selected' : ''; ?>>Aguarda Resposta</option>
@@ -125,7 +210,20 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                             </select>
                         </div>
                         
-                        <div class="col-md-3">
+                        <div class="col-md-2">
+                            <label for="criador" class="form-label">Criador</label>
+                            <select class="form-select" id="criador" name="criador">
+                                <option value="">Todos</option>
+                                <?php foreach ($criadores as $criador): ?>
+                                    <option value="<?php echo htmlspecialchars($criador['email']); ?>" <?php echo $criador_filtro == $criador['email'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($criador['name'] ?? $criador['email']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <?php if (isAdmin()): ?>
+                        <div class="col-md-2">
                             <label for="usuario" class="form-label">Atribuído a</label>
                             <select class="form-select" id="usuario" name="usuario">
                                 <option value="">Todos</option>
@@ -136,24 +234,39 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-dark w-100">Filtrar</button>
+                        <?php else: ?>
+                        <div class="col-md-2">
+                            <!-- Empty space for non-admin users -->
                         </div>
-                    </form>
+                        <?php endif; ?>
                         
-                    <!-- Tabela -->
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="submit" class="btn btn-dark w-100">
+                                <i class="bi bi-funnel me-1"></i>Filtrar
+                            </button>
+                        </div>
+                        
+                        <div class="col-md-1 d-flex align-items-end">
+                            <a href="consultar_tickets.php" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-x-circle me-1"></i>Limpar
+                            </a>
+                        </div>
+                    </form
+                        
+                    <!-- Table -->
                     <div class="table-responsive">
                         <table class="table align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th scope="col" class="sortable text-nowrap">Título</th>                                    
-                                    <th scope="col" class="sortable text-nowrap">Assunto</th>
-                                    <th scope="col" class="sortable text-nowrap">Atualizado</th>
+                                    <th scope="col" class="sortable text-nowrap">Título</th>
                                     <th scope="col" class="sortable text-nowrap">Criado</th>
+                                    <th scope="col" class="sortable text-nowrap">Atualizado</th>
                                     <th scope="col" class="sortable text-nowrap">Estado</th>
-                                    <th scope="col" class="sortable text-nowrap">Prioridade</th>                                    <th scope="col" class="sortable text-nowrap">Criador</th>
+                                    <th scope="col" class="sortable text-nowrap">Prioridade</th>
+                                    <th scope="col" class="sortable text-nowrap">Criador</th>
                                     <th scope="col" class="sortable text-nowrap">Atribuído a</th>
+                                    <th scope="col" class="sortable text-nowrap">Última Mensagem</th>
+                                    <th scope="col" class="text-nowrap">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -161,26 +274,35 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                                     <?php foreach ($tickets as $ticket): ?>
                                         <tr>
                                             <td>
-                                                <a href="detalhes_ticket.php?keyid=<?php echo htmlspecialchars($ticket['id']); ?>" class="text-decoration-none text-dark d-flex align-items-center text-nowrap">
-                                                    <i class="bi bi-arrow-right-circle me-2"></i> 
+                                                <a href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>" class="text-decoration-none text-dark d-flex align-items-center">
+                                                    <?php if ($ticket['status'] == 'Concluído'): ?>
+                                                        <i class="bi bi-check-circle-fill me-2 text-success"></i>
+                                                    <?php elseif ($ticket['status'] == 'Em Resolução'): ?>
+                                                        <i class="bi bi-gear-fill me-2 text-warning"></i>
+                                                    <?php elseif ($ticket['status'] == 'Em Análise'): ?>
+                                                        <i class="bi bi-search me-2 text-info"></i>
+                                                    <?php else: ?>
+                                                        <i class="bi bi-circle me-2 text-secondary"></i>
+                                                    <?php endif; ?>
                                                     <?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?>
                                                 </a>
                                             </td>
-                                            <td><?php echo htmlspecialchars($ticket['assunto_do_ticket'] ?? ''); ?></td>
-                                            <td><?php echo $ticket['atualizado']; ?></td>
                                             <td><?php echo $ticket['criado']; ?></td>
+                                            <td><?php echo $ticket['atualizado']; ?></td>
                                             <td>
                                                 <?php 
                                                 $status = $ticket['status'];
                                                 $statusClass = '';
-                                                if ($status == 'Em Análise') {
+                                                if ($status == 'Concluído') {
+                                                    $statusClass = 'badge w-100 bg-success';
+                                                } elseif ($status == 'Em Análise') {
                                                     $statusClass = 'badge w-100 bg-info';
                                                 } elseif ($status == 'Em Resolução') {
                                                     $statusClass = 'badge w-100 bg-warning';
                                                 } elseif ($status == 'Aguarda Resposta') {
                                                     $statusClass = 'badge w-100 bg-secondary';
-                                                } elseif ($status == 'Concluído') {
-                                                    $statusClass = 'badge w-100 bg-success';
+                                                } elseif ($status == 'Aberto') {
+                                                    $statusClass = 'badge w-100 bg-primary';
                                                 } else {
                                                     $statusClass = 'badge w-100 bg-dark';
                                                 }
@@ -197,15 +319,30 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                                                 }
                                                 ?>
                                                 <span class="badge <?php echo $badgeClass; ?>"><?php echo $ticket['prioridade']; ?></span>
-                                            </td>                                            <td><?php echo $ticket['CreationUser']; ?></td>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($ticket['CreationUser']); ?></td>
                                             <td><?php echo !empty($ticket['atribuido_a']) ? htmlspecialchars($ticket['atribuido_a']) : '-'; ?></td>
+                                            <td><?php echo !empty($ticket['LastCommentUser']) ? htmlspecialchars($ticket['LastCommentUser']) : '-'; ?></td>
+                                            <td>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton<?php echo $ticket['id']; ?>" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-gear"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton<?php echo $ticket['id']; ?>">
+                                                        <li><a class="dropdown-item" href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>"><i class="bi bi-eye me-2"></i> Ver detalhes</a></li>
+                                                        <?php if ($ticket['status'] != 'Concluído' && (isAdmin() || $ticket['User'] == $current_user_id)): ?>
+                                                            <li><a class="dropdown-item" href="editar_ticket.php?keyid=<?php echo $ticket['id']; ?>"><i class="bi bi-pencil me-2"></i> Editar</a></li>
+                                                        <?php endif; ?>
+                                                    </ul>
+                                                </div>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="10" class="text-center py-4">
+                                        <td colspan="9" class="text-center py-4">
                                             <div class="alert alert-info mb-0">
-                                                <i class="bi bi-info-circle me-2"></i> Não há tickets correspondentes aos filtros aplicados.
+                                                <i class="bi bi-info-circle me-2"></i> Nenhum ticket encontrado com os filtros selecionados.
                                             </div>
                                         </td>
                                     </tr>
@@ -218,34 +355,22 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
-    <!-- Modal de confirmação para fechar ticket -->
-    <div class="modal fade" id="fecharTicketModal" tabindex="-1" aria-labelledby="fecharTicketModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="fecharTicketModalLabel">Confirmar encerramento</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Tem a certeza de que deseja fechar este ticket? Esta ação não pode ser desfeita.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <a href="#" id="confirmarFecharTicket" class="btn btn-danger">Confirmar encerramento</a>
-                </div>
-            </div>
-        </div>
-    </div>
-    
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Funcionalidade de ordenação
+        // Sorting functionality
         const table = document.querySelector('table');
         const headers = table.querySelectorAll('th.sortable');
         const priorityMap = {
             'Baixa': 1,
             'Normal': 2,
             'Alta': 3
+        };
+        const statusMap = {
+            'Aberto': 1,
+            'Em Análise': 2,
+            'Em Resolução': 3,
+            'Aguarda Resposta': 4,
+            'Concluído': 5
         };
         
         headers.forEach(function(header, index) {
@@ -267,8 +392,15 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
                     const cellAContent = rowA.cells[index].textContent.trim();
                     const cellBContent = rowB.cells[index].textContent.trim();
                     
-                    // Special sorting for "Prioridade" column (index 5)
-                    if (index === 5) {
+                    // Special sorting for "Estado" column (index 3)
+                    if (index === 3) {
+                        const statusA = statusMap[cellAContent] || 0;
+                        const statusB = statusMap[cellBContent] || 0;
+                        return isAscending ? statusA - statusB : statusB - statusA;
+                    }
+                    
+                    // Special sorting for "Prioridade" column (index 4)
+                    if (index === 4) {
                         const priorityA = priorityMap[cellAContent] || 0;
                         const priorityB = priorityMap[cellBContent] || 0;
                         return isAscending ? priorityA - priorityB : priorityB - priorityA;
@@ -302,20 +434,6 @@ $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
             }
             return null;
         }
-        
-        // Funcionalidade de fechar ticket
-        const fecharBtns = document.querySelectorAll('.fechar-ticket');
-        const modal = new bootstrap.Modal(document.getElementById('fecharTicketModal'));
-        const confirmarBtn = document.getElementById('confirmarFecharTicket');
-        
-        fecharBtns.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const ticketId = this.getAttribute('data-id');
-                confirmarBtn.setAttribute('href', `processar_alteracao.php?action=close&keyid=${ticketId}`);
-                modal.show();
-            });
-        });
     });
     </script>
 </body>

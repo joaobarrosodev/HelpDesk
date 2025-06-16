@@ -19,7 +19,7 @@ try {
 
     // Get current user's assigned user ID for restricted users
     $current_user_id = null;
-    if (isComum()) {
+    if (!isAdmin()) {
         // Get the user ID associated with this admin account
         $user_sql = "SELECT id FROM users WHERE email = :admin_email";
         $user_stmt = $pdo->prepare($user_sql);
@@ -35,11 +35,12 @@ try {
         $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status <> 'Concluído'";
         $stmt_atribuidos = $pdo->prepare($sql_atribuidos);
     } else {
-        // Restricted users see only tickets assigned to them
+        // Restricted users see only tickets assigned to them or created by them
         $sql_atribuidos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields 
-                          WHERE Status <> 'Concluído' AND Atribuido = :user_id";
+                          WHERE Status <> 'Concluído' AND (Atribuido = :user_id OR CreationUser = :admin_email)";
         $stmt_atribuidos = $pdo->prepare($sql_atribuidos);
         $stmt_atribuidos->bindParam(':user_id', $current_user_id);
+        $stmt_atribuidos->bindParam(':admin_email', $_SESSION['admin_email']);
     }
 
     $stmt_atribuidos->execute();
@@ -56,9 +57,17 @@ try {
         $total_sem_atribuicao = 0;
     }
 
-    // Tickets resolvidos esta semana - using a simple approach
-    $sql_semana = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status = 'Concluído'";
-    $stmt_semana = $pdo->prepare($sql_semana);
+    // Tickets resolvidos esta semana - adjusted for user permissions
+    if (isAdmin()) {
+        $sql_semana = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status = 'Concluído'";
+        $stmt_semana = $pdo->prepare($sql_semana);
+    } else {
+        $sql_semana = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields 
+                      WHERE Status = 'Concluído' AND (Atribuido = :user_id OR CreationUser = :admin_email)";
+        $stmt_semana = $pdo->prepare($sql_semana);
+        $stmt_semana->bindParam(':user_id', $current_user_id);
+        $stmt_semana->bindParam(':admin_email', $_SESSION['admin_email']);
+    }
     $stmt_semana->execute();
     $total_semana = $stmt_semana->fetch(PDO::FETCH_ASSOC)['total'];
 
@@ -82,11 +91,28 @@ try {
 
     // Tickets críticos (check if Prioridade column exists)
     if (in_array('Prioridade', $columns)) {
-        $sql_criticos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Prioridade = 'Alta' AND Status <> 'Concluído'";
+        if (isAdmin()) {
+            $sql_criticos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Prioridade = 'Alta' AND Status <> 'Concluído'";
+            $stmt_criticos = $pdo->prepare($sql_criticos);
+        } else {
+            $sql_criticos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields 
+                            WHERE Prioridade = 'Alta' AND Status <> 'Concluído' AND (Atribuido = :user_id OR CreationUser = :admin_email)";
+            $stmt_criticos = $pdo->prepare($sql_criticos);
+            $stmt_criticos->bindParam(':user_id', $current_user_id);
+            $stmt_criticos->bindParam(':admin_email', $_SESSION['admin_email']);
+        }
     } else {
-        $sql_criticos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status = 'Aberto'";
+        if (isAdmin()) {
+            $sql_criticos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields WHERE Status = 'Aberto'";
+            $stmt_criticos = $pdo->prepare($sql_criticos);
+        } else {
+            $sql_criticos = "SELECT COUNT(*) as total FROM info_xdfree01_extrafields 
+                            WHERE Status = 'Aberto' AND (Atribuido = :user_id OR CreationUser = :admin_email)";
+            $stmt_criticos = $pdo->prepare($sql_criticos);
+            $stmt_criticos->bindParam(':user_id', $current_user_id);
+            $stmt_criticos->bindParam(':admin_email', $_SESSION['admin_email']);
+        }
     }
-    $stmt_criticos = $pdo->prepare($sql_criticos);
     $stmt_criticos->execute();
     $total_criticos = $stmt_criticos->fetch(PDO::FETCH_ASSOC)['total'];
 

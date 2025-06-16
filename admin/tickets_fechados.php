@@ -4,45 +4,15 @@ session_start();  // Inicia a sessão
 include('conflogin.php');
 include('db.php');
 
-// Get current user's assigned user ID for all users
-$current_user_id = null;
-$admin_email = $_SESSION['admin_email'] ?? '';
+// Use the admin_id from session directly - this should be the correct user ID
+$admin_id = $_SESSION['admin_id'];
 
-// Adicionar diagnóstico temporário
-echo "<!-- Debug Email: " . htmlspecialchars($admin_email) . " -->";
-
-// Verificar se há tickets para este usuário
-$verify_sql = "SELECT COUNT(*) as ticket_count FROM info_xdfree01_extrafields 
-               JOIN users ON info_xdfree01_extrafields.Atribuido = users.id 
-               WHERE users.email = :admin_email AND info_xdfree01_extrafields.Status = 'Concluído'";
-$verify_stmt = $pdo->prepare($verify_sql);
-$verify_stmt->bindParam(':admin_email', $admin_email);
-$verify_stmt->execute();
-$verify_result = $verify_stmt->fetch(PDO::FETCH_ASSOC);
-$ticket_count = $verify_result['ticket_count'] ?? 0;
-
-echo "<!-- Debug: Encontrados " . $ticket_count . " tickets fechados para este email -->";
-
-// Verificar o total de tickets fechados no sistema
-$total_sql = "SELECT COUNT(*) as total_tickets FROM info_xdfree01_extrafields WHERE Status = 'Concluído'";
-$total_stmt = $pdo->prepare($total_sql);
-$total_stmt->execute();
-$total_result = $total_stmt->fetch(PDO::FETCH_ASSOC);
-$total_tickets = $total_result['total_tickets'] ?? 0;
-
-echo "<!-- Debug: Total de " . $total_tickets . " tickets fechados no sistema -->";
-
-// Obter o ID do usuário atual - usuário que está logado
-$user_sql = "SELECT id, Name, email FROM users WHERE email = :admin_email";
-$user_stmt = $pdo->prepare($user_sql);
-$user_stmt->bindParam(':admin_email', $admin_email);
-$user_stmt->execute();
-$user_result = $user_stmt->fetch(PDO::FETCH_ASSOC);
-$current_user_id = $user_result['id'] ?? null;
-$current_user_name = $user_result['Name'] ?? 'Desconhecido';
-$current_user_email = $user_result['email'] ?? '';
-
-echo "<!-- Debug ID: " . ($current_user_id ?? 'null') . " | Nome: " . $current_user_name . " | Email: " . $current_user_email . " -->";
+// Recupera os filtros se existirem
+$prioridade_filtro = isset($_GET['prioridade']) ? $_GET['prioridade'] : '';
+$criador_filtro = isset($_GET['criador']) ? $_GET['criador'] : '';
+$data_inicio = isset($_GET['data_inicio']) ? $_GET['data_inicio'] : '';
+$data_fim = isset($_GET['data_fim']) ? $_GET['data_fim'] : '';
+$params = [];
 
 // Prepara a SQL para tickets fechados (concluídos)
 $sql = "SELECT 
@@ -56,6 +26,7 @@ $sql = "SELECT
             DATE_FORMAT(info_xdfree01_extrafields.CreationDate, '%d/%m/%Y') as criado, 
             DATE_FORMAT(info_xdfree01_extrafields.dateu, '%d/%m/%Y') as atualizado, 
             online.name as CreationUser,
+            info_xdfree01_extrafields.CreationUser as CreationUserEmail,
             u.Name as atribuido_a,
             (SELECT oee.Name 
              FROM comments_xdfree01_extrafields c 
@@ -70,36 +41,50 @@ $sql = "SELECT
         LEFT JOIN online_entity_extrafields online ON info_xdfree01_extrafields.CreationUser = online.email
         WHERE info_xdfree01_extrafields.Status = 'Concluído'";
 
-// Verificar quais utilizadores têm tickets fechados
-$users_tickets_sql = "SELECT u.id, u.Name, u.email, COUNT(*) as ticket_count 
-                     FROM info_xdfree01_extrafields e
-                     JOIN users u ON e.Atribuido = u.id
-                     WHERE e.Status = 'Concluído' 
-                     GROUP BY u.id, u.Name, u.email
-                     ORDER BY ticket_count DESC";
-$users_tickets_stmt = $pdo->prepare($users_tickets_sql);
-$users_tickets_stmt->execute();
-$users_with_tickets = $users_tickets_stmt->fetchAll(PDO::FETCH_ASSOC);
-
-echo "<!-- utilizadores com tickets fechados: ";
-foreach ($users_with_tickets as $user) {
-    echo $user['Name'] . " (ID: " . $user['id'] . ", Email: " . $user['email'] . "): " . $user['ticket_count'] . " tickets; ";
-}
-echo " -->";
-
-// Sempre filtrar para mostrar apenas tickets atribuídos ao usuário atual
-// Independentemente de ser Admin ou não
+// Show closed tickets based on user permissions
+// Both admin and comum users should only see tickets they resolved
 $sql .= " AND info_xdfree01_extrafields.Atribuido = :current_user_id";
+$params[':current_user_id'] = $admin_id;
 
-// Log para debug
-echo "<!-- Filtrando tickets para o usuário: " . $current_user_name . " (ID: " . $current_user_id . ") -->";
+// Adicionar filtros adicionais
+if (!empty($prioridade_filtro)) {
+    $sql .= " AND info_xdfree01_extrafields.Priority = :prioridade_filtro";
+    $params[':prioridade_filtro'] = $prioridade_filtro;
+}
+
+if (!empty($criador_filtro)) {
+    $sql .= " AND info_xdfree01_extrafields.CreationUser = :criador_filtro";
+    $params[':criador_filtro'] = $criador_filtro;
+}
+
+if (!empty($data_inicio)) {
+    $sql .= " AND DATE(info_xdfree01_extrafields.dateu) >= :data_inicio";
+    $params[':data_inicio'] = $data_inicio;
+}
+
+if (!empty($data_fim)) {
+    $sql .= " AND DATE(info_xdfree01_extrafields.dateu) <= :data_fim";
+    $params[':data_fim'] = $data_fim;
+}
 
 $sql .= " ORDER BY info_xdfree01_extrafields.dateu DESC";
-$stmt = $pdo->prepare($sql);
-$stmt->bindParam(':current_user_id', $current_user_id);
 
-$stmt->execute();
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Obter listas para os dropdowns de filtro
+$sql_criadores = "SELECT DISTINCT online.email, online.name 
+                  FROM info_xdfree01_extrafields info 
+                  LEFT JOIN online_entity_extrafields online ON info.CreationUser = online.email 
+                  WHERE info.Status = 'Concluído' 
+                  AND info.Atribuido = :current_user_id 
+                  AND online.name IS NOT NULL 
+                  ORDER BY online.name ASC";
+$stmt_criadores = $pdo->prepare($sql_criadores);
+$stmt_criadores->bindParam(':current_user_id', $admin_id);
+$stmt_criadores->execute();
+$criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -118,6 +103,53 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
+                    <!-- Filters -->
+                    <form method="get" action="" class="row g-3 mb-4">
+                        <div class="col-md-2">
+                            <label for="data_inicio" class="form-label">Data Início</label>
+                            <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="<?php echo $data_inicio; ?>">
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label for="data_fim" class="form-label">Data Fim</label>
+                            <input type="date" class="form-control" id="data_fim" name="data_fim" value="<?php echo $data_fim; ?>">
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label for="prioridade" class="form-label">Prioridade</label>
+                            <select class="form-select" id="prioridade" name="prioridade">
+                                <option value="">Todas</option>
+                                <option value="Baixa" <?php echo $prioridade_filtro == 'Baixa' ? 'selected' : ''; ?>>Baixa</option>
+                                <option value="Normal" <?php echo $prioridade_filtro == 'Normal' ? 'selected' : ''; ?>>Normal</option>
+                                <option value="Alta" <?php echo $prioridade_filtro == 'Alta' ? 'selected' : ''; ?>>Alta</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="criador" class="form-label">Criador</label>
+                            <select class="form-select" id="criador" name="criador">
+                                <option value="">Todos</option>
+                                <?php foreach ($criadores as $criador): ?>
+                                    <option value="<?php echo htmlspecialchars($criador['email']); ?>" <?php echo $criador_filtro == $criador['email'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($criador['name'] ?? $criador['email']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="submit" class="btn btn-dark w-100">
+                                <i class="bi bi-funnel me-1"></i>Filtrar
+                            </button>
+                        </div>
+                        
+                        <div class="col-md-1 d-flex align-items-end">
+                            <a href="tickets_fechados.php" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-x-circle me-1"></i>Limpar
+                            </a>
+                        </div>
+                    </form>
+                        
                     <!-- Table -->
                     <div class="table-responsive">
                         <table class="table align-middle">
@@ -128,9 +160,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <th scope="col" class="sortable text-nowrap">Criado</th>
                                     <th scope="col" class="sortable text-nowrap">Prioridade</th>
                                     <th scope="col" class="sortable text-nowrap">Tempo (min)</th>
-                                    <th scope="col" class="sortable text-nowrap">Atribuído a</th>
                                     <th scope="col" class="sortable text-nowrap">Criador</th>
-                                    <th scope="col" class="text-nowrap">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -157,62 +187,12 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                 <span class="badge <?php echo $badgeClass; ?>"><?php echo $ticket['prioridade']; ?></span>
                                             </td>
                                             <td><?php echo !empty($ticket['ResolutionTime']) ? htmlspecialchars($ticket['ResolutionTime']) : '-'; ?></td>
-                                            <td><?php echo !empty($ticket['atribuido_a']) ? htmlspecialchars($ticket['atribuido_a']) : '-'; ?></td>
                                             <td><?php echo $ticket['CreationUser']; ?></td>
-                                            <td>
-                                                <div class="dropdown">
-                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton<?php echo $ticket['id']; ?>" data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <i class="bi bi-gear"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton<?php echo $ticket['id']; ?>">
-                                                        <li><a class="dropdown-item" href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>"><i class="bi bi-eye me-2"></i> Ver detalhes</a></li>
-                                                        <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalResolucao<?php echo $ticket['id']; ?>" href="#"><i class="bi bi-info-circle me-2"></i> Ver resolução</a></li>
-                                                    </ul>
-                                                </div>
-
-                                                <!-- Modal de Resolução -->
-                                                <div class="modal fade" id="modalResolucao<?php echo $ticket['id']; ?>" tabindex="-1" aria-labelledby="modalLabel<?php echo $ticket['id']; ?>" aria-hidden="true">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title" id="modalLabel<?php echo $ticket['id']; ?>">Detalhes da Resolução</h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <div class="mb-3">
-                                                                    <h6>Título do Ticket</h6>
-                                                                    <p><?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?></p>
-                                                                </div>
-                                                                <div class="mb-3">
-                                                                    <h6>Resolvido por</h6>
-                                                                    <p><?php echo !empty($ticket['atribuido_a']) ? htmlspecialchars($ticket['atribuido_a']) : 'Não especificado'; ?></p>
-                                                                </div>
-                                                                <div class="mb-3">
-                                                                    <h6>Tempo de Resolução</h6>
-                                                                    <p><?php echo !empty($ticket['ResolutionTime']) ? htmlspecialchars($ticket['ResolutionTime']) . ' minutos' : 'Não especificado'; ?></p>
-                                                                </div>
-                                                                <div class="mb-3">
-                                                                    <h6>Descrição da Resolução</h6>
-                                                                    <p><?php echo !empty($ticket['ResolutionDescription']) ? nl2br(htmlspecialchars($ticket['ResolutionDescription'])) : 'Não especificado'; ?></p>
-                                                                </div>
-                                                                <div class="mb-3">
-                                                                    <h6>Data de Conclusão</h6>
-                                                                    <p><?php echo $ticket['atualizado']; ?></p>
-                                                                </div>
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                                                                <a href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>" class="btn btn-primary">Ver Ticket Completo</a>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="8" class="text-center py-4">
+                                        <td colspan="6" class="text-center py-4">
                                             <div class="alert alert-info mb-0">
                                                 <i class="bi bi-info-circle me-2"></i> Não há tickets fechados para exibir.
                                             </div>
