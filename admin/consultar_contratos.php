@@ -62,7 +62,7 @@ try {
     $total_records = $stmt_count->fetch(PDO::FETCH_ASSOC)['total'];
     $total_pages = ceil($total_records / $records_per_page);
     
-    // Buscar contratos com apenas os campos específicos que você quer
+    // Procurar contratos com apenas os campos específicos que você quer
     $sql = "SELECT 
                 x2Extra.XDfree02_KeyId,
                 x2Extra.*,
@@ -391,12 +391,6 @@ try {
         
         .badge.bg-info {
             background-color: #529ebe !important;
-        }
-        
-        /* Fix border thickness */
-        .bg-white.rounded.border,
-        .bg-white.p-3.rounded.border {
-            border: 1px solid #dee2e6 !important;
         }
     </style>
 </body>

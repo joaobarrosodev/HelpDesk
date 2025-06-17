@@ -13,7 +13,7 @@ try {
     // Obter entity do usuário logado
     $entity = $_SESSION['usuario_id'];
     
-    // Buscar contratos do cliente
+    // Procurar contratos do cliente
     $sql_contratos = "SELECT XDfree02_KeyId, TotalHours, SpentHours, Status, StartDate
                       FROM info_xdfree02_extrafields 
                       WHERE Entity = :entity 

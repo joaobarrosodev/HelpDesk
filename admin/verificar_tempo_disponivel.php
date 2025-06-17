@@ -7,7 +7,7 @@ function verificarTempoDisponivel($entity, $tempoNecessario, $pdo, $permitirDebi
         // Converter tempo necessário para minutos (se estiver em horas)
         $tempoNecessarioMinutos = is_numeric($tempoNecessario) ? intval($tempoNecessario) : 0;
         
-        // Buscar todos os contratos do cliente ordenados por prioridade
+        // Procurar todos os contratos do cliente ordenados por prioridade
         $sql = "SELECT Id, XDfree02_KeyId, Entity, TotalHours, SpentHours, Status, StartDate
                 FROM info_xdfree02_extrafields 
                 WHERE Entity = :entity 
@@ -137,7 +137,7 @@ function distribuirTempoContratos($entity, $tempoGasto, $ticketId, $pdo) {
         $tempoRestante = intval($tempoGasto);
         $distribuicoes = [];
         
-        // Buscar contratos ordenados por prioridade
+        // Procurar contratos ordenados por prioridade
         $sql = "SELECT Id, XDfree02_KeyId, Entity, TotalHours, SpentHours, Status
                 FROM info_xdfree02_extrafields 
                 WHERE Entity = :entity 
@@ -467,7 +467,7 @@ function criarDebitoTempo($entity, $tempoDevido, $ticketId, $pdo) {
 // Função para verificar e descontar débitos automaticamente
 function processarDebitosAutomaticos($entity, $pdo) {
     try {
-        // Buscar débitos pendentes
+        // Procurar débitos pendentes
         $sqlDebitos = "SELECT Id, TempoDevido, TicketOrigem 
                        FROM debitos_tempo_extrafields 
                        WHERE Entity = :entity AND Status = 'Pendente' 

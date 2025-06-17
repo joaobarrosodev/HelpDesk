@@ -293,15 +293,6 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
         .badge.bg-info {
             background-color: #529ebe !important;
         }
-        
-        /* Fix border thickness */
-        .card.shadow-sm {
-            border: 1px solid #dee2e6 !important;
-        }
-        
-        .table-responsive.table-wrapper {
-            border: 1px solid #dee2e6 !important;
-        }
     </style>
 </head>
 <body>

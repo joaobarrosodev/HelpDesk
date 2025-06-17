@@ -25,7 +25,7 @@ if (!isset($_GET['keyid']) && !isset($_POST['keyid'])) {
 $ticketId = isset($_GET['keyid']) ? $_GET['keyid'] : $_POST['keyid'];
 
 try {
-    // Buscar informações do ticket atual
+    // Procurar informações do ticket atual
     $sql = "SELECT info.*, free.id as ticket_number, free.Name
             FROM info_xdfree01_extrafields info
             LEFT JOIN xdfree01 free ON info.XDFree01_KeyID = free.KeyId

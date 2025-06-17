@@ -211,7 +211,7 @@ try {
     }
 } catch (PDOException $e) {
     // Log do erro
-    error_log("Erro ao buscar dados da empresa: " . $e->getMessage());
+    error_log("Erro ao Procurar dados da empresa: " . $e->getMessage());
     
     // Valores padrão em caso de erro
     $empresa = [
