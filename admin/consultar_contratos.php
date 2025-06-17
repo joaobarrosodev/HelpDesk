@@ -1,4 +1,3 @@
-//consultar_contratos.php
 <?php
 session_start();  // Inicia a sessão
 
@@ -392,6 +391,12 @@ try {
         
         .badge.bg-info {
             background-color: #529ebe !important;
+        }
+        
+        /* Fix border thickness */
+        .bg-white.rounded.border,
+        .bg-white.p-3.rounded.border {
+            border: 1px solid #dee2e6 !important;
         }
     </style>
 </body>

@@ -7,7 +7,7 @@ $entity = $_SESSION['usuario_id'];
 
 try {
     // Buscar contratos do cliente com informações detalhadas
-    $sql = "SELECT 
+    $sql = "SELECT
                 x2Extra.XDfree02_KeyId,
                 x2Extra.TotalHours,
                 x2Extra.SpentHours,
