@@ -109,10 +109,10 @@ try {
         $entity = $ticketAtual['Entity']; // ID da entidade/cliente
         $tempoNecessario = intval($resolutionTime);
         
-        $verificacaoTempo = verificarTempoDisponivel($entity, $tempoNecessario, $pdo);
+        $verificacaoTempo = verificarTempoDisponivel($entity, $tempoNecessario, $pdo, true); // Permitir débito
         
         if (!$verificacaoTempo['temTempo']) {
-            // Cliente não tem tempo suficiente - mostrar detalhes
+            // Cliente não tem tempo suficiente - verificar se pode usar débito
             $resumoContratos = obterResumoContratos($entity, $pdo);
             
             $mensagemDetalhada = $verificacaoTempo['mensagem'] . "\\n\\n";
@@ -123,7 +123,6 @@ try {
                 $restanteMin = $contrato['restanteMinutos'] % 60;
                 $statusDisplay = $contrato['excedido'] ? 'Excedido' : $contrato['status'];
                 
-                // Convert totalHoras from minutes to hours for display
                 $totalMinutos = (int)$contrato['totalHoras'];
                 $totalHorasDisplay = floor($totalMinutos / 60);
                 $totalMinutosResto = $totalMinutos % 60;
@@ -145,13 +144,24 @@ try {
             $totalRestanteMin = $resumoContratos['tempoRestante'] % 60;
             $mensagemDetalhada .= "\\nTotal disponível: {$totalRestanteHoras}h {$totalRestanteMin}min";
             
+            // Adicionar informação sobre débito
+            if ($verificacaoTempo['podeUsarDebito']) {
+                $tempoEmFaltaHoras = floor($verificacaoTempo['tempoEmFalta'] / 60);
+                $tempoEmFaltaMin = $verificacaoTempo['tempoEmFalta'] % 60;
+                $mensagemDetalhada .= "\\n\\nTempo em falta: {$tempoEmFaltaHoras}h {$tempoEmFaltaMin}min";
+                $mensagemDetalhada .= "\\nEste tempo será criado como débito e descontado automaticamente no próximo contrato.";
+                $mensagemDetalhada .= "\\nATENÇÃO: A criação de novos tickets ficará bloqueada até o débito ser quitado.";
+            }
+            
             $response = [
                 'success' => false, 
                 'message' => 'Tempo insuficiente nos contratos',
                 'detalhes' => $mensagemDetalhada,
                 'tempoNecessario' => $tempoNecessario,
                 'tempoDisponivel' => $resumoContratos['tempoRestante'],
-                'contratos' => $resumoContratos['contratos']
+                'contratos' => $resumoContratos['contratos'],
+                'podeUsarDebito' => $verificacaoTempo['podeUsarDebito'],
+                'tempoEmFalta' => $verificacaoTempo['tempoEmFalta'] ?? 0
             ];
             
             if ($isAjax) {
@@ -163,6 +173,9 @@ try {
             exit;
         }
     }
+    
+    // Verificar se foi solicitado uso de débito
+    $usarDebito = isset($_POST['usar_debito']) && $_POST['usar_debito'] === 'true';
     
     // Construir campos para atualização baseado nos parâmetros recebidos
     if ($newStatus !== null) {
@@ -219,46 +232,122 @@ try {
     if ($newStatus === 'Concluído' && $ticketAtual['Status'] !== 'Concluído') {
         $tempoGasto = intval($newResolutionTime ?: $ticketAtual['Tempo']);
         $entity = $ticketAtual['Entity'];
-        $ticketNumber = $ticketAtual['ticket_number']; // Usar o ID numérico do ticket
+        $ticketNumber = $ticketAtual['ticket_number'];
         
-        $distribuicao = distribuirTempoContratos($entity, $tempoGasto, $ticketNumber, $pdo);
+        // Verificar novamente o tempo disponível
+        $verificacaoFinal = verificarTempoDisponivel($entity, $tempoGasto, $pdo, true);
         
-        if (!$distribuicao['sucesso']) {
-            // Reverter o fechamento do ticket se a distribuição falhou
+        if ($verificacaoFinal['temTempo']) {
+            // Tem tempo suficiente - distribuir normalmente
+            $distribuicao = distribuirTempoContratos($entity, $tempoGasto, $ticketNumber, $pdo);
+            
+            if (!$distribuicao['sucesso']) {
+                // Reverter o fechamento do ticket se a distribuição falhou
+                $sqlRevert = "UPDATE info_xdfree01_extrafields SET Status = :oldStatus WHERE XDFree01_KeyID = :keyid";
+                $stmtRevert = $pdo->prepare($sqlRevert);
+                $stmtRevert->bindParam(':oldStatus', $ticketAtual['Status']);
+                $stmtRevert->bindParam(':keyid', $ticketId);
+                $stmtRevert->execute();
+                
+                $response = [
+                    'success' => false, 
+                    'message' => 'Erro ao distribuir tempo pelos contratos: ' . $distribuicao['erro']
+                ];
+                
+                if ($isAjax) {
+                    echo json_encode($response);
+                    exit;
+                }
+                
+                header('Location: detalhes_ticket.php?keyid=' . urlencode($ticketId) . '&error=distribution_failed');
+                exit;
+            }
+        } else if ($usarDebito && $verificacaoFinal['podeUsarDebito']) {
+            // Usar tempo disponível primeiro, depois criar débito
+            $tempoDisponivel = $verificacaoFinal['tempoRestanteTotal'];
+            $tempoParaDebito = $tempoGasto - $tempoDisponivel;
+            
+            // Distribuir tempo disponível primeiro
+            if ($tempoDisponivel > 0) {
+                $distribuicaoDisponivel = distribuirTempoContratos($entity, $tempoDisponivel, $ticketNumber, $pdo);
+                if (!$distribuicaoDisponivel['sucesso']) {
+                    $sqlRevert = "UPDATE info_xdfree01_extrafields SET Status = :oldStatus WHERE XDFree01_KeyID = :keyid";
+                    $stmtRevert = $pdo->prepare($sqlRevert);
+                    $stmtRevert->bindParam(':oldStatus', $ticketAtual['Status']);
+                    $stmtRevert->bindParam(':keyid', $ticketId);
+                    $stmtRevert->execute();
+                    
+                    $response = ['success' => false, 'message' => 'Erro ao distribuir tempo disponível'];
+                    if ($isAjax) {
+                        echo json_encode($response);
+                        exit;
+                    }
+                    header('Location: detalhes_ticket.php?keyid=' . urlencode($ticketId) . '&error=distribution_failed');
+                    exit;
+                }
+            }
+            
+            // Criar débito para o tempo restante
+            if ($tempoParaDebito > 0) {
+                $debitoSucesso = criarDebitoTempo($entity, $tempoParaDebito, $ticketNumber, $pdo);
+                if (!$debitoSucesso) {
+                    // Reverter mudanças se não conseguir criar débito
+                    $sqlRevert = "UPDATE info_xdfree01_extrafields SET Status = :oldStatus WHERE XDFree01_KeyID = :keyid";
+                    $stmtRevert = $pdo->prepare($sqlRevert);
+                    $stmtRevert->bindParam(':oldStatus', $ticketAtual['Status']);
+                    $stmtRevert->bindParam(':keyid', $ticketId);
+                    $stmtRevert->execute();
+                    
+                    $response = ['success' => false, 'message' => 'Erro ao criar débito de tempo'];
+                    if ($isAjax) {
+                        echo json_encode($response);
+                        exit;
+                    }
+                    header('Location: detalhes_ticket.php?keyid=' . urlencode($ticketId) . '&error=debt_failed');
+                    exit;
+                }
+            }
+        } else {
+            // Não tem tempo e não pode usar débito - não deveria chegar aqui
             $sqlRevert = "UPDATE info_xdfree01_extrafields SET Status = :oldStatus WHERE XDFree01_KeyID = :keyid";
             $stmtRevert = $pdo->prepare($sqlRevert);
             $stmtRevert->bindParam(':oldStatus', $ticketAtual['Status']);
             $stmtRevert->bindParam(':keyid', $ticketId);
             $stmtRevert->execute();
             
-            $response = [
-                'success' => false, 
-                'message' => 'Erro ao distribuir tempo pelos contratos: ' . $distribuicao['erro']
-            ];
-            
+            $response = ['success' => false, 'message' => 'Tempo insuficiente nos contratos'];
             if ($isAjax) {
                 echo json_encode($response);
                 exit;
             }
-            
-            header('Location: detalhes_ticket.php?keyid=' . urlencode($ticketId) . '&error=distribution_failed');
+            header('Location: detalhes_ticket.php?keyid=' . urlencode($ticketId) . '&error=insufficient_time');
             exit;
         }
         
         // Recalcular SpentHours para garantir precisão
-        foreach ($distribuicao['distribuicoes'] as $dist) {
-            recalcularSpentHours($dist['contratoId'], $pdo);
+        if (isset($distribuicao) && $distribuicao['sucesso']) {
+            foreach ($distribuicao['distribuicoes'] as $dist) {
+                recalcularSpentHours($dist['contratoId'], $pdo);
+            }
         }
         
-        // Log da distribuição para auditoria
-        error_log("Ticket {$ticketId} fechado - Tempo distribuído: " . json_encode($distribuicao['distribuicoes']));
+        // Processar débitos automáticos se houver novos contratos
+        processarDebitosAutomaticos($entity, $pdo);
+        
+        // Log da operação
+        if ($usarDebito && isset($tempoParaDebito) && $tempoParaDebito > 0) {
+            error_log("Ticket {$ticketId} fechado com débito - Tempo usado: {$tempoDisponivel}min, Débito criado: {$tempoParaDebito}min");
+        } else {
+            error_log("Ticket {$ticketId} fechado - Tempo distribuído normalmente");
+        }
     }
     
     $response = [
         'success' => true, 
         'message' => 'Alterações guardadas com sucesso',
         'ticketFechado' => ($newStatus === 'Concluído'),
-        'tempoDistribuido' => ($newStatus === 'Concluído') ? ($newResolutionTime ?: $ticketAtual['Tempo']) : null
+        'tempoDistribuido' => ($newStatus === 'Concluído') ? ($newResolutionTime ?: $ticketAtual['Tempo']) : null,
+        'debitoUsado' => isset($tempoParaDebito) && $tempoParaDebito > 0
     ];
     
     if ($isAjax) {

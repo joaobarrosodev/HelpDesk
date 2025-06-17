@@ -2,7 +2,7 @@
 // verificar_tempo_disponivel.php
 // Sistema de verificação e gestão de tempo nos contratos
 
-function verificarTempoDisponivel($entity, $tempoNecessario, $pdo) {
+function verificarTempoDisponivel($entity, $tempoNecessario, $pdo, $permitirDebito = false) {
     try {
         // Converter tempo necessário para minutos (se estiver em horas)
         $tempoNecessarioMinutos = is_numeric($tempoNecessario) ? intval($tempoNecessario) : 0;
@@ -31,7 +31,8 @@ function verificarTempoDisponivel($entity, $tempoNecessario, $pdo) {
                 'temTempo' => false,
                 'mensagem' => 'Cliente não possui contratos ativos.',
                 'distribuicao' => [],
-                'tempoRestanteTotal' => 0
+                'tempoRestanteTotal' => 0,
+                'podeUsarDebito' => false
             ];
         }
         
@@ -79,6 +80,7 @@ function verificarTempoDisponivel($entity, $tempoNecessario, $pdo) {
         
         // Verificar se tem tempo suficiente
         $temTempo = $tempoRestanteTotal >= $tempoNecessarioMinutos;
+        $podeUsarDebito = !$temTempo && $permitirDebito;
         
         if (!$temTempo) {
             $tempoEmFalta = $tempoNecessarioMinutos - $tempoRestanteTotal;
@@ -93,6 +95,10 @@ function verificarTempoDisponivel($entity, $tempoNecessario, $pdo) {
             if ($minutosEmFalta > 0) {
                 $mensagem .= "{$minutosEmFalta}min";
             }
+            
+            if ($podeUsarDebito) {
+                $mensagem .= "\n\nOpção disponível: Criar débito de tempo para ser descontado no próximo contrato.";
+            }
         } else {
             $mensagem = "Tempo suficiente disponível.";
         }
@@ -103,7 +109,9 @@ function verificarTempoDisponivel($entity, $tempoNecessario, $pdo) {
             'distribuicao' => $distribuicaoSimulada,
             'tempoRestanteTotal' => $tempoRestanteTotal,
             'tempoNecessario' => $tempoNecessarioMinutos,
-            'contratos' => $contratos
+            'contratos' => $contratos,
+            'podeUsarDebito' => $podeUsarDebito,
+            'tempoEmFalta' => $temTempo ? 0 : ($tempoNecessarioMinutos - $tempoRestanteTotal)
         ];
         
     } catch (Exception $e) {
@@ -111,7 +119,8 @@ function verificarTempoDisponivel($entity, $tempoNecessario, $pdo) {
             'temTempo' => false,
             'mensagem' => 'Erro ao verificar tempo disponível: ' . $e->getMessage(),
             'distribuicao' => [],
-            'tempoRestanteTotal' => 0
+            'tempoRestanteTotal' => 0,
+            'podeUsarDebito' => false
         ];
     }
 }
@@ -424,6 +433,130 @@ function verificarECorrigirDiscrepancias($pdo) {
     } catch (Exception $e) {
         error_log("Erro ao verificar discrepâncias: " . $e->getMessage());
         return 0;
+    }
+}
+
+// Nova função para gerenciar débito de tempo
+function criarDebitoTempo($entity, $tempoDevido, $ticketId, $pdo) {
+    try {
+        // Inserir registro de débito
+        $sql = "INSERT INTO debitos_tempo_extrafields (Entity, TempoDevido, TicketOrigem, DataCriacao, Status) 
+                VALUES (:entity, :tempoDevido, :ticketOrigem, NOW(), 'Pendente')";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':entity', $entity);
+        $stmt->bindParam(':tempoDevido', $tempoDevido);
+        $stmt->bindParam(':ticketOrigem', $ticketId);
+        $stmt->execute();
+        
+        // Desabilitar criação de novos tickets para esta entidade
+        $sqlUpdate = "UPDATE entities SET CanCreateTickets = 0 WHERE KeyId = :entity";
+        $stmtUpdate = $pdo->prepare($sqlUpdate);
+        $stmtUpdate->bindParam(':entity', $entity);
+        $stmtUpdate->execute();
+        
+        error_log("Débito criado para entidade {$entity}: {$tempoDevido} minutos, ticket {$ticketId}");
+        
+        return true;
+        
+    } catch (Exception $e) {
+        error_log("Erro ao criar débito: " . $e->getMessage());
+        return false;
+    }
+}
+
+// Função para verificar e descontar débitos automaticamente
+function processarDebitosAutomaticos($entity, $pdo) {
+    try {
+        // Buscar débitos pendentes
+        $sqlDebitos = "SELECT Id, TempoDevido, TicketOrigem 
+                       FROM debitos_tempo_extrafields 
+                       WHERE Entity = :entity AND Status = 'Pendente' 
+                       ORDER BY DataCriacao ASC";
+        $stmtDebitos = $pdo->prepare($sqlDebitos);
+        $stmtDebitos->bindParam(':entity', $entity);
+        $stmtDebitos->execute();
+        $debitos = $stmtDebitos->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (empty($debitos)) {
+            return true; // Sem débitos pendentes
+        }
+        
+        // Calcular tempo total em débito
+        $tempoTotalDebito = array_sum(array_column($debitos, 'TempoDevido'));
+        
+        // Verificar tempo disponível atual
+        $resumoContratos = obterResumoContratos($entity, $pdo);
+        $tempoDisponivel = $resumoContratos['tempoRestante'];
+        
+        if ($tempoDisponivel >= $tempoTotalDebito) {
+            // Tem tempo suficiente para quitar todos os débitos
+            $tempoRestanteParaDebitar = $tempoTotalDebito;
+            
+            foreach ($debitos as $debito) {
+                if ($tempoRestanteParaDebitar <= 0) break;
+                
+                $tempoDesteDebito = min($debito['TempoDevido'], $tempoRestanteParaDebitar);
+                
+                // Distribuir tempo pelos contratos para cobrir este débito
+                $distribuicao = distribuirTempoContratos($entity, $tempoDesteDebito, "DEBITO_" . $debito['TicketOrigem'], $pdo);
+                
+                if ($distribuicao['sucesso']) {
+                    // Marcar débito como pago
+                    $sqlPago = "UPDATE debitos_tempo_extrafields 
+                               SET Status = 'Pago', DataPagamento = NOW() 
+                               WHERE Id = :debitoId";
+                    $stmtPago = $pdo->prepare($sqlPago);
+                    $stmtPago->bindParam(':debitoId', $debito['Id']);
+                    $stmtPago->execute();
+                    
+                    $tempoRestanteParaDebitar -= $tempoDesteDebito;
+                    
+                    error_log("Débito {$debito['Id']} pago automaticamente: {$tempoDesteDebito} minutos");
+                }
+            }
+            
+            // Se todos os débitos foram pagos, reabilitar criação de tickets
+            $sqlCheckDebitos = "SELECT COUNT(*) as pendentes 
+                               FROM debitos_tempo_extrafields 
+                               WHERE Entity = :entity AND Status = 'Pendente'";
+            $stmtCheck = $pdo->prepare($sqlCheckDebitos);
+            $stmtCheck->bindParam(':entity', $entity);
+            $stmtCheck->execute();
+            $debitosPendentes = $stmtCheck->fetch(PDO::FETCH_ASSOC)['pendentes'];
+            
+            if ($debitosPendentes == 0) {
+                $sqlReabilitar = "UPDATE entities SET CanCreateTickets = 1 WHERE KeyId = :entity";
+                $stmtReabilitar = $pdo->prepare($sqlReabilitar);
+                $stmtReabilitar->bindParam(':entity', $entity);
+                $stmtReabilitar->execute();
+                
+                error_log("Criação de tickets reabilitada para entidade {$entity} - todos os débitos pagos");
+            }
+        }
+        
+        return true;
+        
+    } catch (Exception $e) {
+        error_log("Erro ao processar débitos automáticos: " . $e->getMessage());
+        return false;
+    }
+}
+
+// Função para obter débitos de uma entidade
+function obterDebitosEntidade($entity, $pdo) {
+    try {
+        $sql = "SELECT Id, TempoDevido, TicketOrigem, DataCriacao, Status, DataPagamento
+                FROM debitos_tempo_extrafields 
+                WHERE Entity = :entity 
+                ORDER BY DataCriacao DESC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':entity', $entity);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+    } catch (Exception $e) {
+        error_log("Erro ao obter débitos: " . $e->getMessage());
+        return [];
     }
 }
 ?>
