@@ -51,11 +51,18 @@
                 
                 <?php if (isset($_SESSION['Grupo']) && $_SESSION['Grupo'] == 'Admin'): ?>
                     <li class="nav-item px-2 py-1">
+                        <a href="meus_contratos.php" id="cc" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'meus_contratos.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'meus_contratos.php' ? 'page' : 'false'; ?>">
+                            <i class="bi bi-bank me-3 nav-menu-item" aria-hidden="true"></i> 
+                            <span>Meus Contratos</span>
+                        </a>
+                    </li>
+                    <li class="nav-item px-2 py-1">
                         <a href="cc.php" id="cc" class="menu-link nav-link rounded-2 px-3 py-2 d-flex align-items-center text-dark <?php echo basename($_SERVER['PHP_SELF']) == 'cc.php' ? 'active' : ''; ?>" aria-current="<?php echo basename($_SERVER['PHP_SELF']) == 'cc.php' ? 'page' : 'false'; ?>">
                             <i class="bi bi-bank me-3 nav-menu-item" aria-hidden="true"></i> 
                             <span>Conta Corrente</span>
                         </a>
                     </li>
+                    
                 <?php endif; ?>                
                 <!-- Dropdown para Manuais - implementação personalizada -->
                 <li class="nav-item px-2 py-1">

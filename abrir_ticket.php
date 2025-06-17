@@ -128,7 +128,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.css">
     <style>
         .contracts-summary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #529ebe;
             color: white;
             border-radius: 12px;
             padding: 20px;
@@ -176,9 +176,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         
         .priority-item.selected {
-            border-color: #007bff;
-            background-color: #007bff;
-            color: white;
+            border-color:rgb(237, 235, 235);
+            background-color:rgb(237, 235, 235);
+            color: black;
         }
         
         .priority-icon {

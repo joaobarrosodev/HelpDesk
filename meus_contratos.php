@@ -95,7 +95,7 @@ try {
 <head>
     <style>
         .summary-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #529ebe;;
             color: white;
             border-radius: 12px;
         }
@@ -211,13 +211,13 @@ try {
                                     <div class="mb-2">
                                         <i class="bi bi-clock-history" style="font-size: 2rem;"></i>
                                     </div>
-                                    <h4 class="mb-1">
+                                    <h2 class="mb-1">
                                         <?php 
                                         $totalCompradoH = floor($tempoTotalComprado / 60);
                                         $totalCompradoM = $tempoTotalComprado % 60;
                                         echo $totalCompradoH . 'h ' . $totalCompradoM . 'min';
                                         ?>
-                                    </h4>
+                                    </h2>
                                     <small class="opacity-75">Tempo Total Comprado</small>
                                 </div>
                                 <div class="col-md-3 text-center">
@@ -291,7 +291,13 @@ try {
                                     ?>">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <h5 class="card-title mb-0">Contrato <?php echo $contrato['TotalHours']; ?>h</h5>
+                                    <h5 class="mb-0">Contrato 
+                                    <?php 
+                                    // Exibir o total de horas em formato "10h" em vez de "600 minutos"
+                                    $totalHorasDisplay = floor($contrato['TotalHours'] / 60);
+                                    echo $totalHorasDisplay . ' Horas';
+                                    ?>
+                                    </h5>
                                     <span class="badge status-badge bg-<?php 
                                         switch(strtolower($contrato['Status'])) {
                                             case 'em utilização': echo 'success'; break;
