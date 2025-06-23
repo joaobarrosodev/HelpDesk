@@ -14,59 +14,24 @@ if (empty($contract_id)) {
 }
 
 try {
-    // FORÇAR a busca do contrato com debug extensivo
-    error_log("=== DEBUG DETALHES CONTRATO ===");
-    error_log("Contract ID: '$contract_id' | Entity: '$entity'");
+    // CORREÇÃO: Use the exact same query structure as consultar_contratos.php
+    $sql = "SELECT 
+                x2Extra.XDfree02_KeyId,
+                x2Extra.*,
+                e.name as CompanyName,
+                e.ContactEmail as EntityEmail,
+                e.MobilePhone1 as EntityMobilePhone,
+                e.Phone1 as EntityPhone
+            FROM info_xdfree02_extrafields x2Extra
+            LEFT JOIN entities e ON e.KeyId = x2Extra.Entity
+            WHERE x2Extra.XDfree02_KeyId = ? AND x2Extra.Entity = ?";
     
-    $contrato = null;
-    
-    // Método 1: Query normal
-    $sql1 = "SELECT x2.* FROM info_xdfree02_extrafields x2 WHERE x2.XDfree02_KeyId = ? AND x2.Entity = ?";
-    $stmt1 = $pdo->prepare($sql1);
-    $stmt1->execute([$contract_id, $entity]);
-    $result1 = $stmt1->fetch(PDO::FETCH_ASSOC);
-    
-    if ($result1) {
-        $contrato = $result1;
-        error_log("SUCESSO - Método 1 (query normal)");
-    } else {
-        error_log("Método 1 falhou");
-        
-        // Método 2: Só por contract_id para ver se existe
-        $sql2 = "SELECT x2.* FROM info_xdfree02_extrafields x2 WHERE x2.XDfree02_KeyId = ?";
-        $stmt2 = $pdo->prepare($sql2);
-        $stmt2->execute([$contract_id]);
-        $result2 = $stmt2->fetch(PDO::FETCH_ASSOC);
-        
-        if ($result2) {
-            error_log("Contrato existe mas entity não confere: Contract Entity='{$result2['Entity']}' vs User Entity='$entity'");
-            
-            // Verificar se é questão de tipo ou espaços
-            if (trim($result2['Entity']) == trim($entity) || 
-                strval($result2['Entity']) == strval($entity)) {
-                $contrato = $result2;
-                error_log("SUCESSO - Método 2 (problema de comparação)");
-            }
-        } else {
-            error_log("Contrato '$contract_id' não existe na BD");
-        }
-        
-        // Método 3: TRIM both sides
-        if (!$contrato) {
-            $sql3 = "SELECT x2.* FROM info_xdfree02_extrafields x2 WHERE x2.XDfree02_KeyId = ? AND TRIM(x2.Entity) = TRIM(?)";
-            $stmt3 = $pdo->prepare($sql3);
-            $stmt3->execute([$contract_id, $entity]);
-            $result3 = $stmt3->fetch(PDO::FETCH_ASSOC);
-            
-            if ($result3) {
-                $contrato = $result3;
-                error_log("SUCESSO - Método 3 (TRIM)");
-            }
-        }
-    }
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$contract_id, $entity]);
+    $contrato = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$contrato) {
-        error_log("ERRO: Contrato não encontrado com nenhum método");
+        error_log("ERRO: Contrato '$contract_id' não encontrado para entity '$entity'");
         header('Location: meus_contratos.php?error=contract_not_found');
         exit;
     }
@@ -87,7 +52,10 @@ try {
     $restanteMinutos = max(0, $totalMinutos - $gastoMinutos);
     $excedido = $gastoMinutos > $totalMinutos;
 
-    // Get tickets used in this contract
+    // CORRIGIR: Get tickets com debug extensivo
+    error_log("=== DEBUG TICKETS DETALHES ===");
+    error_log("Buscando tickets para contrato: '$contract_id'");
+    
     $sql_tickets = "SELECT 
                         t.TicketNumber, 
                         t.TotTime,
@@ -107,21 +75,21 @@ try {
     $stmt_tickets->execute([$contract_id]);
     $tickets = $stmt_tickets->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get all contracts for this entity using correct field
+    // Get all contracts for this entity using same structure as consultar_contratos.php
     $sql_outros_contratos = "SELECT 
-                                XDfree02_KeyId as id,
-                                TotalHours as totalHoras,
-                                SpentHours as gastoHoras,
-                                Status as status
-                            FROM info_xdfree02_extrafields
-                            WHERE Entity = ? AND XDfree02_KeyId != ?
+                                x2Extra.XDfree02_KeyId as id,
+                                x2Extra.TotalHours as totalHoras,
+                                x2Extra.SpentHours as gastoHoras,
+                                x2Extra.Status as status
+                            FROM info_xdfree02_extrafields x2Extra
+                            WHERE x2Extra.Entity = ? AND x2Extra.XDfree02_KeyId != ?
                             ORDER BY 
                                 CASE 
-                                    WHEN Status = 'Em Utilização' THEN 1
-                                    WHEN Status = 'Por Começar' THEN 2
+                                    WHEN x2Extra.Status = 'Em Utilização' THEN 1
+                                    WHEN x2Extra.Status = 'Por Começar' THEN 2
                                     ELSE 3
                                 END,
-                                TotalHours DESC";
+                                x2Extra.TotalHours DESC";
     
     $stmt_outros = $pdo->prepare($sql_outros_contratos);
     $stmt_outros->execute([$entity, $contract_id]);

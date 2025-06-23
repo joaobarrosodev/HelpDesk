@@ -54,7 +54,7 @@ function canAccessPage($page) {
     }
     
     // Pages that only admins can access
-    $adminOnlyPages = ['cc.php'];
+    $adminOnlyPages = ['cc.php', 'meus_contratos.php', 'detalhes_contratos.php'];
     
     if (in_array($page, $adminOnlyPages)) {
         return isAdmin();
