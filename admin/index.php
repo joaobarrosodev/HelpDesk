@@ -2,6 +2,22 @@
 session_start();
 include('conflogin.php');
 include('db.php');
+include('../verificar_tempo_disponivel.php');
+
+// Process any pending debts for all entities right after login
+try {
+    $sqlEntitiesForDebt = "SELECT DISTINCT Entity FROM info_xdfree02_extrafields WHERE Entity IS NOT NULL";
+    $stmtEntitiesForDebt = $pdo->prepare($sqlEntitiesForDebt);
+    $stmtEntitiesForDebt->execute();
+    $entitiesForDebt = $stmtEntitiesForDebt->fetchAll(PDO::FETCH_COLUMN);
+    
+    foreach ($entitiesForDebt as $entity) {
+        // Process any pending debits for this entity
+        processarDebitosAutomaticos($entity, $pdo);
+    }
+} catch (Exception $e) {
+    error_log("Error processing debts on login: " . $e->getMessage());
+}
 
 // Obter estatísticas de tickets
 try {
@@ -413,21 +429,26 @@ try {
     
     <script>
         // Script para o botão "voltar ao topo"
-        const backToTopButton = document.getElementById('backToTop');
-        
-        window.addEventListener('scroll', () => {
-            if (window.pageYOffset > 300) { // Mostrar após descer 300px
-                backToTopButton.style.display = 'block';
-            } else {
-                backToTopButton.style.display = 'none';
+        document.addEventListener('DOMContentLoaded', function() {
+            const backToTopButton = document.getElementById('backToTop');
+            
+            // Only add event listeners if the element exists
+            if (backToTopButton) {
+                window.addEventListener('scroll', () => {
+                    if (window.pageYOffset > 300) { // Mostrar após descer 300px
+                        backToTopButton.style.display = 'block';
+                    } else {
+                        backToTopButton.style.display = 'none';
+                    }
+                });
+                
+                backToTopButton.addEventListener('click', () => {
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                });
             }
-        });
-        
-        backToTopButton.addEventListener('click', () => {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
         });
     </script>
 </body>

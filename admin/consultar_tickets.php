@@ -4,6 +4,14 @@ session_start();  // Inicia a sessão
 include('conflogin.php');
 include('db.php');
 
+// Helper function to limit text length
+function limitCharacters($text, $limit = 35) {
+    if (strlen($text) > $limit) {
+        return substr($text, 0, $limit) . '...';
+    }
+    return $text;
+}
+
 // Allow both admin and comum users to access tickets consultation
 // Restrict access based on user permissions in the query instead
 
@@ -45,6 +53,7 @@ $sql = "SELECT
             DATE_FORMAT(info_xdfree01_extrafields.dateu, '%d/%m/%Y') as atualizado, 
             online.name as CreationUser,
             info_xdfree01_extrafields.CreationUser as CreationUserEmail,
+            e.Name as entidadenome,
             (SELECT oee.Name 
              FROM comments_xdfree01_extrafields c 
              JOIN online_entity_extrafields oee ON c.user = oee.email 
@@ -54,7 +63,8 @@ $sql = "SELECT
         FROM xdfree01 
         JOIN info_xdfree01_extrafields ON xdfree01.KeyId = info_xdfree01_extrafields.XDFree01_KeyID
         LEFT JOIN users u ON info_xdfree01_extrafields.Atribuido = u.id
-        LEFT JOIN online_entity_extrafields online on info_xdfree01_extrafields.CreationUser = online.email";
+        LEFT JOIN online_entity_extrafields online on info_xdfree01_extrafields.CreationUser = online.email
+        LEFT JOIN entities e ON online.Entity_KeyId = e.KeyId";
 
 // Base WHERE clause
 $whereConditions = [];
@@ -310,12 +320,12 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                 <div class="card-body">
                     <!-- Filters -->
                     <form method="get" action="" class="row g-3 mb-4">
-                        <div class="col-md-1">
+                        <div class="col-md-2">
                             <label for="data_inicio" class="form-label">Data Início</label>
                             <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="<?php echo $data_inicio; ?>">
                         </div>
                         
-                        <div class="col-md-1">
+                        <div class="col-md-2">
                             <label for="data_fim" class="form-label">Data Fim</label>
                             <input type="date" class="form-control" id="data_fim" name="data_fim" value="<?php echo $data_fim; ?>">
                         </div>
@@ -366,22 +376,14 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <?php else: ?>
-                        <div class="col-md-2">
-                            <!-- Empty space for non-admin users -->
-                        </div>
                         <?php endif; ?>
                         
-                        <div class="col-md-1 d-flex align-items-end">
-                            <button type="submit" class="btn btn-dark w-100">
-                                <i class="bi bi-funnel me-1"></i>Filtrar
-                            </button>
-                        </div>
-                        
-                        <div class="col-md-1 d-flex align-items-end">
-                            <a href="consultar_tickets.php" class="btn btn-outline-secondary w-100">
-                                <i class="bi bi-x-circle me-1"></i>Limpar
-                            </a>
+                        <div class="col-12">
+                            <div class="d-flex">
+                                <a href="consultar_tickets.php" class="btn btn-sm btn-link ms-auto text-muted">
+                                    <i class="bi bi-x-circle me-1"></i>Limpar filtros
+                                </a>
+                            </div>
                         </div>
                     </form                
                         
@@ -390,15 +392,15 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                         <table class="table align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th scope="col" class="sortable text-nowrap">Título</th>
-                                    <th scope="col" class="sortable text-nowrap">Criado</th>
-                                    <th scope="col" class="sortable text-nowrap">Atualizado</th>
-                                    <th scope="col" class="sortable text-nowrap">Estado</th>
-                                    <th scope="col" class="sortable text-nowrap">Prioridade</th>
-                                    <th scope="col" class="sortable text-nowrap">Criador</th>
-                                    <th scope="col" class="sortable text-nowrap">Atribuído a</th>
-                                    <th scope="col" class="sortable text-nowrap">Última Mensagem</th>
-                                    <th scope="col" class="text-nowrap">Ações</th>
+                                    <th>Título</th>
+                                    <th>Assunto</th>
+                                    <th>Cliente</th>
+                                    <th>Atribuído a</th>
+                                    <th>Data Criação</th>
+                                    <th>Data Atualização</th>
+                                    <th>Estado</th>
+                                    <th>Prioridade</th>
+                                    <th>Última DM</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -406,7 +408,7 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                                     <?php foreach ($tickets as $ticket): ?>
                                         <tr>
                                             <td>
-                                                <a href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>" class="text-decoration-none text-dark d-flex align-items-center">
+                                                <a href="<?php echo generateTicketUrl($ticket['KeyId'], true); ?>" class="text-decoration-none text-dark d-flex align-items-center">
                                                     <?php if ($ticket['status'] == 'Concluído'): ?>
                                                         <i class="bi bi-check-circle-fill me-2 text-success"></i>
                                                     <?php elseif ($ticket['status'] == 'Em Resolução'): ?>
@@ -419,6 +421,17 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                                                     <?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?>
                                                 </a>
                                             </td>
+                                            <td><?php echo $ticket['assunto_do_ticket'] ?? ''; ?></td>
+                                            <td>
+                                                <?php 
+                                                $clientName = ($ticket['CreationUser'] ?? '');
+                                                if (!empty($ticket['entidadenome'])) {
+                                                    $clientName .= ' - ' . $ticket['entidadenome'];
+                                                }
+                                                echo htmlspecialchars(limitCharacters($clientName));
+                                                ?>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($ticket['atribuido_a'] ?? '-'); ?></td>
                                             <td><?php echo $ticket['criado']; ?></td>
                                             <td><?php echo $ticket['atualizado']; ?></td>
                                             <td>
@@ -452,27 +465,12 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                                                 ?>
                                                 <span class="badge <?php echo $badgeClass; ?>"><?php echo $ticket['prioridade']; ?></span>
                                             </td>
-                                            <td><?php echo htmlspecialchars($ticket['CreationUser']); ?></td>
-                                            <td><?php echo !empty($ticket['atribuido_a']) ? htmlspecialchars($ticket['atribuido_a']) : '-'; ?></td>
                                             <td><?php echo !empty($ticket['LastCommentUser']) ? htmlspecialchars($ticket['LastCommentUser']) : '-'; ?></td>
-                                            <td>
-                                                <div class="dropdown">
-                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton<?php echo $ticket['id']; ?>" data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <i class="bi bi-gear"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton<?php echo $ticket['id']; ?>">
-                                                        <li><a class="dropdown-item" href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>"><i class="bi bi-eye me-2"></i> Ver detalhes</a></li>
-                                                        <?php if ($ticket['status'] != 'Concluído' && (isAdmin() || $ticket['User'] == $current_user_id)): ?>
-                                                            <li><a class="dropdown-item" href="editar_ticket.php?keyid=<?php echo $ticket['id']; ?>"><i class="bi bi-pencil me-2"></i> Editar</a></li>
-                                                        <?php endif; ?>
-                                                    </ul>
-                                                </div>
-                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="9" class="text-center py-4">
+                                        <td colspan="8" class="text-center py-4">
                                             <div class="alert alert-info mb-0">
                                                 <i class="bi bi-info-circle me-2"></i> Nenhum ticket encontrado com os filtros selecionados.
                                             </div>

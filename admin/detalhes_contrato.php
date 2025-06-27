@@ -2,7 +2,7 @@
 session_start();
 include('conflogin.php');
 include('db.php');
-include('verificar_tempo_disponivel.php'); // Incluir o sistema de verificação
+include('../verificar_tempo_disponivel.php'); // Incluir o sistema de verificação
 
 // Get contract ID - keep as string
 $contract_id = isset($_GET['id']) ? trim($_GET['id']) : '';
@@ -64,21 +64,29 @@ try {
     $stmt->execute();
     $contrato = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Get tickets used in this contract
+    // Get tickets used in this contract - IMPROVED query to correctly fetch debt status fields
     $sql_tickets = "SELECT 
-                        t.TicketNumber, 
-                        t.TotTime,
-                        free.KeyId as TicketKeyId,
-                        free.Name as TicketName,
-                        info.Description as TicketDescription,
-                        info.Status as TicketStatus,
-                        info.CreationDate,
-                        info.CreationUser
-                    FROM tickets_xdfree02_extrafields t
-                    LEFT JOIN xdfree01 free ON t.TicketNumber = free.id
-                    LEFT JOIN info_xdfree01_extrafields info ON free.KeyId = info.XDFree01_KeyID
-                    WHERE t.XDfree02_KeyId = :contract_id
-                    ORDER BY info.CreationDate DESC";
+                t.Id as TicketRecordId,
+                t.TicketNumber, 
+                t.TotTime,
+                t.IsDebt,
+                t.IsProcessed,
+                t.PartiallyProcessed,
+                t.DebtOriginId,
+                free.KeyId as TicketKeyId,
+                free.Name as TicketName,
+                info.Description as TicketDescription,
+                info.Status as TicketStatus,
+                info.CreationDate,
+                info.CreationUser,
+                (SELECT td.XDfree02_KeyId FROM tickets_xdfree02_extrafields td WHERE td.Id = t.DebtOriginId LIMIT 1) as OriginContractId,
+                (SELECT COUNT(*) FROM tickets_xdfree02_extrafields tc WHERE tc.DebtOriginId = t.Id) as CompensationCount,
+                (SELECT GROUP_CONCAT(tc.XDfree02_KeyId) FROM tickets_xdfree02_extrafields tc WHERE tc.DebtOriginId = t.Id) as CompensatedInContractIds
+            FROM tickets_xdfree02_extrafields t
+            LEFT JOIN xdfree01 free ON t.TicketNumber = free.id
+            LEFT JOIN info_xdfree01_extrafields info ON free.KeyId = info.XDFree01_KeyID
+            WHERE t.XDfree02_KeyId = :contract_id
+            ORDER BY t.TicketNumber, t.IsDebt DESC";
     
     $stmt_tickets = $pdo->prepare($sql_tickets);
     $stmt_tickets->bindValue(':contract_id', $contract_id, PDO::PARAM_STR);
@@ -88,6 +96,33 @@ try {
     // Get all contracts for this entity (for context)
     $entity = $contrato['Entity'];
     $resumoContratos = obterResumoContratos($entity, $pdo);
+    
+    // Attempt to process any pending debts
+    if ($contrato['Status'] === 'Em Utilização' || $contrato['Status'] === 'Por Começar') {
+        error_log("detalhes_contrato.php - Processing debts for entity {$entity}, contract {$contract_id}");
+        if (processarDebitosAutomaticos($entity, $pdo)) {
+            // If debts were processed, reload contract data to reflect changes
+            $stmt = $pdo->prepare($sql);
+            $stmt->bindValue(':contract_id', $contract_id, PDO::PARAM_STR);
+            $stmt->execute();
+            $contrato = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Reload tickets and resume
+            $stmt_tickets->execute();
+            $tickets = $stmt_tickets->fetchAll(PDO::FETCH_ASSOC);
+            $resumoContratos = obterResumoContratos($entity, $pdo);
+            error_log("detalhes_contrato.php - Contract data reloaded after debt processing");
+        }
+    }
+    
+    // Certifique-se de que o SpentHours está atualizado para este contrato
+    recalcularSpentHours($contract_id, $pdo);
+    
+    // Recarregar dados do contrato após recálculo
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(':contract_id', $contract_id, PDO::PARAM_STR);
+    $stmt->execute();
+    $contrato = $stmt->fetch(PDO::FETCH_ASSOC);
     
 } catch (PDOException $e) {
     $erro_db = "Erro ao carregar contrato: " . $e->getMessage();
@@ -125,6 +160,12 @@ try {
             <?php endif; ?>
             
             <?php if (isset($contrato) && $contrato): ?>
+            <?php 
+            // Calculate remaining minutes early for use in ticket processing
+            $total_minutes = (int)($contrato['TotalHours'] ?? 0); // Already in minutes from DB
+            $used_minutes = (int)($contrato['SpentHours'] ?? 0);   // Already in minutes from DB
+            $remaining_minutes = $total_minutes - $used_minutes;
+            ?>
             <div class="row">
                 <!-- Contract Information -->
                 <div class="col-md-8">
@@ -195,9 +236,9 @@ try {
                                         switch(strtolower($status)) {
                                             case 'em utilização': $status_class = 'bg-success'; break;
                                             case 'por começar': $status_class = 'bg-warning'; break;
-                                            case 'concluído': 
-                                            case 'concluido': $status_class = 'bg-info'; break;
+                                            case 'concluído': $status_class = 'bg-info'; break;
                                             case 'excedido': $status_class = 'bg-danger'; break;
+                                            case 'regularizado': $status_class = 'bg-primary'; break; // New status with primary color
                                             default: $status_class = 'bg-secondary';
                                         }
                                         echo "<span class='badge $status_class fs-6'>" . htmlspecialchars($status) . "</span>";
@@ -245,11 +286,122 @@ try {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($tickets as $ticket): ?>
+                                        <?php 
+                                        // Track tickets we've already displayed
+                                        $displayedTickets = [];
+                                        
+                                        foreach ($tickets as $ticket): 
+                                            // Get unique ticket identifier - include IsDebt flag to distinguish between regular and debt records
+                                            $ticketKey = $ticket['TicketNumber'] . '-' . ($ticket['IsDebt'] ? 'debt' : 'normal');
+                                            
+                                            // Skip if we've already displayed this specific record
+                                            if (in_array($ticketKey, $displayedTickets)) {
+                                                continue;
+                                            }
+                                            
+                                            // Add to our tracking array
+                                            $displayedTickets[] = $ticketKey;
+                                        ?>
                                         <tr>
                                             <td>
                                                 <strong><?php echo htmlspecialchars($ticket['TicketName'] ?? 'N/A'); ?></strong><br>
                                                 <small class="text-muted"><?php echo htmlspecialchars($ticket['TicketKeyId'] ?? 'N/A'); ?></small>
+                                                <small class="text-muted d-block">Record ID: <?php echo htmlspecialchars($ticket['TicketRecordId'] ?? 'N/A'); ?></small>
+                                                
+                                                <?php 
+                                                // Debug helper - show raw debt values for admins
+                                                if (isset($_GET['debug'])): 
+                                                ?>
+                                                <div class="mt-1 small text-muted bg-light p-1 rounded">
+                                                    <code>
+                                                    IsDebt: <?php echo $ticket['IsDebt'] ? 'Yes' : 'No'; ?> | 
+                                                    IsProcessed: <?php echo $ticket['IsProcessed'] ? 'Yes' : 'No'; ?> | 
+                                                    PartiallyProcessed: <?php echo $ticket['PartiallyProcessed'] ? 'Yes' : 'No'; ?> | 
+                                                    CompensationCount: <?php echo $ticket['CompensationCount'] ?? '0'; ?>
+                                                    </code>
+                                                </div>
+                                                <?php endif; ?>
+                                                
+                                                <?php if (!empty($ticket['IsDebt']) && $ticket['IsDebt'] == 1): ?>
+                                                <!-- This is a debt ticket - show where it was or will be compensated -->
+                                                <div class="mt-2">
+                                                    <?php
+                                                    // Calculate exceeded time for this debt ticket
+                                                    $ticketTime = (int)($ticket['TotTime'] ?? 0);
+                                                    $exceededTime = 0;
+                                                    
+                                                    // For debt tickets, we need to estimate how much time exceeded the contract
+                                                    // This is an approximation since we don't have the exact state when the ticket was created
+                                                    if ($ticketTime > 0) {
+                                                        // If we have remaining time in current contract, the whole ticket time exceeded
+                                                        if ($remaining_minutes > 0) {
+                                                            $exceededTime = $ticketTime;
+                                                        } else {
+                                                            // If contract is already exceeded, estimate based on current excess
+                                                            // This is a rough estimate - ideally we'd need historical data
+                                                            $exceededTime = min($ticketTime, abs($remaining_minutes));
+                                                        }
+                                                    }
+                                                    
+                                                    $exceededHours = floor($exceededTime / 60);
+                                                    $exceededMins = $exceededTime % 60;
+                                                    
+                                                    $exceededText = '';
+                                                    if ($exceededHours > 0) {
+                                                        $exceededText = $exceededHours . 'h';
+                                                        if ($exceededMins > 0) {
+                                                            $exceededText .= ' ' . $exceededMins . 'min';
+                                                        }
+                                                    } else {
+                                                        $exceededText = $exceededMins . 'min';
+                                                    }
+                                                    ?>
+                                                    <span class="badge bg-danger">Ticket Excede Plafond em: <?php echo $exceededText; ?></span>
+                                                  
+                                                    <?php if (!empty($ticket['CompensationCount']) && $ticket['CompensationCount'] > 0): ?>
+                                                    <div class="mt-1">
+                                                        <span class="badge bg-info">
+                                                            <i class="bi bi-arrow-right-circle me-1"></i>
+                                                            Tempo debitado no contrato: <?php echo htmlspecialchars($ticket['CompensatedInContractIds'] ?? 'N/A'); ?>
+                                                        </span>
+                                                    </div>
+                                                    <?php elseif (!empty($ticket['IsProcessed']) && $ticket['IsProcessed'] == 1): ?>
+                                                    <div class="mt-1">
+                                                        <span class="badge bg-success">
+                                                            <i class="bi bi-check-circle me-1"></i>
+                                                            Débito processado
+                                                        </span>
+                                                    </div>
+                                                    <?php elseif (!empty($ticket['PartiallyProcessed']) && $ticket['PartiallyProcessed'] == 1): ?>
+                                                    <div class="mt-1">
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="bi bi-clock me-1"></i>
+                                                            Débito parcialmente processado
+                                                        </span>
+                                                    </div>
+                                                    <?php else: ?>
+                                                    <div class="mt-1">
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="bi bi-clock me-1"></i>
+                                                            Pendente de compensação
+                                                        </span>
+                                                    </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <?php endif; ?>
+                                                
+                                                <?php if (!empty($ticket['DebtOriginId'])): ?>
+                                                <!-- This is a compensation ticket - show the origin ticket record -->
+                                                <div class="mt-2">
+                                                    <span class="badge bg-success">
+                                                        <i class="bi bi-arrow-left-circle me-1"></i>
+                                                        Compensa ticket ID: <?php echo htmlspecialchars($ticket['DebtOriginId']); ?>
+                                                        <?php if (!empty($ticket['OriginContractId'])): ?>
+                                                        do contrato: <?php echo htmlspecialchars($ticket['OriginContractId']); ?>
+                                                        <?php endif; ?>
+                                                    </span>
+                                                </div>
+                                                <?php endif; ?>
                                             </td>
                                             <td>
                                                 <?php 
@@ -276,6 +428,7 @@ try {
                                                 ?>
                                             </td>
                                             <td>
+                                                <!-- Existing status display -->
                                                 <?php 
                                                 $status = $ticket['TicketStatus'] ?? '';
                                                 $badge_class = '';
@@ -287,6 +440,12 @@ try {
                                                 }
                                                 echo !empty($status) ? "<span class='badge $badge_class'>" . htmlspecialchars($status) . "</span>" : '<span class="text-muted">N/A</span>';
                                                 ?>
+                                                
+                                                <?php if ($ticket['IsDebt']): ?>
+                                                <div class="mt-1">
+                                                    <span class="badge bg-danger">Excedido</span>
+                                                </div>
+                                                <?php endif; ?>
                                             </td>
                                             <td>
                                                 <?php 
@@ -327,12 +486,9 @@ try {
                         </div>
                         <div class="card-body">
                             <?php 
+                            // Use the already calculated values
                             // Fix: Ensure we're working with minutes consistently
-                            $total_minutes = (int)($contrato['TotalHours'] ?? 0); // Already in minutes from DB
-                            $used_minutes = (int)($contrato['SpentHours'] ?? 0);   // Already in minutes from DB
-                            
-                            // Calculate remaining minutes
-                            $remaining_minutes = $total_minutes - $used_minutes;
+                            // $total_minutes and $used_minutes already calculated above
                             
                             // Convert for display
                             $total_hours_display = $total_minutes / 60;
@@ -373,11 +529,29 @@ try {
                             
                             <div class="row text-center">
                                 <div class="col-6">
-                                    <strong><?php echo number_format($total_hours_display, 1); ?>h</strong><br>
+                                    <?php
+                                    // Format total hours consistently using hours and minutes
+                                    $total_hours = floor($total_minutes / 60);
+                                    $total_mins = $total_minutes % 60;
+                                    $total_display = $total_hours . 'h';
+                                    if ($total_mins > 0) {
+                                        $total_display .= ' ' . $total_mins . 'min';
+                                    }
+                                    ?>
+                                    <strong><?php echo $total_display; ?></strong><br>
                                     <small class="text-muted">Total</small>
                                 </div>
                                 <div class="col-6">
-                                    <strong><?php echo number_format($used_hours_display, 1); ?>h</strong><br>
+                                    <?php
+                                    // Format used hours consistently using hours and minutes
+                                    $used_hours = floor($used_minutes / 60);
+                                    $used_mins = $used_minutes % 60;
+                                    $used_display = $used_hours . 'h';
+                                    if ($used_mins > 0) {
+                                        $used_display .= ' ' . $used_mins . 'min';
+                                    }
+                                    ?>
+                                    <strong><?php echo $used_display; ?></strong><br>
                                     <small class="text-muted">Utilizadas</small>
                                 </div>
                             </div>
@@ -386,9 +560,26 @@ try {
                             <div class="alert alert-<?php echo $percentage >= 100 ? 'danger' : 'warning'; ?> mt-3 p-2" role="alert">
                                 <small><i class="bi bi-exclamation-triangle me-1"></i>
                                 <?php if ($percentage >= 100): ?>
-                                Contrato excedido em <?php echo number_format(abs($used_hours_display - $total_hours_display), 1); ?>h
+                                    <?php
+                                    // Calculate exceeded time in minutes instead of decimal hours
+                                    $exceeded_minutes = ($used_minutes - $total_minutes);
+                                    $exceeded_hours = floor($exceeded_minutes / 60);
+                                    $exceeded_mins = $exceeded_minutes % 60;
+                                    
+                                    // Format as hours and minutes
+                                    $exceeded_time = '';
+                                    if ($exceeded_hours > 0) {
+                                        $exceeded_time .= $exceeded_hours . 'h';
+                                        if ($exceeded_mins > 0) {
+                                            $exceeded_time .= ' ' . $exceeded_mins . 'min';
+                                        }
+                                    } else {
+                                        $exceeded_time = $exceeded_mins . 'min';
+                                    }
+                                    ?>
+                                    Contrato excedido em <?php echo $exceeded_time; ?>
                                 <?php else: ?>
-                                Poucas horas restantes (<?php echo 100 - $percentage; ?>%)
+                                    Poucas horas restantes (<?php echo 100 - $percentage; ?>%)
                                 <?php endif; ?>
                                 </small>
                             </div>
@@ -404,42 +595,80 @@ try {
                         </div>
                         <div class="card-body">
                             <?php foreach ($resumoContratos['contratos'] as $outroContrato): ?>
-                                <?php if ($outroContrato['id'] !== $contract_id): ?>
-                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-start border-3 <?php echo $outroContrato['excedido'] ? 'border-danger' : 'border-primary'; ?>">
+                                <?php 
+                                // Make sure we have an ID to compare and the array is properly formatted
+                                // Try different possible ID keys that might be returned by obterResumoContratos
+                                $contractID = $outroContrato['XDfree02_KeyId'] ?? $outroContrato['id'] ?? '';
+                                if (!empty($contractID) && $contractID !== $contract_id): 
+                                ?>
+                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-start border-3 <?php echo (!empty($outroContrato['excedido']) && $outroContrato['excedido']) ? 'border-danger' : 'border-primary'; ?>">
                                     <div>
-                                        <?php 
-                                        // Convert totalHoras from minutes to hours for display
-                                        $totalMinutos = (int)$outroContrato['totalHoras'];
-                                        $totalHorasDisplay = floor($totalMinutos / 60);
-                                        $totalMinutosResto = $totalMinutos % 60;
-                                        $horasTexto = $totalHorasDisplay . 'h';
-                                        if ($totalMinutosResto > 0) {
-                                            $horasTexto .= ' ' . $totalMinutosResto . 'min';
-                                        }
-                                        ?>
-                                        <small class="fw-bold"><?php echo $horasTexto; ?></small><br>
-                                        <small class="text-muted"><?php echo $outroContrato['status']; ?></small>
-                                    </div>
-                                    <div class="text-end">
-                                        <?php 
-                                        $restH = floor($outroContrato['restanteMinutos'] / 60);
-                                        $restM = $outroContrato['restanteMinutos'] % 60;
-                                        ?>
-                                        <small class="<?php echo $outroContrato['excedido'] ? 'text-danger' : 'text-success'; ?>">
-                                            <?php echo $restH; ?>h <?php echo $restM; ?>min
-                                        </small>
-                                    </div>
+                                <?php 
+                                // Convert totalHoras from minutes to hours for display
+                                // Try different possible keys that might contain the total hours
+                                $totalMinutos = 0;
+                                if (isset($outroContrato['TotalHours'])) {
+                                    $totalMinutos = (int)$outroContrato['TotalHours'];
+                                } elseif (isset($outroContrato['totalHoras'])) {
+                                    $totalMinutos = (int)$outroContrato['totalHoras'];
+                                } elseif (isset($outroContrato['total_hours'])) {
+                                    $totalMinutos = (int)$outroContrato['total_hours'];
+                                }
+                                
+                                $totalHorasDisplay = floor($totalMinutos / 60);
+                                $totalMinutosResto = $totalMinutos % 60;
+                                $horasTexto = $totalHorasDisplay . 'h';
+                                if ($totalMinutosResto > 0) {
+                                    $horasTexto .= ' ' . $totalMinutosResto . 'min';
+                                }
+                                ?>
+                                <small class="fw-bold"><?php echo $horasTexto; ?></small><br>
+                                <small class="text-muted"><?php echo $outroContrato['Status'] ?? $outroContrato['status'] ?? 'N/A'; ?></small>
+                            </div>
+                            <div class="text-end">
+                                <?php 
+                                // Get remaining minutes or fallback to 0
+                                // Try different possible keys for remaining time
+                                $restanteMinutos = 0;
+                                if (isset($outroContrato['restanteMinutos'])) {
+                                    $restanteMinutos = (int)$outroContrato['restanteMinutos'];
+                                } elseif (isset($outroContrato['remaining_minutes'])) {
+                                    $restanteMinutos = (int)$outroContrato['remaining_minutes'];
+                                } elseif (isset($outroContrato['tempoRestante'])) {
+                                    $restanteMinutos = (int)$outroContrato['tempoRestante'];
+                                }
+                                
+                                $restH = floor($restanteMinutos / 60);
+                                $restM = $restanteMinutos % 60;
+                                ?>
+                                <a href="detalhes_contrato.php?id=<?php echo htmlspecialchars($contractID); ?>" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <span>
+                                        <?php echo $restH; ?>h <?php echo $restM; ?>min
+                                    </span>
+                                    <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                            </div>
                                 </div>
                                 <?php endif; ?>
                             <?php endforeach; ?>
                             
-                            <div class="mt-3 pt-2 border-top">
+                            <!-- Debug section to see what data is actually available -->
+                            <?php if (isset($_GET['debug'])): ?>
+                            <div class="mt-3 p-2 bg-light rounded">
+                                <small class="text-muted">Debug - Contract data structure:</small>
+                                <pre style="font-size: 10px; max-height: 200px; overflow-y: auto;">
                                 <?php 
-                                $totalRestH = floor($resumoContratos['tempoRestante'] / 60);
-                                $totalRestM = $resumoContratos['tempoRestante'] % 60;
+                                foreach ($resumoContratos['contratos'] as $index => $contract) {
+                                    echo "Contract $index:\n";
+                                    print_r($contract);
+                                    echo "\n---\n";
+                                }
                                 ?>
-                                <small class="text-muted">Total disponível: <strong><?php echo $totalRestH; ?>h <?php echo $totalRestM; ?>min</strong></small>
+                                </pre>
                             </div>
+                            <?php endif; ?>
+                            
                         </div>
                     </div>
                     <?php endif; ?>
@@ -461,6 +690,24 @@ try {
                             <div class="mb-2">
                                 <strong>Montante Total:</strong><br>
                                 <small class="text-muted"><?php echo number_format($contrato['TotalAmount'] ?? 0, 2, ',', '.'); ?>€</small>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Preço por Hora:</strong><br>
+                                <?php
+                                // Calculate price per hour correctly - fix calculation
+                                $totalMinutes = (int)($contrato['TotalHours'] ?? 0);
+                                $totalAmount = (float)($contrato['TotalAmount'] ?? 0);
+                                $pricePerHour = 0;
+                                
+                                // Calculate price per hour correctly by using the total hours in the contract
+                                if ($totalMinutes > 0) {
+                                    $totalHours = $totalMinutes / 60; // Convert minutes to hours
+                                    if ($totalHours > 0) {
+                                        $pricePerHour = $totalAmount / $totalHours;
+                                    }
+                                }
+                                ?>
+                                <small class="text-muted"><?php echo number_format($pricePerHour, 2, ',', '.'); ?>€/hora</small>
                             </div>
                         </div>
                     </div>

@@ -1,7 +1,68 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Administração - Info.eXe</title>
+  <title>HelpDesk - InfoExe</title>
+
+  <!-- Block TinyMCE script loading first -->
+  <script type="text/javascript">
+  // Mock TinyMCE with all required methods and properties
+  window.tinymce = {
+      init: function() { return false; },
+      execCommand: function() { return false; },
+      triggerSave: function() { return false; },
+      get: function() { return null; },
+      remove: function() { return false; },
+      execCallback: function() { return false; },
+      overrideDefaults: function() { return false; },
+      activeEditor: null,
+      editors: {},
+      EditorManager: { 
+          requireLangPack: function() {},
+          baseURL: '',
+          baseURI: { toAbsolute: function() {} }
+      },
+      dom: { 
+          Event: { add: function() {}, remove: function() {} },
+          ScriptLoader: { load: function() {}, loadQueue: function() {}, loadScripts: function() {} }
+      },
+      create: function() { return {}; },
+      PluginManager: { add: function() {}, requireLangPack: function() {}, load: function() {} },
+      ThemeManager: { load: function() {}, requireLangPack: function() {} },
+      util: { Promise: function() {}, URI: function() {}, Tools: {} },
+      ui: {}
+  };
+
+  // Create alias
+  window.tinyMCE = window.tinymce;
+
+  // Block script loading
+  const originalCreateElement = document.createElement;
+  document.createElement = function(tagName) {
+      const element = originalCreateElement.call(document, tagName);
+      if (tagName.toLowerCase() === 'script') {
+          const originalSetAttribute = element.setAttribute;
+          element.setAttribute = function(name, value) {
+              if (name === 'src' && value && typeof value === 'string' && 
+                  (value.indexOf('tinymce') !== -1 || value.indexOf('tiny_mce') !== -1)) {
+                  console.log('Blocked TinyMCE script:', value);
+                  return element;
+              }
+              return originalSetAttribute.call(this, name, value);
+          };
+      }
+      return element;
+  };
+
+  // Remove any existing TinyMCE scripts
+  document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('script').forEach(script => {
+          if (script.src && 
+              (script.src.includes('tinymce') || script.src.includes('tiny_mce'))) {
+              script.parentNode.removeChild(script);
+          }
+      });
+  });
+  </script>
 
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -21,25 +82,4 @@
   <!-- Bootstrap JS Bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- TinyMCE para edição de texto enriquecido onde necessário -->
-  <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js"></script>
-  <script>
-    // Inicializa o TinyMCE apenas nas textareas com a classe 'rich-editor'
-    document.addEventListener('DOMContentLoaded', function() {
-      if (document.querySelector('.rich-editor')) {
-        tinymce.init({
-          selector: 'textarea.rich-editor',
-          menubar: false,
-          plugins: 'lists advlist autolink link',
-          toolbar: 'undo redo | bold italic underline | bullist numlist | link',
-          height: 200,
-          setup: function (editor) {
-            editor.on('change', function () {
-              tinymce.triggerSave(); // Garante que o valor do textarea seja atualizado
-            });
-          }
-        });
-      }
-    });
-  </script>
 </head>

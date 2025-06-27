@@ -1,29 +1,41 @@
 <?php
-session_start();
-include('../db.php');
+// silent_sync.php - Handle polling for new ticket messages
+// Ensure clean output by capturing everything
+ob_start();
 
-// Definir cabeçalho JSON
+// Set content type to JSON
 header('Content-Type: application/json');
 
-// Desativar qualquer saída de erro
-error_reporting(0);
-ini_set('display_errors', 0);
-
-// Verificar parâmetros obrigatórios
-if (!isset($_GET['ticketId']) || !isset($_GET['lastCheck'])) {
-    echo json_encode(['error' => 'Parâmetros em falta']);
-    exit;
-}
-
-$ticketId = $_GET['ticketId'];
-$lastCheck = $_GET['lastCheck'];
-$deviceId = isset($_GET['deviceId']) ? $_GET['deviceId'] : null;
+// Initialize response array
+$response = [
+    'hasNewMessages' => false,
+    'messages' => [],
+    'timestamp' => date('Y-m-d H:i:s'),
+    'error' => null
+];
 
 try {
-    // Consultar novas mensagens desde a última verificação
-    $sql = "SELECT c.Message, c.type, c.Date as CommentTime, c.user, c.id as messageId
+    // Start session and include required files
+    session_start();
+    include('conflogin.php');
+    include('db.php');
+    
+    // Log request for debugging
+    error_log("silent_sync.php accessed - Params: " . print_r($_GET, true));
+    
+    // Check for required parameters
+    if (!isset($_GET['ticketId']) || !isset($_GET['deviceId']) || !isset($_GET['lastCheck'])) {
+        throw new Exception('Missing required parameters');
+    }
+    
+    $ticketId = $_GET['ticketId'];
+    $deviceId = $_GET['deviceId'];
+    $lastCheck = $_GET['lastCheck'];
+    
+    // Query to fetch new messages since last check
+    $sql = "SELECT c.Message, c.type, c.Date as CommentTime, c.user, c.Id 
             FROM comments_xdfree01_extrafields c
-            WHERE c.XDFree01_KeyID = :ticketId
+            WHERE c.XDFree01_KeyID = :ticketId 
             AND c.Date > :lastCheck
             ORDER BY c.Date ASC";
     
@@ -34,28 +46,23 @@ try {
     
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Verificar se há novas mensagens
-    if (count($messages) > 0) {
-        // Adicionar IDs únicos de mensagem para desduplicação
-        foreach ($messages as &$message) {
-            $message['messageId'] = 'db_' . $message['messageId'];
-        }
-        
-        echo json_encode([
-            'hasNewMessages' => true,
-            'messages' => $messages,
-            'count' => count($messages)
-        ]);
-    } else {
-        echo json_encode([
-            'hasNewMessages' => false,
-            'messages' => [],
-            'count' => 0
-        ]);
-    }
+    // Update response
+    $response['hasNewMessages'] = !empty($messages);
+    $response['messages'] = $messages;
+    $response['timestamp'] = date('Y-m-d H:i:s');
     
+    // Log results for debugging
+    error_log("silent_sync.php - Found " . count($messages) . " new messages");
+
 } catch (Exception $e) {
-    error_log('Erro em admin/silent_sync.php: ' . $e->getMessage());
-    echo json_encode(['error' => 'Erro de base de dados']);
-}
+    error_log("silent_sync.php error: " . $e->getMessage());
+    $response['error'] = 'Error: ' . $e->getMessage();
+} 
+
+// Clean any output buffer to prevent contamination
+ob_end_clean();
+
+// Send clean JSON response
+echo json_encode($response);
+exit;
 ?>

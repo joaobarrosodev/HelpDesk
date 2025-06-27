@@ -12,6 +12,19 @@ if (!isAdmin()) {
 
 $entity = $_SESSION['usuario_id'] ?? '';
 
+// Parâmetros de pesquisa - EXPANDED (same as admin but without creator filter)
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$status_filter = isset($_GET['status']) ? $_GET['status'] : '';
+$data_inicio_de = isset($_GET['data_inicio_de']) ? $_GET['data_inicio_de'] : '';
+$data_inicio_ate = isset($_GET['data_inicio_ate']) ? $_GET['data_inicio_ate'] : '';
+$tempo_restante_filter = isset($_GET['tempo_restante']) ? $_GET['tempo_restante'] : '';
+$pack_horas_filter = isset($_GET['pack_horas']) ? $_GET['pack_horas'] : '';
+
+// Paginação
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$records_per_page = 20;
+$offset = ($page - 1) * $records_per_page;
+
 // Processar solicitação de pack de horas
 if ($_POST && isset($_POST['solicitar_pack'])) {
     $pack_horas = $_POST['pack_selecionado'];
@@ -221,6 +234,8 @@ $tempoTotalGasto = 0;
 $tempoRestante = 0;
 $contratosExcedidos = 0;
 $nome_empresa = 'N/A';
+$total_records = 0;
+$total_pages = 0;
 
 try {
     // Update contract status before displaying
@@ -233,7 +248,72 @@ try {
     $empresa_info = $stmt_empresa->fetch(PDO::FETCH_ASSOC);
     $nome_empresa = $empresa_info ? $empresa_info['name'] : "Cliente ID: $entity";
     
-    // CORREÇÃO: Como só admins acedem, usar sempre a lógica de admin
+    // Construir query com filtros EXPANDIDOS (adapted from admin version)
+    $where_conditions = ["oee.Entity_KeyId = (
+        SELECT Entity_KeyId 
+        FROM online_entity_extrafields 
+        WHERE email = :admin_email
+    )"];
+    $params = [':admin_email' => $_SESSION['usuario_email']];
+    
+    if (!empty($search)) {
+        $search_conditions = [];
+        $search_conditions[] = "e.name LIKE :search";
+        $search_conditions[] = "e.ContactEmail LIKE :search";
+        $search_conditions[] = "e.MobilePhone1 LIKE :search";
+        $search_conditions[] = "e.Phone1 LIKE :search";
+        $search_conditions[] = "x2Extra.Status LIKE :search";
+        $search_conditions[] = "x2Extra.XDfree02_KeyId LIKE :search"; // Add contract ID search
+        
+        $where_conditions[] = "(" . implode(" OR ", $search_conditions) . ")";
+        $params['search'] = "%$search%";
+    }
+    
+    if (!empty($status_filter)) {
+        $where_conditions[] = "x2Extra.Status = :status";
+        $params['status'] = $status_filter;
+    }
+    
+    // Date range filter
+    if (!empty($data_inicio_de)) {
+        $where_conditions[] = "x2Extra.StartDate >= :data_inicio_de";
+        $params['data_inicio_de'] = $data_inicio_de . ' 00:00:00';
+    }
+    
+    if (!empty($data_inicio_ate)) {
+        $where_conditions[] = "x2Extra.StartDate <= :data_inicio_ate";
+        $params['data_inicio_ate'] = $data_inicio_ate . ' 23:59:59';
+    }
+    
+    // Pack hours filter - filter by total hours ranges
+    if (!empty($pack_horas_filter)) {
+        switch ($pack_horas_filter) {
+            case '5':
+                $where_conditions[] = "x2Extra.TotalHours >= 240 AND x2Extra.TotalHours <= 360"; // 4-6 hours range
+                break;
+            case '10':
+                $where_conditions[] = "x2Extra.TotalHours >= 540 AND x2Extra.TotalHours <= 660"; // 9-11 hours range
+                break;
+            case '20':
+                $where_conditions[] = "x2Extra.TotalHours >= 1140 AND x2Extra.TotalHours <= 1260"; // 19-21 hours range
+                break;
+        }
+    }
+    
+    $where_clause = "WHERE " . implode(" AND ", $where_conditions);
+    
+    // Count total records
+    $sql_count = "SELECT COUNT(*) as total 
+                  FROM info_xdfree02_extrafields x2Extra
+                  LEFT JOIN entities e ON e.KeyId = x2Extra.Entity
+                  LEFT JOIN online_entity_extrafields oee ON x2Extra.Entity = oee.Entity_KeyId
+                  $where_clause";
+    $stmt_count = $pdo->prepare($sql_count);
+    $stmt_count->execute($params);
+    $total_records = $stmt_count->fetch(PDO::FETCH_ASSOC)['total'];
+    $total_pages = ceil($total_records / $records_per_page);
+    
+    // Main query with filtering
     $sql = "SELECT 
                 x2Extra.XDfree02_KeyId,
                 x2Extra.*,
@@ -246,18 +326,69 @@ try {
             FROM info_xdfree02_extrafields x2Extra
             LEFT JOIN entities e ON e.KeyId = x2Extra.Entity
             LEFT JOIN online_entity_extrafields oee ON x2Extra.Entity = oee.Entity_KeyId
-            WHERE oee.Entity_KeyId = (
-                SELECT Entity_KeyId 
-                FROM online_entity_extrafields 
-                WHERE email = :admin_email
-            )
-            ORDER BY x2Extra.id DESC";
-    
-    $params = [':admin_email' => $_SESSION['usuario_email']];
+            $where_clause 
+            ORDER BY x2Extra.id DESC
+            LIMIT :limit OFFSET :offset";
     
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindValue(':limit', $records_per_page, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
     $contratos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Filter by remaining time after fetching (since this requires calculation)
+    if (!empty($tempo_restante_filter) && !empty($contratos)) {
+        $filtered_contratos = [];
+        foreach ($contratos as $contrato) {
+            $total_minutes = (int)($contrato['TotalHours'] ?? 0);
+            $used_minutes = (int)($contrato['SpentHours'] ?? 0);
+            $remaining_minutes = $total_minutes - $used_minutes;
+            
+            $include = false;
+            switch ($tempo_restante_filter) {
+                case 'disponivel':
+                    $include = $remaining_minutes > 0;
+                    break;
+                case 'excedido':
+                    $include = $remaining_minutes < 0;
+                    break;
+                case 'esgotado':
+                    $include = $remaining_minutes <= 0;
+                    break;
+                case 'critico':
+                    $include = $remaining_minutes > 0 && $remaining_minutes <= 60; // Less than 1 hour
+                    break;
+            }
+            
+            if ($include) {
+                $filtered_contratos[] = $contrato;
+            }
+        }
+        $contratos = $filtered_contratos;
+        
+        // Recalculate totals for filtered results
+        $total_records = count($contratos);
+        $total_pages = ceil($total_records / $records_per_page);
+        
+        // Apply pagination to filtered results
+        $contratos = array_slice($contratos, $offset, $records_per_page);
+    }
+    
+    // Get status options for filter
+    $sql_status = "SELECT DISTINCT x2Extra.Status 
+                   FROM info_xdfree02_extrafields x2Extra
+                   LEFT JOIN online_entity_extrafields oee ON x2Extra.Entity = oee.Entity_KeyId
+                   WHERE oee.Entity_KeyId = (
+                       SELECT Entity_KeyId 
+                       FROM online_entity_extrafields 
+                       WHERE email = :admin_email
+                   ) AND x2Extra.Status IS NOT NULL AND x2Extra.Status != ''";
+    $stmt_status = $pdo->prepare($sql_status);
+    $stmt_status->execute([':admin_email' => $_SESSION['usuario_email']]);
+    $status_options = $stmt_status->fetchAll(PDO::FETCH_COLUMN);
     
     // Debug log
     error_log("=== MEUS CONTRATOS QUERY DEBUG ===");
@@ -295,10 +426,11 @@ try {
         }
     }
     
-    // Calculate totals - CORREÇÃO: Usar array para evitar duplicação
+    // Calculate totals - FIXED: Correctly separate active vs. historical contracts
     $tempoTotalComprado = 0;
     $tempoTotalGasto = 0;
     $tempoRestante = 0;
+    $contratosAtivos = [];
     $contratosExcedidos = 0;
     $contracts_processed = []; // Array para evitar processar o mesmo contrato duas vezes
     
@@ -314,38 +446,45 @@ try {
         $total_minutes = (int)($contrato['TotalHours'] ?? 0);
         $used_minutes = (int)($contrato['SpentHours'] ?? 0);
         $remaining_minutes = $total_minutes - $used_minutes;
+        $status = strtolower($contrato['Status'] ?? '');
         
         $contrato['restanteMinutos'] = $remaining_minutes;
         $contrato['excedido'] = $used_minutes > $total_minutes;
         
+        // FIXED: Separate calculations for TOTAL values vs. AVAILABLE values
+        // Add to total purchased for historical tracking
         $tempoTotalComprado += $total_minutes;
+        
+        // Add to total spent for historical tracking
         $tempoTotalGasto += $used_minutes;
         
-        // CORREÇÃO: Apenas somar tempo restante se for positivo e contrato não estiver concluído
-        if ($remaining_minutes > 0 && strtolower($contrato['Status'] ?? '') !== 'concluído') {
+        // FIXED: Only add to remaining time if contract is active (Em Utilização or Por Começar)
+        // and has positive remaining time
+        if ($remaining_minutes > 0 && 
+            ($status === 'em utilização' || $status === 'por começar' || $status === 'regularizado')) {
             $tempoRestante += $remaining_minutes;
+            $contratosAtivos[] = $contrato; // Track active contracts
         }
         
         if ($contrato['excedido']) {
             $contratosExcedidos++;
         }
-        
-        // Debug individual para verificar os cálculos
-        error_log("Contract ID: $contract_id - Total: {$total_minutes}min, Used: {$used_minutes}min, Remaining: {$remaining_minutes}min, Status: " . ($contrato['Status'] ?? 'NULL'));
     }
     
-    // Debug dos totais finais
-    error_log("=== TOTAIS FINAIS ===");
+    // Debug log for calculations
+    error_log("=== TOTAIS FINAIS CORRIGIDOS ===");
     error_log("Contratos únicos processados: " . count($contracts_processed));
-    error_log("Tempo Total Comprado: {$tempoTotalComprado}min");
-    error_log("Tempo Total Gasto: {$tempoTotalGasto}min"); 
-    error_log("Tempo Restante: {$tempoRestante}min");
+    error_log("Tempo Total Comprado (histórico): {$tempoTotalComprado}min");
+    error_log("Tempo Total Gasto (histórico): {$tempoTotalGasto}min");
+    error_log("Tempo Restante (apenas contratos ativos): {$tempoRestante}min");
+    error_log("Contratos Ativos: " . count($contratosAtivos));
     error_log("Contratos Excedidos: {$contratosExcedidos}");
     
 } catch (PDOException $e) {
     $erro_db = "Erro ao carregar contratos: " . $e->getMessage();
     error_log("Database error: " . $e->getMessage());
     $contratos = [];
+    $status_options = [];
 }
 ?>
 
@@ -365,19 +504,10 @@ try {
                         Lista de todos os contratos da sua empresa.
                         <?php echo htmlspecialchars($nome_empresa); ?>
                     </p>
-                    <?php if (isset($_GET['debug'])): ?>
-                    <small class="text-info">
-                        Debug: Role = ADMIN | 
-                        Entity ID = <?php echo htmlspecialchars($entity); ?> | 
-                        Email = <?php echo htmlspecialchars($_SESSION['usuario_email']); ?> |
-                        Contratos encontrados: <?php echo count($contratos); ?>
-                    </small>
-                    <?php endif; ?>
                 </div>
                 <div class="d-flex gap-2">
-                    <!-- CORREÇÃO: Botão sempre disponível para admins -->
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#packsHorasModal">
-                        <i class="bi bi-plus-lg me-1"></i> Novo Pack de Horas
+                        <i class="bi bi-plus-lg me-1"></i> Solicitar Contrato
                     </button>
                 </div>
             </div>
@@ -396,85 +526,88 @@ try {
             </div>
             <?php endif; ?>
             
-            <!-- Debug Entity Info -->
-            <?php if (isset($_GET['debug']) && isset($_GET['show_entities'])): ?>
-            <div class="alert alert-info">
-                <h6>Debug: Informações da Entity</h6>
-                <p><strong>Entity da sessão:</strong> <?php echo htmlspecialchars($entity); ?> (<?php echo gettype($entity); ?>)</p>
-                
-                <?php
-                try {
-                    $sql_all_entities = "SELECT Entity, COUNT(*) as contracts FROM info_xdfree02_extrafields GROUP BY Entity ORDER BY Entity";
-                    $stmt_all = $pdo->prepare($sql_all_entities);
-                    $stmt_all->execute();
-                    $all_entity_data = $stmt_all->fetchAll(PDO::FETCH_ASSOC);
-                    
-                    echo "<p><strong>Entities com contratos:</strong></p><ul>";
-                    foreach ($all_entity_data as $entity_data) {
-                        $highlight = ($entity_data['Entity'] == $entity) ? 'style="background-color: yellow;"' : '';
-                        echo "<li $highlight>Entity: '{$entity_data['Entity']}' ({$entity_data['contracts']} contratos)</li>";
-                    }
-                    echo "</ul>";
-                } catch (Exception $e) {
-                    echo "<p>Erro ao buscar entities: " . htmlspecialchars($e->getMessage()) . "</p>";
-                }
-                ?>
+            <!-- Filtros EXPANDIDOS (adapted from admin) -->
+            <div class="bg-white p-3 rounded border mb-4">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">Pesquisar</label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               value="<?php echo htmlspecialchars($search); ?>" 
+                               placeholder="Nome, email, telefone, ID contrato (SP-002)...">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-control" id="status" name="status">
+                            <option value="">Todos os status</option>
+                            <?php foreach ($status_options as $status): ?>
+                            <option value="<?php echo htmlspecialchars($status); ?>" 
+                                    <?php echo $status_filter === $status ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($status); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="pack_horas" class="form-label">Pack de Horas</label>
+                        <select class="form-control" id="pack_horas" name="pack_horas">
+                            <option value="">Todos os packs</option>
+                            <option value="5" <?php echo $pack_horas_filter === '5' ? 'selected' : ''; ?>>5 Horas</option>
+                            <option value="10" <?php echo $pack_horas_filter === '10' ? 'selected' : ''; ?>>10 Horas</option>
+                            <option value="20" <?php echo $pack_horas_filter === '20' ? 'selected' : ''; ?>>20 Horas</option>
+                            </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="tempo_restante" class="form-label">Tempo Restante</label>
+                        <select class="form-control" id="tempo_restante" name="tempo_restante">
+                            <option value="">Todos</option>
+                            <option value="disponivel" <?php echo $tempo_restante_filter === 'disponivel' ? 'selected' : ''; ?>>Com tempo disponível</option>
+                            <option value="critico" <?php echo $tempo_restante_filter === 'critico' ? 'selected' : ''; ?>>Crítico (&lt;1h)</option>
+                            <option value="esgotado" <?php echo $tempo_restante_filter === 'esgotado' ? 'selected' : ''; ?>>Esgotado</option>
+                            <option value="excedido" <?php echo $tempo_restante_filter === 'excedido' ? 'selected' : ''; ?>>Excedido</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Data de Início</label>
+                        <div class="d-flex gap-1">
+                            <input type="date" class="form-control" name="data_inicio_de" 
+                                   value="<?php echo htmlspecialchars($data_inicio_de); ?>" 
+                                   placeholder="De">
+                            <input type="date" class="form-control" name="data_inicio_ate" 
+                                   value="<?php echo htmlspecialchars($data_inicio_ate); ?>" 
+                                   placeholder="Até">
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i> Pesquisar
+                            </button>
+                            <a href="meus_contratos.php" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Limpar
+                            </a>
+                            
+                            <!-- Show active filters -->
+                            <?php
+                            $active_filters = [];
+                            if (!empty($search)) $active_filters[] = "Pesquisa: " . htmlspecialchars($search);
+                            if (!empty($status_filter)) $active_filters[] = "Status: " . htmlspecialchars($status_filter);
+                            if (!empty($pack_horas_filter)) $active_filters[] = "Pack: " . htmlspecialchars($pack_horas_filter) . "h";
+                            if (!empty($tempo_restante_filter)) $active_filters[] = "Tempo: " . htmlspecialchars($tempo_restante_filter);
+                            if (!empty($data_inicio_de)) $active_filters[] = "De: " . htmlspecialchars($data_inicio_de);
+                            if (!empty($data_inicio_ate)) $active_filters[] = "Até: " . htmlspecialchars($data_inicio_ate);
+                            
+                            if (!empty($active_filters)):
+                            ?>
+                            <div class="ms-auto">
+                                <small class="text-muted">Filtros ativos: <?php echo implode(' | ', $active_filters); ?></small>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </form>
             </div>
-            <?php endif; ?>
             
-            <!-- Summary Cards -->
-            <?php if (!empty($contratos)): ?>
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <?php echo floor($tempoTotalComprado/60); ?>h 
-                                <?php if ($tempoTotalComprado % 60 > 0): ?>
-                                    <?php echo $tempoTotalComprado % 60; ?>min
-                                <?php endif; ?>
-                            </h5>
-                            <p class="card-text">Total Comprado</p>
-                            <?php if (isset($_GET['debug'])): ?>
-                            <small>Raw: <?php echo $tempoTotalComprado; ?>min</small>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-warning text-dark">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <?php echo floor($tempoTotalGasto/60); ?>h 
-                                <?php if ($tempoTotalGasto % 60 > 0): ?>
-                                    <?php echo $tempoTotalGasto % 60; ?>min
-                                <?php endif; ?>
-                            </h5>
-                            <p class="card-text">Total Utilizado</p>
-                            <?php if (isset($_GET['debug'])): ?>
-                            <small>Raw: <?php echo $tempoTotalGasto; ?>min</small>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-success text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <?php echo floor($tempoRestante/60); ?>h 
-                                <?php if ($tempoRestante % 60 > 0): ?>
-                                    <?php echo $tempoRestante % 60; ?>min
-                                <?php endif; ?>
-                            </h5>
-                            <p class="card-text">Tempo Restante</p>
-                            <?php if (isset($_GET['debug'])): ?>
-                            <small>Raw: <?php echo $tempoRestante; ?>min</small>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
+           
             
             <!-- Tabela de Contratos -->
             <div class="bg-white rounded border">
@@ -551,9 +684,10 @@ try {
                                         case 'por começar': $status_class = 'bg-warning'; break;
                                         case 'concluido': $status_class = 'bg-info'; break;
                                         case 'excedido': $status_class = 'bg-danger'; break;
+                                        case 'regularizado': $status_class = 'bg-primary'; break; // New status
                                         default: $status_class = 'bg-secondary';
                                     }
-                                    if ($excedido && $status !== 'Concluído') {
+                                    if ($excedido && $status !== 'Concluído' && $status !== 'Regularizado') {
                                         $status_class = 'bg-danger';
                                         $status = 'Excedido';
                                     }
@@ -606,44 +740,38 @@ try {
                     </table>
                 </div>
                 
-                <!-- Summary footer for multiple contracts -->
-                <?php if (count($contratos) > 1): ?>
-                <div class="border-top p-3 bg-light">
-                    <div class="row text-center">
-                        <div class="col-md-3">
-                            <strong>
-                                <?php echo floor($tempoTotalComprado/60); ?>h 
-                                <?php if ($tempoTotalComprado % 60 > 0): ?>
-                                    <?php echo $tempoTotalComprado % 60; ?>min
-                            <?php endif; ?>
-                            </strong><br>
-                            <small class="text-muted">Total Geral Comprado</small>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>
-                                <?php echo floor($tempoTotalGasto/60); ?>h 
-                                <?php if ($tempoTotalGasto % 60 > 0): ?>
-                                    <?php echo $tempoTotalGasto % 60; ?>min
-                            <?php endif; ?>
-                            </strong><br>
-                            <small class="text-muted">Total Geral Utilizado</small>
-                        </div>
-                        <div class="col-md-3">
-                            <strong class="<?php echo $tempoRestante > 0 ? 'text-success' : 'text-danger'; ?>">
-                                <?php echo floor($tempoRestante/60); ?>h 
-                                <?php if ($tempoRestante % 60 > 0): ?>
-                                    <?php echo $tempoRestante % 60; ?>min
-                            <?php endif; ?>
-                            </strong><br>
-                            <small class="text-muted">Total Restante</small>
-                        </div>
-                        <div class="col-md-3">
-                            <strong class="<?php echo $contratosExcedidos > 0 ? 'text-warning' : 'text-success'; ?>">
-                                <?php echo count($contracts_processed) - $contratosExcedidos; ?>/<?php echo count($contracts_processed); ?>
-                            </strong><br>
-                            <small class="text-muted">Contratos Ativos</small>
-                        </div>
+                <!-- Pagination -->
+                <?php if ($total_pages > 1): ?>
+                <div class="d-flex justify-content-between align-items-center p-3 border-top">
+                    <div class="text-muted">
+                        Mostrando <?php echo number_format($offset + 1); ?> a <?php echo number_format(min($offset + $records_per_page, $total_records)); ?> 
+                        de <?php echo number_format($total_records); ?> registros
                     </div>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            <?php if ($page > 1): ?>
+                            <li class="page-item">
+                                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>">Anterior</a>
+                            </li>
+                            <?php endif; ?>
+                            
+                            <?php
+                            $start_page = max(1, $page - 2);
+                            $end_page = min($total_pages, $page + 2);
+                            for ($i = $start_page; $i <= $end_page; $i++):
+                            ?>
+                            <li class="page-item <?php echo $i === $page ? 'active' : ''; ?>">
+                                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
+                            </li>
+                            <?php endfor; ?>
+                            
+                            <?php if ($page < $total_pages): ?>
+                            <li class="page-item">
+                                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>">Próximo</a>
+                            </li>
+                            <?php endif; ?>
+                        </ul>
+                    </nav>
                 </div>
                 <?php endif; ?>
                 
@@ -651,14 +779,82 @@ try {
                 <div class="text-center py-5">
                     <i class="bi bi-file-earmark-text text-muted" style="font-size: 4rem;"></i>
                     <h5 class="mt-3 text-muted">Nenhum contrato encontrado</h5>
-                    <p class="text-muted">Não há contratos para a sua empresa.</p>
+                    <p class="text-muted">
+                        <?php if (!empty($active_filters)): ?>
+                            Tente ajustar os filtros de pesquisa.
+                        <?php else: ?>
+                            Não há contratos para a sua empresa.
+                        <?php endif; ?>
+                    </p>
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#packsHorasModal">
                         <i class="bi bi-plus-lg me-1"></i> Solicitar Primeiro Pack de Horas
                     </button>
                 </div>
                 <?php endif; ?>
             </div>
+            
         </div>
+         <!-- Summary Cards - só mostrar se não há filtros ativos -->
+            <?php if (empty($active_filters) && !empty($contratos)): ?>
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <?php 
+                                $total_h = floor($tempoTotalComprado / 60);
+                                $total_m = $tempoTotalComprado % 60;
+                                echo "{$total_h}h";
+                                echo $total_m > 0 ? " {$total_m}min" : "";
+                                ?>
+                            </h5>
+                            <p class="card-text">Total Comprado</p>
+                            <?php if (isset($_GET['debug'])): ?>
+                            <small>Raw: <?php echo $tempoTotalComprado; ?>min</small>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-dark">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <?php 
+                                $used_h = floor($tempoTotalGasto / 60);
+                                $used_m = $tempoTotalGasto % 60;
+                                echo "{$used_h}h";
+                                echo $used_m > 0 ? " {$used_m}min" : "";
+                                ?>
+                            </h5>
+                            <p class="card-text">Total Utilizado</p>
+                            <?php if (isset($_GET['debug'])): ?>
+                            <small>Raw: <?php echo $tempoTotalGasto; ?>min</small>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <?php 
+                                // FIXED: Display remaining time from active contracts only
+                                $remaining_h = floor($tempoRestante / 60);
+                                $remaining_m = $tempoRestante % 60;
+                                echo "{$remaining_h}h";
+                                echo $remaining_m > 0 ? " {$remaining_m}min" : "";
+                                ?>
+                            </h5>
+                            <p class="card-text">Tempo Restante</p>
+                            <?php if (isset($_GET['debug'])): ?>
+                            <!-- Added more detailed debug info -->
+                            <small>Raw: <?php echo $tempoRestante; ?>min (contratos ativos apenas)</small>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
     </div>
     
     <!-- Modal para Packs de Horas - SEMPRE DISPONÍVEL para administradores -->

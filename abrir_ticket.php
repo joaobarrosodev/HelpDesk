@@ -3,15 +3,27 @@
 session_start();  // Inicia a sessão
 include('conflogin.php');
 include('db.php');  // Incluindo o arquivo de conexão com o banco de dados
+// Incluir arquivo de verificação de tempo - usar caminho relativo correto
+include('verificar_tempo_disponivel.php'); // Modificado para usar o arquivo local
 
 // Verificar contratos e tempo disponível do cliente
 $tempoDisponivel = 0;
 $contratosInfo = [];
 $avisoTempo = '';
+$clienteBloqueado = false;
 
 try {
     // Obter entity do usuário logado
     $entity = $_SESSION['usuario_id'];
+    
+    // Verificar se o cliente está bloqueado por ter contratos excedidos
+    $clientePodeCriar = clientePodeCriarTickets($entity, $pdo);
+    if (!$clientePodeCriar) {
+        $clienteBloqueado = true;
+    }
+    
+    // Forçar atualização dos status dos contratos
+    atualizarStatusContratos($entity, $pdo);
     
     // Procurar contratos do cliente
     $sql_contratos = "SELECT XDfree02_KeyId, TotalHours, SpentHours, Status, StartDate
@@ -64,59 +76,101 @@ try {
     error_log("Erro ao obter contratos: " . $e->getMessage());
 }
 
+// Check if user has any time available (for non-admin users)
+$temTempoDisponivel = ($tempoDisponivel > 0);
+
 // Processamento do formulário quando enviado
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $nome_computador = $_POST['nome_computador'];
-    $descricao_problema = $_POST['descricao_problema'];
-    $prioridade = $_POST['prioridade'];
-    $usuario_id = $_SESSION['usuario_id'];
-    $entidade_codigo = $_SESSION['usuario_email'];
-    $imagem = $_POST['imagem'] ?? ''; // Caminho da imagem recebida (com fallback)
-    
-    try {
-        $stmt = $pdo->query("SELECT KeyId FROM xdfree01 ORDER BY id DESC LIMIT 1");
-        $ultimo_keyid = $stmt->fetchColumn();
-
-        if ($ultimo_keyid) {
-            $ultimo_numero = (int) substr($ultimo_keyid, 1);
-            $novo_numero = $ultimo_numero + 1;
-        } else {
-            $novo_numero = 1;
-        }
-
-        $novo_keyid = "#" . str_pad($novo_numero, 3, "0", STR_PAD_LEFT);
-        $titulo = "Ticket " . $novo_keyid; 
-
-        $stmt = $pdo->prepare("INSERT INTO xdfree01 (KeyId, Name) VALUES (:keyId, :name)");
-        $stmt->bindParam(':keyId', $novo_keyid);
-        $stmt->bindParam(':name', $titulo);
-        $stmt->execute();
-
-        $keyId = $novo_keyid;
-
-        $stmt = $pdo->prepare("INSERT INTO info_xdfree01_extrafields (XDFree01_KeyID, Entity, User, Description, Priority, Status, Image, CreationUser, CreationDate, dateu) 
-                               VALUES (:keyId, :entity, :user, :description, :priority, :status, :image, :creationuser, NOW(), NOW())");
-        $stmt->bindParam(':keyId', $keyId);
-        $stmt->bindParam(':entity', $usuario_id);
-        $stmt->bindParam(':user', $nome_computador);
-        $stmt->bindParam(':description', $descricao_problema);
-        $stmt->bindParam(':priority', $prioridade);
-        $status = "Em Análise";
-        $stmt->bindParam(':status', $status);
-        $stmt->bindParam(':image', $imagem); 
-        $stmt->bindParam(':creationuser', $_SESSION['usuario_email']);
-
-        $stmt->execute();
-
-        // Set success flag and ticket ID in session instead of showing alert
-        $_SESSION['ticket_created'] = true;
-        $_SESSION['novo_keyid'] = $novo_keyid;
-
-    } catch (PDOException $e) {
+    // Verificar se cliente está bloqueado
+    if ($clienteBloqueado) {
         echo "<div class='alert alert-danger alert-dismissible fade show' role='alert'>
-                Erro ao criar ticket: " . $e->getMessage() . "
+                Não é possível criar tickets. Você possui contratos excedidos que necessitam ser regularizados.
                 <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button>
               </div>";
+    } else {
+        $nome_computador = $_POST['nome_computador'];
+        $descricao_problema = $_POST['descricao_problema'];
+        $prioridade = $_POST['prioridade'];
+        $usuario_id = $_SESSION['usuario_id'];
+        $entidade_codigo = $_SESSION['usuario_email'];
+        $imagem = $_POST['imagem'] ?? ''; // Caminho da imagem recebida (com fallback)
+        
+        try {
+            $stmt = $pdo->query("SELECT KeyId FROM xdfree01 ORDER BY id DESC LIMIT 1");
+            $ultimo_keyid = $stmt->fetchColumn();
+
+            if ($ultimo_keyid) {
+                $ultimo_numero = (int) substr($ultimo_keyid, 1);
+                $novo_numero = $ultimo_numero + 1;
+            } else {
+                $novo_numero = 1;
+            }
+
+            $novo_keyid = "#" . str_pad($novo_numero, 3, "0", STR_PAD_LEFT);
+            $titulo = "Ticket " . $novo_keyid; 
+
+            $stmt = $pdo->prepare("INSERT INTO xdfree01 (KeyId, Name) VALUES (:keyId, :name)");
+            $stmt->bindParam(':keyId', $novo_keyid);
+            $stmt->bindParam(':name', $titulo);
+            $stmt->execute();
+
+            $keyId = $novo_keyid;
+            
+            // Calculate the default median time based on company tickets
+            $tempoMediano = 30; // Fallback default value if no tickets exist
+            
+            try {
+                // Query to get time values from completed tickets
+                $stmt_median = $pdo->prepare("SELECT Tempo FROM info_xdfree01_extrafields WHERE Status = 'Concluído' AND Tempo > 0");
+                $stmt_median->execute();
+                $tempos = $stmt_median->fetchAll(PDO::FETCH_COLUMN);
+                
+                if (count($tempos) > 5) {
+                    // Sort times to calculate median
+                    sort($tempos);
+                    $count = count($tempos);
+                    
+                    // Calculate median
+                    if ($count % 2 == 0) {
+                        // Even number of elements - we pick the LARGER of the two middle values
+                        // e.g., if middle values are 30 and 45, we use 45
+                        $tempoMediano = max($tempos[$count/2 - 1], $tempos[$count/2]);
+                    } else {
+                        // Odd number of elements - we pick the exact middle element
+                        // e.g., for array of 5 elements, we pick element at index 2 (the middle)
+                        $tempoMediano = $tempos[floor($count/2)];
+                    }
+                }
+            } catch (PDOException $e) {
+                // If there's an error, use the default value and log the error
+                error_log("Error calculating median time: " . $e->getMessage());
+            }
+
+            $stmt = $pdo->prepare("INSERT INTO info_xdfree01_extrafields (XDFree01_KeyID, Entity, User, Description, Priority, Status, Image, CreationUser, CreationDate, dateu, Tempo) 
+                                  VALUES (:keyId, :entity, :user, :description, :priority, :status, :image, :creationuser, NOW(), NOW(), :tempo)");
+            $stmt->bindParam(':keyId', $keyId);
+            $stmt->bindParam(':entity', $usuario_id);
+            $stmt->bindParam(':user', $nome_computador);
+            $stmt->bindParam(':description', $descricao_problema);
+            $stmt->bindParam(':priority', $prioridade);
+            $status = "Em Análise";
+            $stmt->bindParam(':status', $status);
+            $stmt->bindParam(':image', $imagem); 
+            $stmt->bindParam(':creationuser', $_SESSION['usuario_email']);
+            $stmt->bindParam(':tempo', $tempoMediano); // Binding the median time
+
+            $stmt->execute();
+
+            // Set success flag and ticket ID in session instead of showing alert
+            $_SESSION['ticket_created'] = true;
+            $_SESSION['novo_keyid'] = $novo_keyid;
+
+        } catch (PDOException $e) {
+            echo "<div class='alert alert-danger alert-dismissible fade show' role='alert'>
+                    Erro ao criar ticket: " . $e->getMessage() . "
+                    <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button>
+                  </div>";
+        }
     }
 }
 ?>
@@ -194,6 +248,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <h2 class="mb-3 display-5">Criar Ticket de Suporte</h2>
         <p class="text-muted">Preencher os campos abaixo para solicitar suporte técnico</p>
         
+        <!-- Aviso de bloqueio -->
+        <?php if ($clienteBloqueado): ?>
+        <div class="alert alert-danger mb-4">
+            <h5><i class="bi bi-exclamation-triangle-fill me-2"></i>Criação de Tickets Bloqueada</h5>
+            <p>Você possui contratos excedidos que necessitam ser regularizados antes de criar novos tickets.</p>
+            <p>Por favor, entre em contato com o administrador para regularizar sua situação.</p>
+        </div>
+        <?php endif; ?>
+        
         <!-- Resumo de Contratos e Tempo -->
         <?php if (!empty($contratosInfo)): ?>
         <div class="contracts-summary">
@@ -201,80 +264,111 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div class="col-md-8">
                     <h5 class="mb-3">
                         <i class="bi bi-clock-history me-2"></i>
-                        Tempo Disponível: 
-                        <strong>
-                            <?php 
-                            $horas = floor($tempoDisponivel / 60);
-                            $minutos = $tempoDisponivel % 60;
-                            echo $horas . 'h ' . $minutos . 'min';
-                            ?>
-                        </strong>
+                            <?php if (isAdmin()): ?>
+                                Tempo Disponível:
+                                <?php 
+                                $horas = floor($tempoDisponivel / 60);
+                                $minutos = $tempoDisponivel % 60;
+                                echo $horas > 0 ? $horas . 'h' : '';
+                                echo ($horas > 0 && $minutos > 0) ? ' ' : '';
+                                echo $minutos > 0 ? $minutos . 'min' : '';
+                                ?>
+                            <?php else: ?>
+                                <?php if ($temTempoDisponivel): ?>
+                                    <span class="text-white">Tempo Disponível</span>
+                                <?php else: ?>
+                                    <span class="text-white">Tempo Indisponível</span>
+                                <?php endif; ?>
+                            <?php endif; ?>
                     </h5>
                     
                     <div class="row">
-                        <?php foreach (array_slice($contratosInfo, 0, 3) as $contrato): ?>
-                        <div class="col-md-4 mb-2">
-                            <div class="contract-item <?php echo $contrato['excedido'] ? 'contract-danger' : ($contrato['restanteMinutos'] <= 120 ? 'contract-warning' : 'contract-active'); ?>">
-                                <div class="d-flex justify-content-between">
-                                    <span>
-                                        <?php 
-                                        // Convert minutes to hours for display
-                                        $totalH = floor($contrato['totalHoras'] / 60);
-                                        $totalM = $contrato['totalHoras'] % 60;
-                                        echo $totalH . 'h';
-                                        if ($totalM > 0) {
-                                            echo ' ' . $totalM . 'min';
-                                        }
-                                        ?>
-                                    </span>
-                                    <span>
-                                        <?php 
-                                        $h = floor($contrato['restanteMinutos'] / 60);
-                                        $m = $contrato['restanteMinutos'] % 60;
-                                        echo $h . 'h';
-                                        if ($m > 0) {
-                                            echo ' ' . $m . 'min';
-                                        }
-                                        ?>
-                                    </span>
+                        <?php if (isAdmin()): ?>
+                            <?php foreach (array_slice($contratosInfo, 0, 3) as $contrato): ?>
+                            <div class="col-md-4 mb-2">
+                                <div class="contract-item <?php echo $contrato['excedido'] ? 'contract-danger' : ($contrato['restanteMinutos'] <= 120 ? 'contract-warning' : 'contract-active'); ?>">
+                                    <div class="d-flex justify-content-between">
+                                        <span>
+                                            <?php 
+                                            // Convert minutes to hours for display
+                                            $totalH = floor($contrato['totalHoras'] / 60);
+                                            $totalM = $contrato['totalHoras'] % 60;
+                                            echo $totalH . 'h';
+                                            if ($totalM > 0) {
+                                                echo ' ' . $totalM . 'min';
+                                            }
+                                            ?>
+                                        </span>
+                                        <span>
+                                            <?php 
+                                            $h = floor($contrato['restanteMinutos'] / 60);
+                                            $m = $contrato['restanteMinutos'] % 60;
+                                            echo $h . 'h';
+                                            if ($m > 0) {
+                                                echo ' ' . $m . 'min';
+                                            }
+                                            ?>
+                                        </span>
+                                    </div>
+                                    <small class="opacity-75"><?php echo $contrato['status']; ?></small>
                                 </div>
-                                <small class="opacity-75"><?php echo $contrato['status']; ?></small>
                             </div>
-                        </div>
-                        <?php endforeach; ?>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="col-12">
+                                <p>Para mais detalhes sobre o seu contrato, por favor entre em contacto com os nossos administradores.</p>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="col-md-4 text-center">
                     <div class="mb-2">
                         <i class="bi bi-file-earmark-text" style="font-size: 2.5rem;"></i>
                     </div>
+                    <?php if (isAdmin()): ?>
                     <a href="meus_contratos.php" class="btn btn-light btn-sm">
                         <i class="bi bi-eye me-1"></i>Ver Todos os Contratos
                     </a>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
         <?php endif; ?>
         
         <!-- Avisos de Tempo -->
-        <?php if ($avisoTempo === 'danger'): ?>
-        <div class="alert alert-danger time-alert" role="alert">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            <strong>Atenção!</strong> Não tem tempo disponível nos seus contratos. 
-            Contacte-nos para renovar ou adquirir um novo pacote de horas.
-        </div>
-        <?php elseif ($avisoTempo === 'warning'): ?>
-        <div class="alert alert-warning time-alert" role="alert">
-            <i class="bi bi-clock me-2"></i>
-            <strong>Tempo Baixo!</strong> Tem apenas <?php echo floor($tempoDisponivel / 60); ?>h <?php echo $tempoDisponivel % 60; ?>min restantes. 
-            Considere renovar o seu pacote de horas.
-        </div>
-        <?php elseif ($avisoTempo === 'info'): ?>
-        <div class="alert alert-info time-alert" role="alert">
-            <i class="bi bi-info-circle me-2"></i>
-            <strong>Tempo Limitado:</strong> Tem <?php echo floor($tempoDisponivel / 60); ?>h <?php echo $tempoDisponivel % 60; ?>min disponíveis. 
-            Planeie as suas solicitações de suporte.
-        </div>
+        <?php if (isAdmin()): ?>
+            <?php if ($avisoTempo === 'danger'): ?>
+            <div class="alert alert-danger time-alert" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Atenção!</strong> Não tem tempo disponível nos seus contratos. 
+                Contacte-nos para renovar ou adquirir um novo pacote de horas.
+            </div>
+            <?php elseif ($tempoDisponivel <= 120): ?>
+            <div class="alert alert-warning time-alert" role="alert">
+                <i class="bi bi-clock me-2"></i>
+                <strong>Tempo Baixo!</strong> Tem apenas <?php echo floor($tempoDisponivel / 60); ?>h <?php echo $tempoDisponivel % 60; ?>min restantes. 
+                Considere renovar o seu pacote de horas.
+            </div>
+            <?php elseif ($tempoDisponivel <= 300): ?>
+            <div class="alert alert-info time-alert" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Tempo Limitado:</strong> Tem <?php echo floor($tempoDisponivel / 60); ?>h <?php echo $tempoDisponivel % 60; ?>min disponíveis. 
+                Planeie as suas solicitações de suporte.
+            </div>
+            <?php endif; ?>
+        <?php else: ?>
+            <?php if (!$temTempoDisponivel || $clienteBloqueado): ?>
+            <div class="alert alert-danger time-alert" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Atenção!</strong> 
+                <?php if ($clienteBloqueado): ?>
+                    Você possui contratos excedidos que impedem a criação de novos tickets.
+                <?php else: ?>
+                    Não tem tempo disponível nos seus contratos.
+                <?php endif; ?>
+                Contacte-nos para regularizar sua situação ou adquirir um novo pacote de horas.
+            </div>
+            <?php endif; ?>
         <?php endif; ?>
          
         <div class="card mt-4">
@@ -353,12 +447,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             <!-- Botão de envio -->
                             <div class="text-end mt-4">
                                 <button type="submit" class="btn btn-success submit-btn" 
-                                        <?php echo ($tempoDisponivel <= 0) ? 'disabled title="Sem tempo disponível nos contratos"' : ''; ?>>
+                                        <?php echo (($tempoDisponivel <= 0) || $clienteBloqueado) ? 'disabled title="Sem tempo disponível ou cliente bloqueado"' : ''; ?>>
                                     <i class="bi bi-send me-2"></i>Criar Ticket
                                 </button>
-                                <?php if ($tempoDisponivel <= 0): ?>
+                                <?php if ($tempoDisponivel <= 0 || $clienteBloqueado): ?>
                                 <div class="text-muted mt-2">
-                                    <small><i class="bi bi-info-circle me-1"></i>Contacte-nos para renovar o seu pacote de horas</small>
+                                    <small><i class="bi bi-info-circle me-1"></i>
+                                    <?php if ($clienteBloqueado): ?>
+                                        Contacte-nos para regularizar sua situação
+                                    <?php else: ?>
+                                        Contacte-nos para renovar o seu pacote de horas
+                                    <?php endif; ?>
+                                    </small>
                                 </div>
                                 <?php endif; ?>
                             </div>
@@ -383,7 +483,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <p class="lead">O seu número de ticket é: <strong id="ticketId"></strong></p>
                     <p>Um técnico irá analisar a sua solicitação em breve.</p>
                     
-                    <?php if ($tempoDisponivel <= 300): // Menos de 5 horas ?>
+                    <?php if (isAdmin() && $tempoDisponivel <= 300): // Menos de 5 horas ?>
                     <div class="alert alert-info mt-3">
                         <i class="bi bi-clock me-2"></i>
                         <strong>Lembrete:</strong> Tem <?php echo floor($tempoDisponivel / 60); ?>h <?php echo $tempoDisponivel % 60; ?>min restantes nos seus contratos.

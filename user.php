@@ -571,7 +571,7 @@ if (isAdmin()) {
                                                 </span>
                                             </td>
                                             <td>
-                                                <span class="password-field" data-password="<?php echo htmlspecialchars($user['Password']); ?>">
+                                                <span class="password-field" data-password="<?php echo htmlspecialchars($user['Password']); ?>" data-visible="false">
                                                     ••••••••
                                                 </span>
                                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="togglePassword(this)">
@@ -674,13 +674,17 @@ if (isAdmin()) {
         
         function togglePassword(button) {
             const passwordField = button.previousElementSibling;
-            const isHidden = passwordField.textContent === '••••••••';
+            const isVisible = passwordField.getAttribute('data-visible') === 'true';
             
-            if (isHidden) {
+            if (!isVisible) {
+                // Show password
                 passwordField.textContent = passwordField.getAttribute('data-password');
+                passwordField.setAttribute('data-visible', 'true');
                 button.innerHTML = '<i class="bi bi-eye-slash"></i>';
             } else {
+                // Hide password
                 passwordField.textContent = '••••••••';
+                passwordField.setAttribute('data-visible', 'false');
                 button.innerHTML = '<i class="bi bi-eye"></i>';
             }
         }

@@ -8,19 +8,27 @@ error_log("meus_tickets.php - Session data: " . print_r($_SESSION, true));
 include('conflogin.php');
 include('db.php');
 
-// Get user email for filtering
-$usuario_email = $_SESSION['usuario_email'];
+// Helper function to limit text length
+function limitCharacters($text, $limit = 35) {
+    if (strlen($text) > $limit) {
+        return substr($text, 0, $limit) . '...';
+    }
+    return $text;
+}
 
 // Consultar os tickets do utilizador autenticado (abertos e resolvidos)
+$usuario_email = $_SESSION['usuario_email'];
 $usuario_id = $_SESSION['usuario_id'];
 
-// Verifica se existe um filtro de data
-$data_filtro = isset($_GET['data']) ? $_GET['data'] : '';
+// Verifica se existem filtros
+$data_inicio = isset($_GET['data_inicio']) ? $_GET['data_inicio'] : '';
+$data_fim = isset($_GET['data_fim']) ? $_GET['data_fim'] : '';
 $prioridade_filtro = isset($_GET['prioridade']) ? $_GET['prioridade'] : '';
 $status_filtro = isset($_GET['status']) ? $_GET['status'] : '';
 $assunto_filtro = isset($_GET['assunto']) ? $_GET['assunto'] : ''; // Novo filtro de assunto
 
 $params = [];
+$whereConditions = ["i.XDFree01_KeyID IS NOT NULL"];
 
 // Modify the SQL query based on user role
 if (isAdmin()) {
@@ -36,6 +44,7 @@ if (isAdmin()) {
                 i.Priority as prioridade,
                 i.CreationUser,
                 e.Name as entity_name,
+                u.Name as atribuido_a,
                 (SELECT 
                     CASE
                         WHEN c.user = 'admin' THEN 'Administrador'
@@ -50,13 +59,13 @@ if (isAdmin()) {
                 xdfree01 t
             LEFT JOIN 
                 info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
+            LEFT JOIN users u ON i.Atribuido = u.id
             LEFT JOIN
                 online_entity_extrafields oee ON i.CreationUser = oee.email
             LEFT JOIN
-                entities e ON e.KeyId = oee.Entity_KeyId
-            WHERE 
-                i.XDFree01_KeyID IS NOT NULL
-                AND oee.Entity_KeyId = :usuario_entity_id";
+                entities e ON e.KeyId = oee.Entity_KeyId";
+    
+    $whereConditions[] = "oee.Entity_KeyId = :usuario_entity_id";
     
     // Get the admin's entity ID
     $admin_entity_sql = "SELECT Entity_KeyId FROM online_entity_extrafields WHERE email = :admin_email";
@@ -78,6 +87,7 @@ if (isAdmin()) {
                 i.Status as status,
                 i.Priority as prioridade,
                 i.CreationUser,
+                u.Name as atribuido_a,
                 (SELECT 
                     CASE
                         WHEN c.user = 'admin' THEN 'Administrador'
@@ -92,34 +102,39 @@ if (isAdmin()) {
                 xdfree01 t
             LEFT JOIN 
                 info_xdfree01_extrafields i ON t.KeyId = i.XDFree01_KeyID
-            WHERE 
-                i.XDFree01_KeyID IS NOT NULL
-                AND i.CreationUser = :usuario_email";
+            LEFT JOIN users u ON i.Atribuido = u.id";
     
+    $whereConditions[] = "i.CreationUser = :usuario_email";
     $params[':usuario_email'] = $_SESSION['usuario_email'];
 }
 
 // Adiciona filtros se existirem
-if (!empty($data_filtro)) {
-    $sql .= " AND DATE(i.dateu) = :data_filtro";
-    $params[':data_filtro'] = $data_filtro;
+if (!empty($data_inicio)) {
+    $whereConditions[] = "DATE(i.dateu) >= :data_inicio";
+    $params[':data_inicio'] = $data_inicio;
+}
+
+if (!empty($data_fim)) {
+    $whereConditions[] = "DATE(i.dateu) <= :data_fim";
+    $params[':data_fim'] = $data_fim;
 }
 
 if (!empty($prioridade_filtro)) {
-    $sql .= " AND i.Priority = :prioridade_filtro";
+    $whereConditions[] = "i.Priority = :prioridade_filtro";
     $params[':prioridade_filtro'] = $prioridade_filtro;
 }
 
 if (!empty($status_filtro)) {
-    $sql .= " AND LOWER(TRIM(i.Status)) = :processed_status_filtro";
-    $params[':processed_status_filtro'] = strtolower(trim($status_filtro));
+    $whereConditions[] = "i.Status = :status_filtro";
+    $params[':status_filtro'] = $status_filtro;
 }
 
 if (!empty($assunto_filtro)) {
-    $sql .= " AND i.User LIKE :assunto_filtro";
+    $whereConditions[] = "i.User LIKE :assunto_filtro";
     $params[':assunto_filtro'] = "%$assunto_filtro%";
 }
 
+$sql .= " WHERE " . implode(" AND ", $whereConditions);
 $sql .= " ORDER BY i.dateu DESC";
 
 $stmt = $pdo->prepare($sql);
@@ -184,8 +199,13 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
                     <!-- Filters -->
                     <form id="filterForm" method="get" action="" class="row g-3 mb-4">
                         <div class="col-md-2">
-                            <label for="data" class="form-label">Data</label>
-                            <input type="date" class="form-control filter-control" id="data" name="data" value="<?php echo $data_filtro; ?>">
+                            <label for="data_inicio" class="form-label">Data Início</label>
+                            <input type="date" class="form-control filter-control" id="data_inicio" name="data_inicio" value="<?php echo $data_inicio; ?>">
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label for="data_fim" class="form-label">Data Fim</label>
+                            <input type="date" class="form-control filter-control" id="data_fim" name="data_fim" value="<?php echo $data_fim; ?>">
                         </div>
                         
                         <div class="col-md-3">
@@ -219,36 +239,36 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
                             </select>
                         </div>
                         
-                        <div class="col-md-3 d-flex align-items-end">
-                            <button type="button" id="clearFilters" class="btn btn-outline-danger w-100">
-                                <i class="bi bi-x-circle"></i> Limpar Filtros
-                            </button>
-                        </div>
-                        
-                        <div class="col-12 mt-2">
-                            <div class="alert alert-info p-2 d-flex align-items-center" id="filter-results">
-                                <i class="bi bi-funnel-fill me-2"></i>
-                                <span>A mostrar <strong><?php echo count($tickets); ?></strong> tickets</span>
+                        <div class="col-12">
+                            <div class="d-flex">
+                                <a href="meus_tickets.php" class="btn btn-sm btn-link ms-auto text-muted">
+                                    <i class="bi bi-x-circle me-1"></i>Limpar filtros
+                                </a>
                             </div>
                         </div>
                     </form>
+                    
+                    <div class="alert alert-info p-2 d-flex align-items-center" id="filter-results">
+                        <i class="bi bi-funnel-fill me-2"></i>
+                        <span>A mostrar <strong><?php echo count($tickets); ?></strong> tickets</span>
+                    </div>
                         
                     <!-- Table -->
                     <div class="table-responsive">
                         <table class="table align-middle">                            
-                            <thead class="table-light">                
+                            <thead>
                                 <tr>
-                                    <th scope="col" class="sortable text-nowrap">Título</th>
-                                    <th scope="col" class="sortable text-nowrap">Assunto</th>
+                                    <th>Título</th>
+                                    <th>Assunto</th>
                                     <?php if (isAdmin()): ?>
-                                    <th scope="col" class="sortable text-nowrap">Cliente</th>
-                                    <th scope="col" class="sortable text-nowrap">Criado Por</th>
+                                    <th>Cliente</th>
+                                    <th>Atribuído a</th>
                                     <?php endif; ?>
-                                    <th scope="col" class="sortable text-nowrap">Atualizado</th>
-                                    <th scope="col" class="sortable text-nowrap">Criado</th>
-                                    <th scope="col" class="sortable text-nowrap">Estado</th>
-                                    <th scope="col" class="sortable text-nowrap">Prioridade</th>
-                                    <th scope="col" class="sortable text-nowrap">Última Mensagem Por</th>
+                                    <th>Data Criação</th>
+                                    <th>Data Atualização</th>
+                                    <th>Estado</th>
+                                    <th>Prioridade</th>
+                                    <th>Última DM</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -263,11 +283,11 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
                                             </td>
                                             <td><?php echo htmlspecialchars($ticket['assunto_do_ticket'] ?? ''); ?></td>
                                             <?php if (isAdmin()): ?>
-                                            <td><?php echo htmlspecialchars($ticket['entity_name'] ?? 'N/A'); ?></td>
-                                            <td><?php echo htmlspecialchars($ticket['CreationUser'] ?? 'N/A'); ?></td>
+                                            <td><?php echo htmlspecialchars(limitCharacters($ticket['CreationUser'] ?? 'N/A')); ?></td>
+                                            <td><?php echo htmlspecialchars($ticket['atribuido_a'] ?? '-'); ?></td>
                                             <?php endif; ?>
-                                            <td><?php echo $ticket['atualizado']; ?></td>
                                             <td><?php echo $ticket['criado']; ?></td>
+                                            <td><?php echo $ticket['atualizado']; ?></td>
                                             <td>
                                                 <?php 
                                                 $status = $ticket['status'];
@@ -377,7 +397,7 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
                     const dateB = parseDate(cellBContent);
                     
                     if (dateA && dateB) {
-                        return isAscending ? dateA - dateB : dateB - dateA;
+                        return isAscending ? dateA - dateA : dateB - dateA;
                     }
                     
                     // Otherwise sort as strings

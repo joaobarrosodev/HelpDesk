@@ -11,9 +11,44 @@ if (!isAdmin()) {
 
 include('db.php');
 
-// Recupera o filtro de estado, se existir
+// Helper function to limit text length
+function limitCharacters($text, $limit = 35) {
+    if (strlen($text) > $limit) {
+        return substr($text, 0, $limit) . '...';
+    }
+    return $text;
+}
+
+// Recupera os filtros se existirem
 $estado_filtro = isset($_GET['status']) ? $_GET['status'] : '';
+$data_inicio = isset($_GET['data_inicio']) ? $_GET['data_inicio'] : '';
+$data_fim = isset($_GET['data_fim']) ? $_GET['data_fim'] : '';
+$prioridade_filtro = isset($_GET['prioridade']) ? $_GET['prioridade'] : '';
+
 $params = [];
+$whereConditions = ["(info_xdfree01_extrafields.Atribuido IS NULL OR info_xdfree01_extrafields.Atribuido = '')"];
+$whereConditions[] = "info_xdfree01_extrafields.Status <> 'Concluído'";
+
+// Adicionar filtros adicionais
+if (!empty($estado_filtro)) {
+    $whereConditions[] = "info_xdfree01_extrafields.Status = :estado_filtro";
+    $params[':estado_filtro'] = $estado_filtro;
+}
+
+if (!empty($prioridade_filtro)) {
+    $whereConditions[] = "info_xdfree01_extrafields.Priority = :prioridade_filtro";
+    $params[':prioridade_filtro'] = $prioridade_filtro;
+}
+
+if (!empty($data_inicio)) {
+    $whereConditions[] = "DATE(info_xdfree01_extrafields.dateu) >= :data_inicio";
+    $params[':data_inicio'] = $data_inicio;
+}
+
+if (!empty($data_fim)) {
+    $whereConditions[] = "DATE(info_xdfree01_extrafields.dateu) <= :data_fim";
+    $params[':data_fim'] = $data_fim;
+}
 
 // Prepara a SQL para tickets sem atribuição
 $sql = "SELECT 
@@ -21,11 +56,13 @@ $sql = "SELECT
             xdfree01.id, 
             xdfree01.Name as titulo_do_ticket, 
             info_xdfree01_extrafields.Atribuido as User, 
+            info_xdfree01_extrafields.User as assunto_do_ticket,
             info_xdfree01_extrafields.Priority as prioridade, 
             info_xdfree01_extrafields.Status as status, 
             DATE_FORMAT(info_xdfree01_extrafields.CreationDate, '%d/%m/%Y') as criado, 
             DATE_FORMAT(info_xdfree01_extrafields.dateu, '%d/%m/%Y') as atualizado, 
             online.name as CreationUser,
+            e.Name as entidadenome,
             (SELECT oee.Name 
              FROM comments_xdfree01_extrafields c 
              JOIN online_entity_extrafields oee ON c.user = oee.email 
@@ -34,15 +71,10 @@ $sql = "SELECT
         FROM xdfree01 
         JOIN info_xdfree01_extrafields ON xdfree01.KeyId = info_xdfree01_extrafields.XDFree01_KeyID
         LEFT JOIN online_entity_extrafields online on info_xdfree01_extrafields.CreationUser = online.email
-        WHERE (info_xdfree01_extrafields.Atribuido IS NULL OR info_xdfree01_extrafields.Atribuido = '') 
-        AND info_xdfree01_extrafields.Status <> 'Concluído'";
+        LEFT JOIN entities e ON online.Entity_KeyId = e.KeyId
+        WHERE " . implode(" AND ", $whereConditions) . "
+        ORDER BY info_xdfree01_extrafields.dateu DESC";
 
-if (!empty($estado_filtro)) {
-    $sql .= " AND info_xdfree01_extrafields.Status = :estado_filtro";
-    $params[':estado_filtro'] = $estado_filtro;
-}
-
-$sql .= " ORDER BY info_xdfree01_extrafields.dateu DESC";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -81,6 +113,16 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <!-- Filters -->
                     <form method="get" action="" class="row g-3 mb-4">
                         <div class="col-md-3">
+                            <label for="data_inicio" class="form-label">Data Início</label>
+                            <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="<?php echo $data_inicio; ?>">
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="data_fim" class="form-label">Data Fim</label>
+                            <input type="date" class="form-control" id="data_fim" name="data_fim" value="<?php echo $data_fim; ?>">
+                        </div>
+                        
+                        <div class="col-md-3">
                             <label for="status" class="form-label">Estado</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="">Todos</option>
@@ -90,23 +132,37 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </select>
                         </div>
                         
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-dark w-100">Filtrar</button>
+                        <div class="col-md-3">
+                            <label for="prioridade" class="form-label">Prioridade</label>
+                            <select class="form-select" id="prioridade" name="prioridade">
+                                <option value="">Todas</option>
+                                <option value="Baixa" <?php echo $prioridade_filtro == 'Baixa' ? 'selected' : ''; ?>>Baixa</option>
+                                <option value="Normal" <?php echo $prioridade_filtro == 'Normal' ? 'selected' : ''; ?>>Normal</option>
+                                <option value="Alta" <?php echo $prioridade_filtro == 'Alta' ? 'selected' : ''; ?>>Alta</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="d-flex">
+                                <a href="tickets_sem_atribuicao.php" class="btn btn-sm btn-link ms-auto text-muted">
+                                    <i class="bi bi-x-circle me-1"></i>Limpar filtros
+                                </a>
+                            </div>
                         </div>
                     </form>
                         
                     <!-- Table -->
-                    <div class="table-responsive pb-5">
+                    <div class="table-responsive table-wrapper pb-5">
                         <table class="table align-middle">
                             <thead class="table-light">
                                 <tr>
                                     <th scope="col" class="sortable text-nowrap">Título</th>
-                                    <th scope="col" class="sortable text-nowrap">Atualizado</th>
-                                    <th scope="col" class="sortable text-nowrap">Criado</th>
-                                    <th scope="col" class="sortable text-nowrap">Estado</th>
+                                    <th scope="col" class="sortable text-nowrap">Assunto</th>
+                                    <th scope="col" class="sortable text-nowrap">Cliente</th>
+                                    <th scope="col" class="sortable text-nowrap">Data Criação</th>
+                                    <th scope="col" class="sortable text-nowrap">Data Atualização</th>
                                     <th scope="col" class="sortable text-nowrap">Prioridade</th>
-                                    <th scope="col" class="sortable text-nowrap">Criador</th>
-                                    <th scope="col" class="sortable text-nowrap">Última Mensagem Por</th>
+                                    <th scope="col" class="sortable text-nowrap">Última DM</th>
                                     <th scope="col" class="text-nowrap">Ações</th>
                                 </tr>
                             </thead>
@@ -120,24 +176,16 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                     <?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?>
                                                 </a>
                                             </td>
-                                            <td><?php echo $ticket['atualizado']; ?></td>
-                                            <td><?php echo $ticket['criado']; ?></td>
-                                            <td>
-                                                <?php 
-                                                $status = $ticket['status'];
-                                                $statusClass = '';
-                                                if ($status == 'Em Análise') {
-                                                    $statusClass = 'badge w-100 bg-info';
-                                                } elseif ($status == 'Em Resolução') {
-                                                    $statusClass = 'badge w-100 bg-warning';
-                                                } elseif ($status == 'Aguarda Resposta') {
-                                                    $statusClass = 'badge w-100 bg-secondary';
-                                                } else {
-                                                    $statusClass = 'badge w-100 bg-dark';
+                                            <td><?php echo htmlspecialchars($ticket['assunto_do_ticket'] ?? ''); ?></td>
+                                            <td><?php 
+                                                $clientName = ($ticket['CreationUser'] ?? '');
+                                                if (!empty($ticket['entidadenome'])) {
+                                                    $clientName .= ' - ' . $ticket['entidadenome'];
                                                 }
-                                                ?>
-                                                <span class="<?php echo $statusClass; ?>"><?php echo $status; ?></span>
-                                            </td>
+                                                echo htmlspecialchars(limitCharacters($clientName));
+                                            ?></td>
+                                            <td><?php echo $ticket['criado']; ?></td>
+                                            <td><?php echo $ticket['atualizado']; ?></td>
                                             <td>
                                                 <?php 
                                                 $badgeClass = 'w-100 bg-success';
@@ -149,18 +197,11 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                 ?>
                                                 <span class="badge <?php echo $badgeClass; ?>"><?php echo $ticket['prioridade']; ?></span>
                                             </td>
-                                            <td><?php echo $ticket['CreationUser']; ?></td>
                                             <td><?php echo !empty($ticket['LastCommentUser']) ? htmlspecialchars($ticket['LastCommentUser']) : '-'; ?></td>
                                             <td>
-                                                <div class="dropdown">
-                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton<?php echo $ticket['id']; ?>" data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <i class="bi bi-gear"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton<?php echo $ticket['id']; ?>">
-                                                        <li><a class="dropdown-item" href="detalhes_ticket.php?keyid=<?php echo $ticket['id']; ?>"><i class="bi bi-eye me-2"></i> Ver detalhes</a></li>
-                                                        <li><a class="dropdown-item text-success" href="atribuir_a_mim.php?keyid=<?php echo urlencode($ticket['KeyId']); ?>"><i class="bi bi-person-check me-2"></i> Atribuir a mim</a></li>
-                                                    </ul>
-                                                </div>
+                                                <a href="?action=atribuir_mim&id=<?php echo $ticket['id']; ?>" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="bi bi-person-check me-1"></i> Atribuir a mim
+                                                </a>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -246,6 +287,14 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
             return null;
         }
+        
+        // Implement auto-filter on change
+        const filterElements = document.querySelectorAll('select, input[type="date"]');
+        filterElements.forEach(element => {
+            element.addEventListener('change', function() {
+                this.form.submit();
+            });
+        });
     });
     </script>
 </body>

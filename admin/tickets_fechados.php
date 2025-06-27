@@ -4,6 +4,14 @@ session_start();  // Inicia a sessão
 include('conflogin.php');
 include('db.php');
 
+// Helper function to limit text length
+function limitCharacters($text, $limit = 35) {
+    if (strlen($text) > $limit) {
+        return substr($text, 0, $limit) . '...';
+    }
+    return $text;
+}
+
 // Use the admin_id from session directly - this should be the correct user ID
 $admin_id = $_SESSION['admin_id'];
 
@@ -14,6 +22,31 @@ $data_inicio = isset($_GET['data_inicio']) ? $_GET['data_inicio'] : '';
 $data_fim = isset($_GET['data_fim']) ? $_GET['data_fim'] : '';
 $params = [];
 
+$whereConditions = ["info_xdfree01_extrafields.Status = 'Concluído'"];
+$whereConditions[] = "info_xdfree01_extrafields.Atribuido = :current_user_id";
+$params[':current_user_id'] = $admin_id;
+
+// Adicionar filtros adicionais
+if (!empty($prioridade_filtro)) {
+    $whereConditions[] = "info_xdfree01_extrafields.Priority = :prioridade_filtro";
+    $params[':prioridade_filtro'] = $prioridade_filtro;
+}
+
+if (!empty($criador_filtro)) {
+    $whereConditions[] = "info_xdfree01_extrafields.CreationUser = :criador_filtro";
+    $params[':criador_filtro'] = $criador_filtro;
+}
+
+if (!empty($data_inicio)) {
+    $whereConditions[] = "DATE(info_xdfree01_extrafields.dateu) >= :data_inicio";
+    $params[':data_inicio'] = $data_inicio;
+}
+
+if (!empty($data_fim)) {
+    $whereConditions[] = "DATE(info_xdfree01_extrafields.dateu) <= :data_fim";
+    $params[':data_fim'] = $data_fim;
+}
+
 // Prepara a SQL para tickets fechados (concluídos)
 $sql = "SELECT 
             xdfree01.KeyId, 
@@ -21,6 +54,7 @@ $sql = "SELECT
             xdfree01.Name as titulo_do_ticket, 
             info_xdfree01_extrafields.Atribuido as User, 
             info_xdfree01_extrafields.Relatorio as Description, 
+            info_xdfree01_extrafields.User as assunto_do_ticket,
             info_xdfree01_extrafields.Priority as prioridade, 
             info_xdfree01_extrafields.Status as status, 
             DATE_FORMAT(info_xdfree01_extrafields.CreationDate, '%d/%m/%Y') as criado, 
@@ -28,6 +62,7 @@ $sql = "SELECT
             online.name as CreationUser,
             info_xdfree01_extrafields.CreationUser as CreationUserEmail,
             u.Name as atribuido_a,
+            e.Name as entidadenome,
             (SELECT oee.Name 
              FROM comments_xdfree01_extrafields c 
              JOIN online_entity_extrafields oee ON c.user = oee.email 
@@ -39,35 +74,9 @@ $sql = "SELECT
         JOIN info_xdfree01_extrafields ON xdfree01.KeyId = info_xdfree01_extrafields.XDFree01_KeyID
         LEFT JOIN users u ON info_xdfree01_extrafields.Atribuido = u.id
         LEFT JOIN online_entity_extrafields online ON info_xdfree01_extrafields.CreationUser = online.email
-        WHERE info_xdfree01_extrafields.Status = 'Concluído'";
-
-// Show closed tickets based on user permissions
-// Both admin and comum users should only see tickets they resolved
-$sql .= " AND info_xdfree01_extrafields.Atribuido = :current_user_id";
-$params[':current_user_id'] = $admin_id;
-
-// Adicionar filtros adicionais
-if (!empty($prioridade_filtro)) {
-    $sql .= " AND info_xdfree01_extrafields.Priority = :prioridade_filtro";
-    $params[':prioridade_filtro'] = $prioridade_filtro;
-}
-
-if (!empty($criador_filtro)) {
-    $sql .= " AND info_xdfree01_extrafields.CreationUser = :criador_filtro";
-    $params[':criador_filtro'] = $criador_filtro;
-}
-
-if (!empty($data_inicio)) {
-    $sql .= " AND DATE(info_xdfree01_extrafields.dateu) >= :data_inicio";
-    $params[':data_inicio'] = $data_inicio;
-}
-
-if (!empty($data_fim)) {
-    $sql .= " AND DATE(info_xdfree01_extrafields.dateu) <= :data_fim";
-    $params[':data_fim'] = $data_fim;
-}
-
-$sql .= " ORDER BY info_xdfree01_extrafields.dateu DESC";
+        LEFT JOIN entities e ON online.Entity_KeyId = e.KeyId
+        WHERE " . implode(" AND ", $whereConditions) . "
+        ORDER BY info_xdfree01_extrafields.dateu DESC";
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
@@ -181,17 +190,17 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                 <div class="card-body">
                     <!-- Filters -->
                     <form method="get" action="" class="row g-3 mb-4">
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <label for="data_inicio" class="form-label">Data Início</label>
                             <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="<?php echo $data_inicio; ?>">
                         </div>
                         
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <label for="data_fim" class="form-label">Data Fim</label>
                             <input type="date" class="form-control" id="data_fim" name="data_fim" value="<?php echo $data_fim; ?>">
                         </div>
                         
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <label for="prioridade" class="form-label">Prioridade</label>
                             <select class="form-select" id="prioridade" name="prioridade">
                                 <option value="">Todas</option>
@@ -201,7 +210,7 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                             </select>
                         </div>
                         
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="criador" class="form-label">Criador</label>
                             <select class="form-select" id="criador" name="criador">
                                 <option value="">Todos</option>
@@ -213,20 +222,14 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                             </select>
                         </div>
                         
-                        <div class="col-md-1 d-flex align-items-end">
-                            <button type="submit" class="btn btn-dark w-100">
-                                <i class="bi bi-funnel me-1"></i>Filtrar
-                            </button>
-                        </div>
-                        
-                        <div class="col-md-1 d-flex align-items-end">
-                            <a href="tickets_fechados.php" class="btn btn-outline-secondary w-100">
-                                <i class="bi bi-x-circle me-1"></i>Limpar
-                            </a>
+                        <div class="col-12">
+                            <div class="d-flex">
+                                <a href="tickets_fechados.php" class="btn btn-sm btn-link ms-auto text-muted">
+                                    <i class="bi bi-x-circle me-1"></i>Limpar filtros
+                                </a>
+                            </div>
                         </div>
                     </form>
-                        
-                
                         
                     <!-- Table -->
                     <div class="table-responsive table-wrapper">
@@ -234,11 +237,13 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                             <thead class="table-light">
                                 <tr>
                                     <th scope="col" class="sortable text-nowrap">Título</th>
-                                    <th scope="col" class="sortable text-nowrap">Atualizado</th>
-                                    <th scope="col" class="sortable text-nowrap">Criado</th>
+                                    <th scope="col" class="sortable text-nowrap">Assunto</th>
+                                    <th scope="col" class="sortable text-nowrap">Cliente</th>
+                                    <th scope="col" class="sortable text-nowrap">Data Criação</th>
+                                    <th scope="col" class="sortable text-nowrap">Data Atualização</th>
                                     <th scope="col" class="sortable text-nowrap">Prioridade</th>
                                     <th scope="col" class="sortable text-nowrap">Tempo (min)</th>
-                                    <th scope="col" class="sortable text-nowrap">Criador</th>
+                                    <th scope="col" class="sortable text-nowrap">Última DM</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -251,8 +256,16 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                                                     <?php echo htmlspecialchars($ticket['titulo_do_ticket']); ?>
                                                 </a>
                                             </td>
-                                            <td><?php echo $ticket['atualizado']; ?></td>
+                                            <td><?php echo htmlspecialchars($ticket['assunto_do_ticket'] ?? ''); ?></td>
+                                            <td><?php 
+                                                $clientName = ($ticket['CreationUser'] ?? '');
+                                                if (!empty($ticket['entidadenome'])) {
+                                                    $clientName .= ' - ' . $ticket['entidadenome'];
+                                                }
+                                                echo htmlspecialchars(limitCharacters($clientName));
+                                            ?></td>
                                             <td><?php echo $ticket['criado']; ?></td>
+                                            <td><?php echo $ticket['atualizado']; ?></td>
                                             <td>
                                                 <?php 
                                                 $badgeClass = 'w-100 bg-success';
@@ -265,12 +278,12 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                                                 <span class="badge <?php echo $badgeClass; ?>"><?php echo $ticket['prioridade']; ?></span>
                                             </td>
                                             <td><?php echo !empty($ticket['ResolutionTime']) ? htmlspecialchars($ticket['ResolutionTime']) : '-'; ?></td>
-                                            <td><?php echo $ticket['CreationUser']; ?></td>
+                                            <td><?php echo !empty($ticket['LastCommentUser']) ? htmlspecialchars($ticket['LastCommentUser']) : $ticket['atualizado']; ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="6" class="text-center py-4">
+                                        <td colspan="8" class="text-center py-4">
                                             <div class="alert alert-info mb-0">
                                                 <i class="bi bi-info-circle me-2"></i> Não há tickets fechados para exibir.
                                             </div>
@@ -381,6 +394,14 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
         if (isMobile()) {
             console.log('Vista mobile ativa - primeira coluna fixa habilitada');
         }
+
+        // Implement auto-filter on change
+        const filterElements = document.querySelectorAll('select, input[type="date"]');
+        filterElements.forEach(element => {
+            element.addEventListener('change', function() {
+                this.form.submit();
+            });
+        });
     });
     </script>
 </body>
