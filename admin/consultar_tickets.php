@@ -187,19 +187,16 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
         }
 
         /* Mobile sticky first column */
-        @media (max-width: 768px) {
-            .table-wrapper {
-                position: relative;
-            }
-
+        @media (max-width: 991px) {
             /* First column sticky */
             .table th:first-child,
             .table td:first-child {
                 position: sticky;
                 left: 0;
-                background-color: white;
+                background-color: inherit;
                 z-index: 1;
-                box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+                /* Lighter, cleaner shadow */
+                box-shadow: 2px 0 5px -2px rgba(0,0,0,0.15);
             }
 
             .table th:first-child {
@@ -207,26 +204,23 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
                 z-index: 3; /* Higher z-index for header of first column */
             }
 
-            /* Alternating row colors for sticky column */
-            .table tbody tr:nth-child(even) td:first-child {
+            /* Fix alternating row colors for sticky column */
+            .table tbody tr:nth-of-type(odd) td:first-child {
+                background-color: #fff;
+            }
+            
+            .table tbody tr:nth-of-type(even) td:first-child {
                 background-color: #f9f9f9;
             }
 
             .table tbody tr:hover td:first-child {
                 background-color: #f0f8ff;
             }
+        }
 
-            /* Scroll indicator shadow */
-            .table-wrapper::after {
-                content: '';
-                position: absolute;
-                top: 0;
-                right: 0;
-                bottom: 0;
-                width: 20px;
-                background: linear-gradient(to left, rgba(0,0,0,0.1), transparent);
-                pointer-events: none;
-            }
+        /* Remove the problematic gradient shadow */
+        .table-wrapper::after {
+            display: none;
         }
 
         /* Scroll indicator */
@@ -579,13 +573,13 @@ $criadores = $stmt_criadores->fetchAll(PDO::FETCH_ASSOC);
             });
         }
 
-        // Detect mobile and show tips
-        function isMobile() {
-            return window.innerWidth <= 768;
+        // Detect mobile and tablet views
+        function isMobileOrTablet() {
+            return window.innerWidth <= 991;
         }
 
-        if (isMobile()) {
-            console.log('Vista mobile ativa - primeira coluna fixa habilitada');
+        if (isMobileOrTablet()) {
+            console.log('Vista mobile/tablet ativa - primeira coluna fixa habilitada');
         }
     });
     </script>

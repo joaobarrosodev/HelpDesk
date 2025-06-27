@@ -176,6 +176,57 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
 <!DOCTYPE html>
 <html lang="pt-pt">
 <?php include('head.php'); ?>
+<head>
+    <!-- Add sticky table styles -->
+    <style>
+        /* Sticky first column styles */
+        .table-wrapper {
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .table {
+            min-width: 800px; /* Force horizontal scroll on small screens */
+        }
+
+        /* Mobile sticky first column */
+        @media (max-width: 991px) {
+            /* First column sticky */
+            .table th:first-child,
+            .table td:first-child {
+                position: sticky;
+                left: 0;
+                background-color: inherit;
+                z-index: 1;
+                /* Lighter, cleaner shadow */
+                box-shadow: 2px 0 5px -2px rgba(0,0,0,0.15);
+            }
+
+            .table th:first-child {
+                background-color: #f8f9fa;
+                z-index: 3; /* Higher z-index for header of first column */
+            }
+
+            /* Fix alternating row colors for sticky column */
+            .table tbody tr:nth-of-type(odd) td:first-child {
+                background-color: #fff;
+            }
+            
+            .table tbody tr:nth-of-type(even) td:first-child {
+                background-color: #f9f9f9;
+            }
+
+            .table tbody tr:hover td:first-child {
+                background-color: #f0f8ff;
+            }
+        }
+
+        /* Remove the problematic gradient shadow */
+        .table-wrapper::after {
+            display: none;
+        }
+    </style>
+</head>
 <body>
     <?php include('menu.php'); ?>
     <div class="content">
@@ -254,7 +305,7 @@ $assuntos = $stmt_assuntos->fetchAll(PDO::FETCH_COLUMN);
                     </div>
                         
                     <!-- Table -->
-                    <div class="table-responsive">
+                    <div class="table-responsive table-wrapper">
                         <table class="table align-middle">                            
                             <thead>
                                 <tr>
