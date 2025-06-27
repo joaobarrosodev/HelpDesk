@@ -15,11 +15,15 @@ include_once(__DIR__ . '/conflogin.php');
  */
 ?>
 
-<!-- Toggle button for mobile - acessibilidade melhorada -->
-<button class="btn rounded-circle shadow-sm position-fixed d-lg-none d-block bg-white border-0" id="menuToggle"
-    style="top: 15px; right: 15px; width: 40px; height: 40px; z-index: 1040;"
-    aria-label="Abrir menu" aria-expanded="false">
-    <i class="bi bi-list" aria-hidden="true"></i>
+<!-- Botão hambúrguer que se transforma em X no mesmo local -->
+<button class="btn hamburger-btn rounded-circle shadow-sm position-fixed d-lg-none d-block bg-white border-0" id="menuToggle"
+    style="top: 15px; right: 15px; width: 50px; height: 50px; z-index: 1060; cursor: pointer;"
+    aria-label="Alternar menu" aria-expanded="false">
+    <div class="hamburger-icon">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
 </button>
 
 <!-- Sidebar - estruturada usando nav para melhor semântica HTML5 -->
@@ -28,9 +32,7 @@ include_once(__DIR__ . '/conflogin.php');
         <a href="index.php" title="Página inicial" class="text-decoration-none">
             <img src="../img/logo.png" alt="Info.exe - Logótipo" class="img-fluid" width="120" height="40">
         </a>
-        <button class="btn border-0 bg-transparent d-lg-none d-block p-0 " id="sidebarClose" aria-label="Fechar menu">
-            <i class="bi bi-x text-muted" aria-hidden="true"></i>
-        </button>
+        <!-- Botão X interno removido completamente -->
     </header>
 
     <div class="mt-2">
@@ -134,43 +136,191 @@ include_once(__DIR__ . '/conflogin.php');
 </nav>
 
 <!-- Overlay para dispositivos móveis -->
-<div class="sidebar-overlay position-fixed top-0 start-0 w-100 h-100 d-lg-none" style="z-index: 1025; display: none;"></div>
+<div class="sidebar-overlay position-fixed top-0 start-0 w-100 h-100 d-lg-none" style="z-index: 1045; display: none; background-color: rgba(0,0,0,0.5);"></div>
 
 <!-- Scripts para funcionamento do menu -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const menuToggle = document.getElementById('menuToggle');
-        const sidebarClose = document.getElementById('sidebarClose');
         const sidebar = document.getElementById('sidebar');
-        const overlay = document.querySelector('.sidebar-overlay');
+        const hamburgerIcon = document.querySelector('.hamburger-icon');
+        let menuIsOpen = false;
 
-        // Função para mostrar menu
-        function showSidebar() {
-            sidebar.classList.add('show-sidebar');
-            overlay.style.display = 'block';
-            document.body.style.overflow = 'hidden';
+        // Função para alternar o estado do menu
+        function toggleMenu(event) {
+            // Prevenir comportamento padrão e propagação do evento
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            console.log("Admin menu toggle clicked - Current state: " + (menuIsOpen ? "open" : "closed"));
+            
+            if (!menuIsOpen) {
+                // IMPORTANTE: Alterado de 'show-sidebar' para 'active' para corresponder ao menu do cliente
+                sidebar.classList.add('active');
+                document.body.classList.add('sidebar-open');
+                menuToggle.setAttribute('aria-expanded', 'true');
+                
+                // Alternar para o X - adicionando classe ao ícone
+                hamburgerIcon.classList.add('open');
+                
+                // Mostrar overlay
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (overlay) {
+                    overlay.style.display = 'block';
+                }
+                
+                menuIsOpen = true;
+            } else {
+                // Fechar menu
+                hideSidebar();
+            }
         }
 
         // Função para esconder menu
         function hideSidebar() {
-            sidebar.classList.remove('show-sidebar');
-            overlay.style.display = 'none';
-            document.body.style.overflow = 'auto';
+            // IMPORTANTE: Alterado de 'show-sidebar' para 'active' para corresponder ao menu do cliente
+            sidebar.classList.remove('active');
+            document.body.classList.remove('sidebar-open');
+            
+            // Restaurar ícone de hambúrguer - removendo a classe
+            hamburgerIcon.classList.remove('open');
+            
+            menuToggle.setAttribute('aria-expanded', 'false');
+            
+            // Esconder overlay
+            const overlay = document.querySelector('.sidebar-overlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+            
+            menuIsOpen = false;
         }
 
-        // Toggle menu no mobile
+        // Toggle menu no mobile - múltiplos eventos para melhor resposta
         if (menuToggle) {
-            menuToggle.addEventListener('click', showSidebar);
-        }
-
-        // Fechar menu
-        if (sidebarClose) {
-            sidebarClose.addEventListener('click', hideSidebar);
+            ['click', 'touchstart'].forEach(eventType => {
+                menuToggle.addEventListener(eventType, function(event) {
+                    // Usar preventDefault apenas em touchstart para evitar problemas
+                    if (eventType === 'touchstart') {
+                        event.preventDefault();
+                    }
+                    toggleMenu(event);
+                }, { passive: false });
+            });
         }
 
         // Fechar ao clicar no overlay
+        const overlay = document.querySelector('.sidebar-overlay');
         if (overlay) {
-            overlay.addEventListener('click', hideSidebar);
+            overlay.addEventListener('click', function(event) {
+                event.preventDefault();
+                toggleMenu();
+            });
         }
+        
+        // Fechar com tecla Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && menuIsOpen) {
+                toggleMenu();
+            }
+        });
     });
 </script>
+
+<!-- Estilos CSS para o hambúrguer animado que se transforma em X -->
+<style>
+    /* Estilo para o botão hambúrguer */
+    .hamburger-btn {
+        transition: background-color 0.3s;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+    }
+    
+    /* Ícone hambúrguer animado */
+    .hamburger-icon {
+        width: 24px;
+        height: 18px;
+        position: relative;
+        transform: rotate(0deg);
+        transition: .5s ease-in-out;
+        cursor: pointer;
+    }
+
+    .hamburger-icon span {
+        display: block;
+        position: absolute;
+        height: 3px;
+        width: 100%;
+        background: #333;
+        border-radius: 3px;
+        opacity: 1;
+        left: 0;
+        transform: rotate(0deg);
+        transition: .25s ease-in-out;
+    }
+
+    /* Posição inicial das linhas */
+    .hamburger-icon span:nth-child(1) {
+        top: 0px;
+    }
+
+    .hamburger-icon span:nth-child(2) {
+        top: 8px;
+    }
+
+    .hamburger-icon span:nth-child(3) {
+        top: 16px;
+    }
+
+    /* Animação para o X */
+    .hamburger-icon.open span:nth-child(1) {
+        top: 8px;
+        transform: rotate(135deg);
+        background: #dc3545; /* Cor vermelha para o X */
+    }
+
+    .hamburger-icon.open span:nth-child(2) {
+        opacity: 0;
+        left: -60px;
+    }
+
+    .hamburger-icon.open span:nth-child(3) {
+        top: 8px;
+        transform: rotate(-135deg);
+        background: #dc3545; /* Cor vermelha para o X */
+    }
+    
+    /* IMPORTANTE: Alterado de .sidebar-helpdesk.show-sidebar para .sidebar-helpdesk.active */
+    .sidebar-helpdesk.active {
+        z-index: 1046;
+    }
+    
+    /* Classe para mostrar o menu móvel */
+    .sidebar-helpdesk {
+        left: -300px; /* Começar fora da tela */
+        transition: all 0.3s ease-in-out;
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        width: 300px;
+        overflow-y: auto;
+    }
+
+    /* Quando ativado */
+    .sidebar-helpdesk.active {
+        left: 0; /* Mover para dentro da tela */
+        box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    }
+    
+    /* Em dispositivos móveis, garantir que o botão está sempre visível */
+    @media (max-width: 991.98px) {
+        .hamburger-btn {
+            position: fixed !important;
+            z-index: 1060 !important;
+        }
+    }
+</style>
